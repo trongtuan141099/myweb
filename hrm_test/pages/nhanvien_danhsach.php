@@ -12,7 +12,7 @@
                         </thead>
                         <tbody>
                         <?php 
-                            require "../config/db.php";
+                            require "config/db.php";
                             $sql = "SELECT * FROM nhanvien"; // Câu query
                             $result = $conn->query($sql);
                             if ($result->num_rows > 0) {

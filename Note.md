@@ -1,13 +1,21 @@
 // Mở preview Ctrl + Shift + V
-# Tiêu đề ghi chú chính
+# Ghi chú tài liệu
 
-## 1. Thiết kế phân quyền RBAC (Role-Based Access Control)
-- [x] Tạo giao diện
-- [ ] Kết nối API
+## 1. Cập nhật tài liệu lên github
 
-## 2. Đoạn code ví dụ
-```javascript
-// Hàm tính tổng
-function sum(a, b) {
-  return a + b;
-}
+[Working Directory] --(git add)--> [Staging Area] --(git commit)--> [Local Repo] --(git push)--> [GitHub]
+                                                                        ^                           |
+                                                                        +-------(git pull)----------+
+- Thiết lập git
+
+$ git config --global user.name "trongtuan141099"
+$ git config --global user.email trongtuan141099@gmail.com
+
+- Khởi tạo kho chứa Git ẩn (.git):
+$ git init
+$ git remote add origin https://github.com/trongtuan141099/myweb.git
+
+
+- Upload code lên githut
+$ git config --global user.name "trongtuan141099"
+
