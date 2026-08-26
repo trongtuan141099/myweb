@@ -1,0 +1,185 @@
+/* ==========================================
+   CSS CUSTOM FORM & TABLE (MODERN MES STYLE)
+   ========================================== */
+:root {
+  --primary-color: #2563eb;
+  --primary-hover: #1d4ed8;
+  --success-color: #16a34a;
+  --success-hover: #15803d;
+  --danger-color: #dc2626;
+  --info-color: #0284c7;
+  --bg-card: #ffffff;
+  --bg-table-head: #f8fafc;
+  --border-color: #e2e8f0;
+  --text-main: #0f172a;
+  --text-muted: #64748b;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08);
+}
+
+/* 1. CONTAINER CHÍNH */
+.admin-card {
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  padding: 18px 20px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 20px;
+}
+
+/* 2. ĐỊNH DẠNG FORM & INPUT GROUP */
+.custom-input-group {
+  display: flex;
+  align-items: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background-color: #fff;
+}
+
+.custom-input-group:focus-within {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.custom-input-group .input-label {
+  background-color: #f1f5f9;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 12px;
+  border-right: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
+.custom-input-group .form-control {
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 13px;
+  color: var(--text-main);
+  padding: 7px 12px;
+}
+
+.custom-input-group .form-control:focus {
+  outline: none;
+}
+
+/* 3. ĐỊNH DẠNG NÚT BẤM (BUTTONS) */
+.btn-action {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 16px;
+  border-radius: 6px;
+  transition: all 0.2s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-action-primary {
+  background-color: var(--primary-color);
+  color: #ffffff;
+  border: 1px solid var(--primary-color);
+}
+.btn-action-primary:hover {
+  background-color: var(--primary-hover);
+  border-color: var(--primary-hover);
+}
+
+.btn-action-success {
+  background-color: var(--success-color);
+  color: #ffffff;
+  border: 1px solid var(--success-color);
+}
+.btn-action-success:hover {
+  background-color: var(--success-hover);
+  border-color: var(--success-hover);
+}
+
+/* 4. ĐỊNH DẠNG BẢNG DỮ LIỆU (TABLE) */
+.table-responsive-custom {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg-card);
+}
+
+.table-custom {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 0;
+  font-size: 13px;
+}
+
+.table-custom thead th {
+  background-color: var(--bg-table-head);
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.5px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color);
+  text-align: left;
+}
+
+.table-custom tbody tr {
+  transition: background-color 0.15s ease-in-out;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.table-custom tbody tr:last-child {
+  border-bottom: none;
+}
+
+.table-custom tbody tr:hover {
+  background-color: #f8fafc;
+}
+
+.table-custom td {
+  padding: 10px 14px;
+  vertical-align: middle;
+  color: var(--text-main);
+}
+
+/* Trạng thái ID và nút thao tác bảng */
+.badge-id {
+  background-color: #eff6ff;
+  color: var(--primary-color);
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.btn-tbl-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-tbl-edit {
+  color: var(--info-color);
+  border: 1px solid #bae6fd;
+  background-color: #f0f9ff;
+}
+.btn-tbl-edit:hover {
+  background-color: var(--info-color);
+  color: #ffffff;
+}
+
+.btn-tbl-delete {
+  color: var(--danger-color);
+  border: 1px solid #fecaca;
+  background-color: #fef2f2;
+}
+.btn-tbl-delete:hover {
+  background-color: var(--danger-color);
+  color: #ffffff;
+}

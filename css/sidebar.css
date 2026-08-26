@@ -1,0 +1,101 @@
+.sidebar {
+  width: var(--sidebar-width);
+  background-color: var(--bg-card);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  transition: width 0.2s ease;
+  flex-shrink: 0;
+  z-index: 100;
+  box-shadow: 2px 0 6px rgba(0,0,0,0.02);
+}
+.sidebar.collapsed { width: var(--sidebar-collapsed-width); }
+
+.sidebar-header {
+  height: var(--header-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--border-color);
+}
+.logo-area { display: flex; align-items: center; gap: 8px; overflow: hidden; white-space: nowrap; }
+.logo-icon { color: var(--primary); font-size: 22px; }
+.logo-text { font-weight: 700; font-size: 14px; color: var(--text-main); letter-spacing: -0.2px; }
+.btn-toggle { background: transparent; border: none; color: var(--text-muted); cursor: pointer; padding: 4px; border-radius: 4px; display: flex; align-items: center; }
+.btn-toggle:hover { background-color: var(--bg-hover); color: var(--text-main); }
+
+.sidebar-menu { 
+  flex: 1; 
+  padding: 8px 6px; 
+  overflow-y: auto; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 2px; 
+}
+
+.menu-item { 
+  display: flex; 
+  align-items: center; 
+  gap: 12px; 
+  padding: 8px 10px; 
+  color: var(--text-muted); 
+  text-decoration: none; 
+  border-radius: 6px; 
+  font-size: 13px; 
+  font-weight: 500; 
+  white-space: nowrap; 
+  transition: all 0.15s ease-in-out; 
+}
+.menu-item .material-icons { font-size: 18px; }
+.menu-item:hover { background-color: var(--bg-hover); color: var(--primary); }
+
+.menu-item.active { 
+  background-color: #2563eb !important; 
+  color: #ffffff !important; 
+  font-weight: 600; 
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+}
+.menu-item.active .material-icons { color: #ffffff !important; }
+
+.sidebar.collapsed .label, .sidebar.collapsed .user-details { display: none; }
+
+.sidebar-footer { padding: 8px 12px; border-top: 1px solid var(--border-color); }
+.user-info { display: flex; align-items: center; gap: 10px; overflow: hidden; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background-color: #dbeafe; color: var(--primary); display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px; flex-shrink: 0; }
+.user-details { display: flex; flex-direction: column; }
+.user-name { font-size: 12px; font-weight: 600; color: var(--text-main); line-height: 1.2; }
+.user-role { font-size: 10px; color: var(--text-muted); }
+
+/* Submenu */
+.has-submenu { display: flex; flex-direction: column; }
+.menu-parent { position: relative; }
+.arrow-icon { margin-left: auto; font-size: 16px !important; transition: transform 0.2s ease; }
+.has-submenu.open .arrow-icon { transform: rotate(180deg); }
+.submenu { display: none; flex-direction: column; gap: 2px; padding-left: 20px; margin-top: 2px; }
+.has-submenu.open .submenu { display: flex; }
+.submenu-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; color: var(--text-muted); text-decoration: none; border-radius: 5px; font-size: 12px; font-weight: 500; transition: all 0.15s ease-in-out; }
+.submenu-item .sub-icon { font-size: 14px; }
+.submenu-item:hover { background-color: var(--bg-hover); color: var(--primary); }
+.submenu-item.active { background-color: #dbeafe !important; color: var(--primary) !important; font-weight: 700; }
+.submenu-item.active::before { content: ""; width: 4px; height: 4px; background-color: var(--primary); border-radius: 50%; }
+
+/* Collapsed sidebar adjustments */
+.sidebar.collapsed .sidebar-menu { overflow-y: hidden; }
+.sidebar.collapsed .sidebar-menu::-webkit-scrollbar { display: none; width: 0; }
+.sidebar.collapsed { width: 60px !important; }
+.sidebar.collapsed .sidebar-header { padding: 0; justify-content: center; }
+.sidebar.collapsed .logo-area,
+.sidebar.collapsed .label,
+.sidebar.collapsed .user-details,
+.sidebar.collapsed .arrow-icon,
+.sidebar.collapsed .submenu { display: none !important; }
+.sidebar.collapsed .menu-item { padding: 10px 0; justify-content: center; border-radius: 8px; margin: 0 6px; }
+.sidebar.collapsed .menu-item .material-icons { margin: 0; font-size: 22px; }
+.sidebar.collapsed .sidebar-footer { padding: 8px 0; display: flex; justify-content: center; }
+.sidebar.collapsed .user-info { justify-content: center; }
+
+@media (max-width: 768px) {
+  .sidebar { position: fixed; left: -100%; height: 100%; }
+  .sidebar.open { left: 0; }
+}

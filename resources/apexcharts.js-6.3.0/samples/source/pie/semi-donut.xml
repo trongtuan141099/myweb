@@ -1,0 +1,56 @@
+<title>Semi Donut</title>
+
+<style>
+#chart {
+  max-width: 480px;
+  margin: 35px auto;
+  padding: 0;
+}
+</style>
+
+<chart>
+<options>
+chart: {
+  type: 'donut',
+},
+labels: ['Team A', 'Team B', 'Team C', 'Team D', 'Team E'],
+plotOptions: {
+  pie: {
+    startAngle: -90,
+    endAngle: 90,
+    offsetY: 10,
+    dataLabels: {
+      external: {
+        show: true,
+        formatter: function (name, opts) {
+          return [name, Math.round(opts.percent) + '%']
+        }
+      }
+    }
+  }
+},
+dataLabels: {
+  enabled: false
+},
+legend: {
+  show: false
+},
+grid: {
+  padding: {
+    bottom: -80
+  }
+},
+responsive: [{
+  breakpoint: 480,
+  options: {
+    chart: {
+      width: 300
+    }
+  }
+}]
+</options>
+
+<series>
+[44, 55, 41, 17, 15]
+</series>
+</chart>

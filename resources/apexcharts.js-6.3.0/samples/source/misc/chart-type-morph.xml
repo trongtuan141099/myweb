@@ -1,0 +1,369 @@
+<title>Chart Type Morph</title>
+
+<style>
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: #fafbfc;
+  color: #2c3e50;
+  margin: 0;
+  padding: 32px 16px;
+}
+.wrap {
+  max-width: 760px;
+  margin: 0 auto;
+}
+h1 {
+  font-size: 22px;
+  margin: 0 0 8px;
+}
+p {
+  color: #5b6b78;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+.chart-wrap {
+  background: #fff;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+}
+.actions {
+  margin: 24px auto 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.actions button {
+  color: #fff;
+  background: #008ffb;
+  border: none;
+  padding: 8px 16px;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.actions button.active {
+  background: #00543d;
+}
+.speed-row {
+  margin: 16px auto;
+  text-align: center;
+  color: #5b6b78;
+  font-size: 13px;
+}
+</style>
+
+<scripts>
+<script>
+// Shared by the vanilla-js, React and Vue builds: the labels, the per-type
+// series shape and the active-button sync. The mutable current* state lives in
+// each format's own wiring below (one live chart per generated page).
+var LABELS = ['Direct', 'Organic', 'Referral', 'Social', 'Email']
+
+function buildSeriesFor(type, values) {
+  if (type === 'funnel') {
+    var sorted = values.slice().sort(function (a, b) { return b - a })
+    return [{ name: 'Sessions', data: sorted }]
+  }
+  if (type === 'bar' || type === 'pyramid') {
+    return [{ name: 'Sessions', data: values.slice() }]
+  }
+  return values.slice()
+}
+
+function setActive(type, horizontal) {
+  document.querySelectorAll('.actions button[data-type]').forEach(function (btn) {
+    var btnType = btn.getAttribute('data-type')
+    var btnH = btn.getAttribute('data-horizontal')
+    var active =
+      btnType === type &&
+      (type !== 'bar' || String(horizontal) === btnH)
+    btn.classList.toggle('active', active)
+  })
+}
+</script>
+</scripts>
+
+<html>
+<div class="wrap">
+  <h1>Chart-type morph</h1>
+  <p>
+    Click the buttons to switch chart types. With the optional
+    <code>apexcharts/features/morph</code> module loaded, supported pairs
+    (bar ↔ pie / donut / polarArea / radialBar) tween between paths
+    instead of flickering through a destroy + recreate.
+  </p>
+
+  <div class="chart-wrap">
+    {{ charts[0] }}
+  </div>
+
+  <div class="actions">
+    <button data-type="bar" data-horizontal="false">Column</button>
+    <button data-type="bar" data-horizontal="true">Horizontal bar</button>
+    <button data-type="pie">Pie</button>
+    <button data-type="donut">Donut</button>
+    <button data-type="polarArea">Polar area</button>
+    <button data-type="radialBar">Radial bar</button>
+    <button data-type="funnel">Funnel</button>
+    <button data-type="pyramid">Pyramid</button>
+  </div>
+
+  <div class="actions">
+    <button id="randomize">Randomize values</button>
+  </div>
+
+  <div class="speed-row">
+    Morph speed:
+    <input type="range" id="speed" min="100" max="15000" step="50" value="700" />
+    <span id="speed-value">700</span> ms
+  </div>
+</div>
+</html>
+
+<chart>
+<options>
+chart: {
+  id: 'morphChart',
+  type: 'bar',
+  height: 380,
+  toolbar: {
+    show: false
+  },
+  animations: {
+    enabled: true,
+    speed: 800,
+    chartTypeMorph: {
+      enabled: true,
+      speed: 700,
+    },
+  },
+},
+grid: {
+  show: false
+},
+labels: ['Direct', 'Organic', 'Referral', 'Social', 'Email'],
+legend: { show: false },
+plotOptions: {
+  bar: {
+    borderRadius: 4,
+    distributed: true,
+    barHeight: '99%',
+  },
+  radialBar: {
+    inverseOrder: true,
+    hollow: {
+      size: '5%'
+    },
+    track: {
+      show: false
+    }
+  },
+  funnel: {
+    shape: 'trapezoid',
+  },
+},
+yaxis: {
+  show: false,
+  axisBorder: {
+    show: false,
+  }
+},
+xaxis: {
+  labels: {
+      show: false
+  },
+  axisBorder: {
+    show: false,
+  },
+  axisTicks: {
+    show: false,
+  }
+},
+dataLabels: { enabled: false },
+fill: {
+  opacity: 0.9
+},
+stroke: {  lineCap: 'butt', width: 1, colors: ['#fff'] },
+</options>
+
+<series>
+[{ name: 'Sessions', data: [44, 55, 41, 27, 33] }]
+</series>
+</chart>
+
+<vanilla-js-script>
+// LABELS, buildSeriesFor and setActive live in the shared head script; the
+// current* state and the DOM wiring stay per-format.
+var currentType = 'bar'
+var currentHorizontal = false
+var currentValues = [44, 55, 41, 27, 33]
+
+setActive(currentType, currentHorizontal)
+
+document.querySelectorAll('.actions button[data-type]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    var nextType = btn.getAttribute('data-type')
+    var nextHorizontal = btn.getAttribute('data-horizontal') === 'true'
+    if (nextType === currentType && nextHorizontal === currentHorizontal) return
+    currentType = nextType
+    currentHorizontal = nextHorizontal
+    setActive(currentType, currentHorizontal)
+    chart.updateOptions({
+      chart: { type: currentType },
+      plotOptions: {
+        bar: {
+          horizontal: currentHorizontal,
+        },
+      },
+      series: buildSeriesFor(currentType, currentValues),
+      labels: LABELS,
+    })
+  })
+})
+
+document.querySelector('#randomize').addEventListener('click', function () {
+  currentValues = currentValues.map(function () {
+    return Math.floor(Math.random() * 80) + 10
+  })
+  chart.updateSeries(buildSeriesFor(currentType, currentValues))
+})
+
+var speedInput = document.querySelector('#speed')
+var speedValue = document.querySelector('#speed-value')
+speedInput.addEventListener('input', function () {
+  var v = parseInt(speedInput.value, 10)
+  speedValue.textContent = v
+  chart.updateOptions(
+    { chart: { animations: { chartTypeMorph: { speed: v } } } },
+    false,
+    false,
+  )
+})
+
+</vanilla-js-script>
+
+<react-script>
+React.useEffect(() => {
+  // The react-apexcharts wrapper owns the render, so reach the live instance by
+  // its chart.id, then wire the same controls the vanilla build does. (LABELS,
+  // buildSeriesFor and setActive live in the shared head script.) updateOptions
+  // drives the chart instance directly, so no React state changes and the
+  // <ReactApexChart> is never re-rendered under it.
+  let chart
+  let currentType = 'bar'
+  let currentHorizontal = false
+  let currentValues = [44, 55, 41, 27, 33]
+
+  const timer = window.setInterval(() => {
+    chart = ApexCharts.getChartByID('morphChart')
+    if (!chart) return
+    window.clearInterval(timer)
+
+    setActive(currentType, currentHorizontal)
+
+    document.querySelectorAll('.actions button[data-type]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nextType = btn.getAttribute('data-type')
+        const nextHorizontal = btn.getAttribute('data-horizontal') === 'true'
+        if (nextType === currentType && nextHorizontal === currentHorizontal) return
+        currentType = nextType
+        currentHorizontal = nextHorizontal
+        setActive(currentType, currentHorizontal)
+        chart.updateOptions({
+          chart: { type: currentType },
+          plotOptions: { bar: { horizontal: currentHorizontal } },
+          series: buildSeriesFor(currentType, currentValues),
+          labels: LABELS,
+        })
+      })
+    })
+
+    document.querySelector('#randomize').addEventListener('click', () => {
+      currentValues = currentValues.map(() => Math.floor(Math.random() * 80) + 10)
+      chart.updateSeries(buildSeriesFor(currentType, currentValues))
+    })
+
+    const speedInput = document.querySelector('#speed')
+    const speedValue = document.querySelector('#speed-value')
+    speedInput.addEventListener('input', () => {
+      const v = parseInt(speedInput.value, 10)
+      speedValue.textContent = v
+      chart.updateOptions(
+        { chart: { animations: { chartTypeMorph: { speed: v } } } },
+        false,
+        false,
+      )
+    })
+  }, 50)
+
+  return () => window.clearInterval(timer)
+}, [])
+</react-script>
+
+<vue-data>
+morphTimer: null,
+</vue-data>
+
+<vue-script>
+mounted: function () {
+  // The vue-apexcharts wrapper owns the render, so reach the live instance by
+  // its chart.id, then wire the same controls the vanilla build does. (LABELS,
+  // buildSeriesFor and setActive live in the shared head script.) updateOptions
+  // drives the chart instance directly, so no reactive data changes and the
+  // <apexchart> is never re-rendered under it.
+  var me = this
+  var currentType = 'bar'
+  var currentHorizontal = false
+  var currentValues = [44, 55, 41, 27, 33]
+
+  me.morphTimer = window.setInterval(function () {
+    var chart = ApexCharts.getChartByID('morphChart')
+    if (!chart) return
+    window.clearInterval(me.morphTimer)
+
+    setActive(currentType, currentHorizontal)
+
+    document.querySelectorAll('.actions button[data-type]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var nextType = btn.getAttribute('data-type')
+        var nextHorizontal = btn.getAttribute('data-horizontal') === 'true'
+        if (nextType === currentType && nextHorizontal === currentHorizontal) return
+        currentType = nextType
+        currentHorizontal = nextHorizontal
+        setActive(currentType, currentHorizontal)
+        chart.updateOptions({
+          chart: { type: currentType },
+          plotOptions: { bar: { horizontal: currentHorizontal } },
+          series: buildSeriesFor(currentType, currentValues),
+          labels: LABELS,
+        })
+      })
+    })
+
+    document.querySelector('#randomize').addEventListener('click', function () {
+      currentValues = currentValues.map(function () {
+        return Math.floor(Math.random() * 80) + 10
+      })
+      chart.updateSeries(buildSeriesFor(currentType, currentValues))
+    })
+
+    var speedInput = document.querySelector('#speed')
+    var speedValue = document.querySelector('#speed-value')
+    speedInput.addEventListener('input', function () {
+      var v = parseInt(speedInput.value, 10)
+      speedValue.textContent = v
+      chart.updateOptions(
+        { chart: { animations: { chartTypeMorph: { speed: v } } } },
+        false,
+        false,
+      )
+    })
+  }, 50)
+},
+beforeDestroy: function () {
+  window.clearInterval(this.morphTimer)
+},
+</vue-script>

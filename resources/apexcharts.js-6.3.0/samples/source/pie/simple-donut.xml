@@ -1,0 +1,43 @@
+<title>Simple Donut</title>
+
+<style>
+#chart {
+  max-width: 480px;
+  margin: 35px auto;
+  padding: 0;
+}
+</style>
+
+<chart>
+<options>
+chart: {
+  width: 480,
+  type: 'donut',
+},
+labels: ['Team A', 'Team B', 'Team C', 'Team D', 'Team E'],
+legend: {
+  show: false
+},
+plotOptions: {
+  pie: {
+    dataLabels: {
+      external: {
+        show: true
+      }
+    }
+  }
+},
+responsive: [{
+  breakpoint: 480,
+  options: {
+    chart: {
+      width: 320
+    }
+  }
+}]
+</options>
+
+<series>
+[44, 55, 41, 17, 15]
+</series>
+</chart>
