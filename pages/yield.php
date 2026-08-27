@@ -3,16 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Báo cáo Sản xuất - MES Dashboard v7</title>
+  <title>Tỉ lệ thành phẩm</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link rel="stylesheet" href="../resources/icon.css">
   <!-- <link rel="stylesheet" href="../css/dashboard1.css"> -->
   <link rel="stylesheet" href="../css/main.css">
   <link rel="stylesheet" href="../css/sidebar.css">
   <link rel="stylesheet" href="../css/header.css">
   <link rel="stylesheet" href="../css/dashboard-body.css">
   <link rel="stylesheet" href="../css/footer.css">
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <!-- <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> -->
+  <!-- <script src="../resources/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script> -->
+  <script src="../resources\apexcharts.js"></script>
 </head>
 <body>
   <div class="app-container">
@@ -55,68 +58,10 @@
             </div>
 
             <!-- 1. Vùng vẽ Biểu đồ Cột Chồng -->
-            <div style="position: relative; height: 360px; width: 100%;">
-            <canvas id="yieldRateChart"></canvas>
+            <div style="position: relative; height: 480px; width: 100%;">
+            <!-- <canvas id="yieldRateChart"></canvas> -->
+            <div id="yieldRateChart"></div>
             </div>
-
-
-            <!-- 2. Vùng Bảng Dữ Liệu Tổng Hợp bên dưới Biểu đồ -->
-            <!-- <div class="table-container-custom mt-3">
-            <table class="table table-sm table-bordered align-middle document-table text-center" id="yieldDataTable">
-                <thead>
-                <tr style="background-color: #f1f5f9;">
-                    <th style="text-align: left; width: 160px;">Mã sản phẩm</th>
-                    <th>TU0425</th>
-                    <th>TU0604</th>
-                    <th>TU0805</th>
-                    <th>TU1065</th>
-                    <th>TU1208</th>
-                    <th>TU1610</th>
-                    <th>TIUB01</th>
-                    <th>TIUB05</th>
-                    <th>TIUB07</th>
-                    <th>TIUB11</th>
-                    <th>TIUB13</th>
-                </tr>
-                </thead>
-                <tbody>
-                <tr>
-                    <td style="text-align: left;"><span style="color:#2563eb;">■</span> その他異常(A5)</td>
-                    <td>0.2%</td><td>0.1%</td><td>0.1%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>-</td><td>0.1%</td><td>0.0%</td><td>-</td>
-                </tr>
-                <tr>
-                    <td style="text-align: left;"><span style="color:#38bdf8;">■</span> 偏平異常(A4)</td>
-                    <td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>0.0%</td><td>-</td><td>0.0%</td><td>0.0%</td><td>-</td>
-                </tr>
-                <tr>
-                    <td style="text-align: left;"><span style="color:#f59e0b;">■</span> 下限異常(A3)</td>
-                    <td>0.9%</td><td>0.5%</td><td>0.4%</td><td>0.1%</td><td>0.1%</td><td>0.0%</td><td>0.3%</td><td>-</td><td>0.3%</td><td>0.5%</td><td>-</td>
-                </tr>
-                <tr>
-                    <td style="text-align: left;"><span style="color:#94a3b8;">■</span> 上限異常(A2)</td>
-                    <td>0.3%</td><td>0.9%</td><td>1.4%</td><td>1.1%</td><td>1.1%</td><td>1.7%</td><td>0.0%</td><td>-</td><td>4.2%</td><td>0.9%</td><td>-</td>
-                </tr>
-                <tr>
-                    <td style="text-align: left;"><span style="color:#ea580c;">■</span> 外観(A1)</td>
-                    <td>0.4%</td><td>0.8%</td><td>1.4%</td><td>0.8%</td><td>0.6%</td><td>0.2%</td><td>0.3%</td><td>-</td><td>0.0%</td><td>0.3%</td><td>-</td>
-                </tr>
-                <tr style="font-weight: bold; background-color: #f8fafc;">
-                    <td style="text-align: left;"><span style="color:#3b82f6;">■</span> 良品率 (Thành phẩm)</td>
-                    <td class="text-primary">98.3%</td>
-                    <td class="text-primary">97.7%</td>
-                    <td class="text-primary">96.6%</td>
-                    <td class="text-primary">97.9%</td>
-                    <td class="text-primary">98.2%</td>
-                    <td class="text-primary">98.1%</td>
-                    <td class="text-primary">99.3%</td>
-                    <td>-</td>
-                    <td class="text-primary">95.1%</td>
-                    <td class="text-primary">98.2%</td>
-                    <td>-</td>
-                </tr>
-                </tbody>
-            </table>
-            </div> -->
         <!-- Vùng Bảng Dữ Liệu Tổng Hợp Nâng Cấp -->
             <div class="table-container-custom mt-3">
             <table class="table table-sm yield-table-custom align-middle text-center" id="yieldDataTable">
@@ -228,111 +173,139 @@
 
         <script>
             document.addEventListener("DOMContentLoaded", function () {
-            const ctx = document.getElementById('yieldRateChart');
-            if (!ctx) return;
 
-            // Danh sách các Mã Sản Phẩm
-            const labels = ['TU0425', 'TU0604', 'TU0805', 'TU1065', 'TU1208', 'TU1610', 'TIUB01', 'TIUB05', 'TIUB07', 'TIUB11', 'TIUB13'];
+            const labels = [
+                'TU0425','TU0604','TU0805','TU1065','TU1208',
+                'TU1610','TIUB01','TIUB05','TIUB07','TIUB11','TIUB13'
+            ];
 
-            // Dữ liệu % các nhóm phế phẩm & thành phẩm (Null đại diện cho mã không có dữ liệu)
-            const dataGood      = [98.3, 97.7, 96.6, 97.9, 98.2, 98.1, 99.3, null, 95.1, 98.2, null];
-            const dataA1_Look   = [0.4,  0.8,  1.4,  0.8,  0.6,  0.2,  0.3,  null, 0.0,  0.3,  null];
-            const dataA2_Upper  = [0.3,  0.9,  1.4,  1.1,  1.1,  1.7,  0.0,  null, 4.2,  0.9,  null];
-            const dataA3_Lower  = [0.9,  0.5,  0.4,  0.1,  0.1,  0.0,  0.3,  null, 0.3,  0.5,  null];
-            const dataA4_Flat   = [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  null, 0.0,  0.0,  null];
-            const dataA5_Other  = [0.2,  0.1,  0.1,  0.0,  0.0,  0.0,  0.0,  null, 0.1,  0.0,  null];
+            const dataGood = [
+                98.3,97.7,96.6,97.9,98.2,
+                98.1,99.3,null,95.1,98.2,null
+            ];
 
-            Chart.register(ChartDataLabels);
+            const dataA1 = [
+                0.4,0.8,1.4,0.8,0.6,
+                0.2,0.3,null,0.0,0.3,null
+            ];
 
-            new Chart(ctx, {
-                type: 'bar',
-                data: {
-                labels: labels,
-                datasets: [
-                    {
-                    label: '良品率 (Tỷ lệ thành phẩm)',
-                    data: dataGood,
-                    backgroundColor: '#3b82f6', // Xanh dương
-                    datalabels: {
-                        color: '#ffffff',
-                        font: { weight: 'bold', size: 10 },
-                        formatter: v => (v ? v + '%' : '')
-                    }
-                    },
-                    {
-                    label: '外観(A1)',
-                    data: dataA1_Look,
-                    backgroundColor: '#ea580c', // Cam
-                    datalabels: {
-                        color: '#ffffff',
-                        font: { size: 9 },
-                        formatter: v => (v && v >= 0.3 ? v + '%' : '')
-                    }
-                    },
-                    {
-                    label: '上限異常(A2)',
-                    data: dataA2_Upper,
-                    backgroundColor: '#94a3b8', // Xám
-                    datalabels: {
-                        color: '#334155',
-                        font: { size: 9 },
-                        formatter: v => (v && v >= 0.3 ? v + '%' : '')
-                    }
-                    },
-                    {
-                    label: '下限異常(A3)',
-                    data: dataA3_Lower,
-                    backgroundColor: '#f59e0b', // Vàng
-                    datalabels: {
-                        color: '#ffffff',
-                        font: { size: 9 },
-                        formatter: v => (v && v >= 0.3 ? v + '%' : '')
-                    }
-                    },
-                    {
-                    label: '偏平異常(A4)',
-                    data: dataA4_Flat,
-                    backgroundColor: '#38bdf8', // Xanh lam nhạt
-                    datalabels: { display: false }
-                    },
-                    {
-                    label: 'その他異常(A5)',
-                    data: dataA5_Other,
-                    backgroundColor: '#22c55e', // Xanh lá
-                    datalabels: { display: false }
-                    }
-                ]
-                },
-                options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }, // Ẩn Legend mặc định vì đã có bảng chi tiết bên dưới
-                    tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${ctx.raw}%`
-                    }
-                    }
-                },
-                scales: {
-                    x: {
+            const dataA2 = [
+                0.3,0.9,1.4,1.1,1.1,
+                1.7,0.0,null,4.2,0.9,null
+            ];
+
+            const dataA3 = [
+                0.9,0.5,0.4,0.1,0.1,
+                0.0,0.3,null,0.3,0.5,null
+            ];
+
+            const dataA4 = [
+                0,0,0,0,0,
+                0,0,null,0,0,null
+            ];
+
+            const dataA5 = [
+                0.2,0.1,0.1,0,0,
+                0,0,null,0.1,0,null
+            ];
+
+            var options = {
+
+                chart: {
+                    type: 'bar',
+                    height: 450,
                     stacked: true,
-                    grid: { display: false }
+                    toolbar: {
+                        show: true
+                    }
+                },
+
+                series: [
+                    {
+                        name: '良品率',
+                        data: dataGood
                     },
+                    {
+                        name: 'A1 外観',
+                        data: dataA1
+                    },
+                    {
+                        name: 'A2 上限異常',
+                        data: dataA2
+                    },
+                    {
+                        name: 'A3 下限異常',
+                        data: dataA3
+                    },
+                    {
+                        name: 'A4 偏平異常',
+                        data: dataA4
+                    },
+                    {
+                        name: 'A5 その他異常',
+                        data: dataA5
+                    }
+                ],
+
+                colors: [
+                    '#3b82f6',
+                    '#ea580c',
+                    '#94a3b8',
+                    '#f59e0b',
+                    '#38bdf8',
+                    '#22c55e'
+                ],
+
+                xaxis: {
+                    categories: labels
+                },
+
+                yaxis: {
+                    min: 82,
+                    max: 100,
+                    tickAmount: 6,
+                    labels: {
+                        formatter: function (val) {
+                            return val.toFixed(1) + "%";
+                        }
+                    }
+                },
+
+                dataLabels: {
+                    enabled: true,
+                    style: {
+                        fontSize: '10px',
+                        fontWeight: 'bold'
+                    },
+                    formatter: function(val) {
+                        return val > 0 ? val + "%" : "";
+                    }
+                },
+
+                legend: {
+                    position: 'bottom'
+                },
+
+                tooltip: {
                     y: {
-                    stacked: true,
-                    min: 82.0,
-                    max: 100.0,
-                    ticks: {
-                        stepSize: 3.0,
-                        callback: v => v.toFixed(1) + '%'
-                    },
-                    grid: { color: '#e2e8f0' }
+                        formatter: function(val) {
+                            return val + "%";
+                        }
                     }
                 }
-                }
-            });
-            });
+            };
+
+            new ApexCharts(
+                document.querySelector("#yieldRateChart"),
+                options
+            ).render();
+
+        });
+
+
+
+
+         
         </script>
 
         <style>

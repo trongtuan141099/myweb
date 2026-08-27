@@ -3,9 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Báo cáo Sản xuất - MES Dashboard v7</title>
+  <title>Danh sách nhân viên</title>
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
   <!-- <link rel="stylesheet" href="../css/dashboard1.css"> -->
+  <link rel="stylesheet" href="../resources/css/bootstrap.min.css">
   <link rel="stylesheet" href="../css/main.css">
   <link rel="stylesheet" href="../css/sidebar.css">
   <link rel="stylesheet" href="../css/header.css">
@@ -29,7 +30,7 @@
       <main class="dashboard-body">
 
 
-        <div class="col-10 employee-management">
+        <div class="col-12 employee-management">
                 <style>
                   .employee-form-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
                   .employee-form-title{margin:0;color:#172033;font-size:20px;font-weight:700}
@@ -53,32 +54,77 @@
                       <h2 class="employee-form-title">Quản lý nhân viên</h2>
                       <p class="employee-form-subtitle">Thêm mới hoặc cập nhật thông tin nhân sự</p>
                     </div>
-                    <div class="employee-form-icon"><span class="material-icons">badge</span></div>
-                  </div>
-                  <form method="post">
-                    <div class="employee-form-grid">
-                      <div class="employee-field">
-                        <label for="msnv">Mã số nhân viên <span>*</span></label>
-                        <input id="msnv" type="text" name="msnv" class="form-control" placeholder="Ví dụ: NV001" required>
-                      </div>
-                      <div class="employee-field">
-                        <label for="ten">Họ và tên <span>*</span></label>
-                        <input id="ten" type="text" name="ten" class="form-control" placeholder="Nhập họ và tên" required>
-                      </div>
-                      <div class="employee-field">
-                        <label for="ngayvao">Ngày vào công ty <span>*</span></label>
-                        <input id="ngayvao" type="date" name="ngayvao" class="form-control" required>
-                      </div>
-                      <div class="employee-actions">
-                        <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="pages/themmoi.php">
-                          <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
-                        </button>
-                        <button type="submit" class="btn-action btn-action-success text-nowrap" formaction="pages/capnhat.php">
-                          <span class="material-icons" style="font-size:17px;vertical-align:-4px">save</span> Cập nhật
-                        </button>
+                    
+                    <div class="d-flex justify-content-between align-items-center w-100 py-2">
+                      <!-- Ô tìm kiếm bo tròn bên trái -->
+                      <div class="input-group rounded-pill border bg-light" style="max-width: 550px;">
+                        <span class="input-group-text bg-transparent border-0 pe-1 text-muted">
+                          <i class="bi bi-search"></i>
+                        </span>
+                        <input 
+                          type="text" 
+                          id="employeeSearch"
+                          class="form-control bg-transparent border-0 shadow-none ps-1 text-secondary" 
+                          placeholder="🔎Tìm nhanh..." 
+                          aria-label="Search">
                       </div>
                     </div>
-    </form>
+
+                    <!-- <a class="btn btn-primary" data-bs-toggle="offcanvas" href="#offcanvasRight" role="button" aria-controls="offcanvasRight">
+                      Link with href
+                    </a> -->
+
+                    <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                      <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
+                    </button>
+
+                </div>
+
+
+                  <div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasRight" aria-labelledby="offcanvasRightLabel">
+                    <div class="offcanvas-header">
+                      <h5 class="offcanvas-title" id="offcanvasRightLabel">Thêm mới nhân viên</h5>
+                      <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body">
+                    <form method="post">
+                      <div class="employee-form-grid">
+                          <div class="employee-field">
+                            <label for="employee_code">Mã số nhân viên <span>*</span></label>
+                            <input id="employee_code" type="text" name="employee_code" class="form-control" placeholder="Ví dụ: NV001" required>
+                          </div>
+                          <div class="employee-field">
+                            <label for="ten">Họ và tên <span>*</span></label>
+                            <input id="ten" type="text" name="ten" class="form-control" placeholder="Nhập họ và tên" required>
+                          </div>
+                          <div class="employee-field">
+                            <label for="ngayvao">Ngày vào công ty <span>*</span></label>
+                            <input id="ngayvao" type="date" name="ngayvao" class="form-control" required>
+                          </div>
+                          <div class="employee-actions">
+                            <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="pages/themmoi.php">
+                              <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
+                            </button>
+                            <!-- <button type="submit" class="btn-action btn-action-success text-nowrap" formaction="pages/capnhat.php">
+                              <span class="material-icons" style="font-size:17px;vertical-align:-4px">save</span> Cập nhật
+                            </button> -->
+                          </div>
+                      </div>
+                    </form>
+
+
+                    </div>
+                </div>
+
+
+
+
+
+
+
+
+
+      </div>
   </div>
 
   <!-- Bảng dữ liệu hiển thị -->
@@ -89,38 +135,47 @@
           <th style="width: 70px;">#</th>
           <th>Mã nhân viên</th>
           <th>Họ và tên</th>
-          <th>Ngày vào Cty</th>
+          <th>Giới tính</th>
+          <th>Cấp bậc</th>
+          <th>Cost center</th>
+          <th>Ngày vào công ty</th>
+          <th>Ngày nghỉ việc</th>
           <th style="width: 150px; text-align: center;">Hành động</th>
         </tr>
       </thead>
       <tbody>
         <?php 
-          $sql = "SELECT * FROM nhanvien";
+          $sql = "SELECT * FROM employees ORDER BY hire_date DESC";
           $result = $conn->query($sql);
           if ($result && $result->num_rows > 0) {
+              $stt = 1;
               while($row = $result->fetch_assoc()) {
         ?>
           <tr>
-            <td><span class="badge-id"><?= htmlspecialchars($row["id"]); ?></span></td>
-            <td><strong><?= htmlspecialchars($row["msnv"]); ?></strong></td>
-            <td><?= htmlspecialchars($row["hoten"]); ?></td>
-            <td><?= htmlspecialchars($row["ngayvao"]); ?></td>
+            <td><span class="badge-id"><?= $stt++; ?></span></td>
+            <td><strong><?= htmlspecialchars($row["employee_code"]); ?></strong></td>
+            <td><?= htmlspecialchars($row["full_name"]); ?></td>
+            <td><?= htmlspecialchars($row["gender"]); ?></td>
+            <td><?= htmlspecialchars($row["job_level"]); ?></td>
+            <td><?= htmlspecialchars($row["cost_center"]); ?></td>
+            <td><?= htmlspecialchars($row["hire_date"]); ?></td>
+            <td><?= htmlspecialchars($row["resignation_date"]); ?></td>
             <td style="text-align: center;">
-              <a href="pages/sua.php?id=<?= $row["id"]; ?>" class="btn-tbl-sm btn-tbl-edit">Sửa</a>
-              <a href="pages/xoa.php?id=<?= $row["id"]; ?>" class="btn-tbl-sm btn-tbl-delete" onclick="return confirm('Xác nhận xóa nhân viên này?');">Xóa</a>
+              <a href="pages/sua.php?id=<?= $row["employee_code"]; ?>" class="btn-tbl-sm btn-tbl-edit">Sửa</a>
+              <a href="pages/xoa.php?id=<?= $row["employee_code"]; ?>" class="btn-tbl-sm btn-tbl-delete" onclick="return confirm('Xác nhận xóa nhân viên này?');">Xóa</a>
             </td>
           </tr>
         <?php
               }
           } else {
-              echo '<tr><td colspan="5" style="text-align:center; color:#94a3b8; padding: 20px;">Chưa có dữ liệu nhân viên.</td></tr>';
+              echo '<tr><td colspan="9" style="text-align:center; color:#94a3b8; padding: 20px;">Chưa có dữ liệu nhân viên.</td></tr>';
           }
           $conn->close();
         ?>
       </tbody>
     </table>
   </div>
-</div>
+
                 
 
       </main>
@@ -129,6 +184,17 @@
       <?php include '../includes/footer.php'; ?>
     </div> <!-- Thẻ đóng cho .main-wrapper -->
   </div> <!-- Thẻ đóng cho .app-container -->
+
+  <script>
+    document.getElementById('employeeSearch').addEventListener('input', function () {
+      const keyword = this.value.trim().toLowerCase();
+      const rows = document.querySelectorAll('.table-custom tbody tr');
+
+      rows.forEach(function (row) {
+        row.style.display = row.textContent.toLowerCase().includes(keyword) ? '' : 'none';
+      });
+    });
+  </script>
 
 </body>
 </html>
