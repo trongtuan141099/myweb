@@ -87,32 +87,27 @@
                       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                     </div>
                     <div class="offcanvas-body">
-                    <form method="post">
-                      <div class="employee-form-grid">
-                          <div class="employee-field">
-                            <label for="employee_code">Mã số nhân viên <span>*</span></label>
-                            <input id="employee_code" type="text" name="employee_code" class="form-control" placeholder="Ví dụ: NV001" required>
-                          </div>
-                          <div class="employee-field">
-                            <label for="ten">Họ và tên <span>*</span></label>
-                            <input id="ten" type="text" name="ten" class="form-control" placeholder="Nhập họ và tên" required>
-                          </div>
-                          <div class="employee-field">
-                            <label for="ngayvao">Ngày vào công ty <span>*</span></label>
-                            <input id="ngayvao" type="date" name="ngayvao" class="form-control" required>
-                          </div>
-                          <div class="employee-actions">
-                            <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="pages/themmoi.php">
-                              <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
-                            </button>
-                            <!-- <button type="submit" class="btn-action btn-action-success text-nowrap" formaction="pages/capnhat.php">
-                              <span class="material-icons" style="font-size:17px;vertical-align:-4px">save</span> Cập nhật
-                            </button> -->
-                          </div>
-                      </div>
-                    </form>
-
-
+                      <form method="post">
+                        <div>
+                            <div class="mb-3">
+                              <label for="employee_code">Mã số nhân viên <span>*</span></label>
+                              <input id="employee_code" type="text" name="employee_code" class="form-control" placeholder="Ví dụ: NV001" required>
+                            </div>
+                            <div class="mb-3">
+                              <label for="full_name">Họ và tên <span>*</span></label>
+                              <input id="full_name" type="text" name="full_name" class="form-control" placeholder="Nhập họ và tên" required>
+                            </div>
+                            <div class="mb-3">
+                              <label for="hire_date">Ngày vào công ty <span>*</span></label>
+                              <input id="hire_date" type="date" name="hire_date" class="form-control" required>
+                            </div>
+                            <div class="employee-actions">
+                              <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="../php/add_employee.php">
+                                <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
+                              </button>
+                            </div>
+                        </div>
+                      </form>
                     </div>
                 </div>
 
