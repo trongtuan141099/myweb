@@ -40,3 +40,7 @@
   
   Luôn kéo code mới nhất từ GitHub về trước khi sửa code:
   git pull
+
+
+API (Application Programming Interface)
+AJAX (Asynchronous JavaScript and XML)

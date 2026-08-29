@@ -6,7 +6,7 @@
 header('Content-Type: application/json; charset=utf-8');
 
 // Nhập file config
-require_once 'config.php';
+require_once '../config/db.php';
 
 // Nhận dữ liệu từ request
 $input = file_get_contents('php://input');

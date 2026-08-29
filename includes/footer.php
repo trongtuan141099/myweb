@@ -6,7 +6,10 @@
     </div> <!-- END MAIN-WRAPPER -->
   </div> <!-- END WRAPPER -->
 
-  <script src="../js/main.js"></script>
-  <script src="../resources/js/bootstrap.bundle.min.js"></script>
+    </div> <!-- Thẻ đóng cho .main-wrapper -->
+  </div> <!-- Thẻ đóng cho .app-container -->
+  <!-- <script src="../js/main.js"></script>
+  <script src="../resources/js/bootstrap.bundle.min.js"></script> -->
+  <script src="js/main.js"></script>
 </body>
 </html>

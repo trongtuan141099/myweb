@@ -32,7 +32,9 @@
 
         <div class="col-12 employee-management">
                 <style>
-                  .employee-form-header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+                  .employee-form-header{position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:24px}
+                  .employee-search-wrapper{position:absolute;left:50%;transform:translateX(-50%);width:min(550px,40%)}
+                  @media(max-width:900px){.employee-search-wrapper{position:static;transform:none;flex:1;width:auto}}
                   .employee-form-title{margin:0;color:#172033;font-size:20px;font-weight:700}
                   .employee-form-subtitle{margin:5px 0 0;color:#64748b;font-size:13px}
                   .employee-form-icon{display:grid;place-items:center;width:44px;height:44px;border-radius:12px;background:#e8f0ff;color:#2563eb}
@@ -55,9 +57,9 @@
                       <p class="employee-form-subtitle">Thêm mới hoặc cập nhật thông tin nhân sự</p>
                     </div>
                     
-                    <div class="d-flex justify-content-between align-items-center w-100 py-2">
+                    <div class="d-flex justify-content-center align-items-center py-2 employee-search-wrapper">
                       <!-- Ô tìm kiếm bo tròn bên trái -->
-                      <div class="input-group rounded-pill border bg-light" style="max-width: 550px;">
+                      <div class="input-group rounded-pill border bg-light w-100">
                         <span class="input-group-text bg-transparent border-0 pe-1 text-muted">
                           <i class="bi bi-search"></i>
                         </span>
@@ -74,7 +76,7 @@
                       Link with href
                     </a> -->
 
-                    <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="#" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
+                    <button type="button" class="btn-action btn-action-primary text-nowrap" data-bs-toggle="offcanvas" data-bs-target="#offcanvasRight" aria-controls="offcanvasRight">
                       <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
                     </button>
 
@@ -87,7 +89,7 @@
                       <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                     </div>
                     <div class="offcanvas-body">
-                      <form method="post">
+                      <form id="addEmployeeForm" method="post" action="/myweb/php/add_employee.php">
                         <div>
                             <div class="mb-3">
                               <label for="employee_code">Mã số nhân viên <span>*</span></label>
@@ -102,7 +104,7 @@
                               <input id="hire_date" type="date" name="hire_date" class="form-control" required>
                             </div>
                             <div class="employee-actions">
-                              <button type="submit" class="btn-action btn-action-primary text-nowrap" formaction="../php/add_employee.php">
+                              <button type="submit" class="btn-action btn-action-primary text-nowrap">
                                 <span class="material-icons" style="font-size:17px;vertical-align:-4px">person_add</span> Thêm mới
                               </button>
                             </div>
@@ -181,6 +183,50 @@
   </div> <!-- Thẻ đóng cho .app-container -->
 
   <script>
+    // document.getElementById('addEmployeeForm').addEventListener('submit', function (event) {
+    //   event.preventDefault();
+
+    //   fetch(this.action, {
+    //     method: 'POST',
+    //     body: new FormData(this),
+    //     credentials: 'same-origin'
+    //   }).then(function (response) {
+    //     return response.text().then(function (message) {
+    //       if (!response.ok) {
+    //         throw new Error(message.trim() || ('Không thể thêm nhân viên (HTTP ' + response.status + ').'));
+    //       }
+    //       window.location.reload();
+    //     });
+    //   }).catch(function (error) {
+    //     alert(error.message);
+    //   });
+    // });
+
+    document.getElementById('addEmployeeForm').addEventListener('submit', function (event) {
+  event.preventDefault();
+
+  // Lấy chính xác thuộc tính action ghi trong form
+  const actionUrl = this.getAttribute('action'); 
+
+  fetch(actionUrl, {
+    method: 'POST',
+    body: new FormData(this),
+    credentials: 'same-origin'
+  })
+  .then(function (response) {
+    if (!response.ok) {
+      return response.text().then(function (message) {
+        throw new Error(message.trim() || ('Lỗi HTTP ' + response.status));
+      });
+    }
+    // Đã thêm thành công -> Load lại trang ngay lập tức
+    window.location.reload();
+  })
+  .catch(function (error) {
+    alert(error.message);
+  });
+});
+
     document.getElementById('employeeSearch').addEventListener('input', function () {
       const keyword = this.value.trim().toLowerCase();
       const rows = document.querySelectorAll('.table-custom tbody tr');

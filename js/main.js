@@ -32,12 +32,16 @@ document.addEventListener("DOMContentLoaded", function () {
   // Kiểm tra xem người dùng đã đăng nhập hay chưa
     async function checkAuthentication() {
       try {
-        const response = await fetch('../php/check_auth.php');
+        const response = await fetch('api/check_auth.php', {
+          method: 'GET',
+          credentials: 'same-origin'
+        });
+
         const data = await response.json();
 
         if (!data.authenticated) {
           // Chưa đăng nhập, chuyển hướng về login
-          window.location.href = '../login.html';
+          window.location.href = '/myweb/modules/authentication/login.php';
           return;
         }
 
@@ -103,12 +107,22 @@ document.addEventListener("DOMContentLoaded", function () {
     async function logout() {
       if (confirm('Bạn có chắc chắn muốn đăng xuất?')) {
         try {
-          const response = await fetch('../php/logout.php');
-          const data = await response.json();
+          const response = await fetch('/myweb/api/logout.php', {
+            method: 'POST',
+            credentials: 'same-origin'
+          });
+
+          const contentType = response.headers.get('content-type') || '';
+          const data = contentType.includes('application/json')
+            ? await response.json()
+            : { success: false, message: await response.text() };
 
           if (data.success) {
             localStorage.removeItem('loggedInUser');
-            window.location.href = '../login.html';
+            window.location.href = '/myweb/index.php?mainpage=authentication&subpage=login';
+          } else {
+            console.error('Lỗi đăng xuất:', data.message || 'Không rõ nguyên nhân');
+            alert('Đã xảy ra lỗi khi đăng xuất');
           }
         } catch (error) {
           console.error('Lỗi đăng xuất:', error);
