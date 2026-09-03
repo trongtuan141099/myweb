@@ -1,3 +1,3 @@
 idf_component_register(SRCS "main.c"
                        INCLUDE_DIRS "."
-                       REQUIRES nvs_flash esp_wifi esp_http_server esp_http_client driver lwip)
+                       REQUIRES nvs_flash esp_wifi esp_event esp_http_server esp_http_client driver mdns)

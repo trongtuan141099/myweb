@@ -39,7 +39,7 @@ if ($type === 'HEARTBEAT') {
         } 
         else if ($type === 'EVENT') {
             // Máy thay đổi trạng thái: Cập nhật trạng thái mới & GHI VÀO LỊCH SỬ
-            $stmt = $conn->prepare("UPDATE devices SET status = ?, ip_address = ?, last_seen = NOW(), note = 'Kết nối ổn định 1' WHERE device_code = ?");
+            $stmt = $conn->prepare("UPDATE devices SET status = ?, ip_address = ?, last_seen = NOW(), note = 'Kết nối ổn định' WHERE device_code = ?");
             $stmt->bind_param("sss", $status, $ip, $device_code);
             $stmt->execute();
             $stmt->close();
