@@ -1,17 +1,20 @@
 const MANUAL_TREE_DATA = [
     {
-        id: "xuong-dun",
-        name: "📁 Xưởng Đùn Nhựa",
+        id: "HDCV",
+        name: "Hướng dẫn công việc",
         children: [
-            { id: "hdcv-dun", name: "📄 HDCV Vận Hành Machine" },
-            { id: "tccl-dun", name: "📄 Tiêu Chuẩn Chất Lượng" }
+            { id: "hdcv-dun tu", name: "HDCV Đùn nhựa TU" },
+            { id: "hdcv-cuon tu", name: "HDCV Cuộn nhựa TU" },
+            { id: "hdcv-nghien", name: "HDCV Nghiền nhựa" },
+            { id: "hdcv-dun nylon", name: "HDCV Đùn Nylon T" }
         ]
     },
     {
         id: "xuong-tron",
-        name: "📁 Xưởng Trộn Nguyên Liệu",
+        name: "Tiêu chuẩn kiểm tra",
         children: [
-            { id: "hdcv-tron", name: "📄 HDCV Sấy & Trộn" }
+            { id: "hdcv-tron", name: "Tiêu chuẩn kiểm tra - Ống TU" },
+            { id: "hdcv-tron", name: "Tiêu chuẩn kiểm tra - Ống T" }
         ]
     }
 ];
