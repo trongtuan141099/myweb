@@ -15,7 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
     $docCode  = $_POST['doc_code'] ?? ('DOC-' . rand(1000, 9999));
     $title    = $_POST['title'] ?? $_FILES['file']['name'];
 
-    $fileName = time() . '_' . basename($_FILES['file']['name']);
+    $fileName = date('dmY') . '_' . basename($_FILES['file']['name']);
     $targetFilePath = $uploadDir . $fileName;
 
     if (move_uploaded_file($_FILES['file']['tmp_name'], $targetFilePath)) {
@@ -23,7 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
         $currentData = file_exists($dataFile) ? json_decode(file_get_contents($dataFile), true) : [];
 
         $newDoc = [
-            'id'        => (string)time(),
+            'id'        => date('dmY'),
             'doc_code'  => $docCode,
             'title'     => $title,
             'folder_id' => $folderId,

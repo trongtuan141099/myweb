@@ -27,7 +27,7 @@ static httpd_handle_t server = NULL;
 static char device_id[32] = "PL01";
 static char server_ip[64] = "192.168.2.16";
 static char api_path[128] = "/myweb/api/iot_status.php";
-static char mdns_hostname[64] = "maydun-pl01"; // Tên miền mDNS mặc định
+static char mdns_hostname[64] = "maydun-pl01"; // Tên miền mDNS mặc định của ESP32
 static int gpio_status_pin = 4; // GPIO Chạy/Dừng
 static int gpio_error_pin  = 5; // GPIO Lỗi/Sự cố
 
@@ -44,7 +44,6 @@ static void start_mdns_service(void) {
         ESP_LOGE(TAG, "Khoi tao mDNS that bai: %d", err);
         return;
     }
-    // Thiết lập hostname (Truy cập dạng: http://<mdns_hostname>.local)
     mdns_hostname_set(mdns_hostname);
     mdns_instance_name_set("ESP32 IoT Controller");
     ESP_LOGI(TAG, "mDNS da kich hoat! Ten mien: http://%s.local", mdns_hostname);
@@ -119,8 +118,14 @@ static void boot_button_monitor_task(void *pvParameters) {
     }
 }
 
-// --- 5. HÀM GỬI HTTP REQUEST ---
+// --- 5. HÀM GỬI HTTP REQUEST (ĐÃ SỬA LỖI HOST UNREACHABLE) ---
 static void send_http_request(const char* type, const char* status) {
+    // Ngăn gửi API khi chưa nhận IP thành công từ Router Wi-Fi
+    if (strlen(my_ip) == 0 || strcmp(my_ip, "Connecting...") == 0) {
+        ESP_LOGW(TAG, "Chua co IP/Wi-Fi, hoan gui HTTP request (%s)", type);
+        return;
+    }
+
     char post_data[256];
     snprintf(post_data, sizeof(post_data), "type=%s&device_id=%s&status=%s&ip=%s", type, device_id, status, my_ip);
 
@@ -130,7 +135,7 @@ static void send_http_request(const char* type, const char* status) {
     esp_http_client_config_t config = {
         .url = clean_url,
         .method = HTTP_METHOD_POST,
-        .timeout_ms = 2000,
+        .timeout_ms = 3000,
     };
     
     esp_http_client_handle_t client = esp_http_client_init(&config);
@@ -140,8 +145,12 @@ static void send_http_request(const char* type, const char* status) {
     esp_http_client_set_header(client, "Content-Type", "application/x-www-form-urlencoded");
 
     esp_err_t err = esp_http_client_perform(client);
-    if (err == ESP_OK && strcmp(type, "EVENT") == 0) {
-        ESP_LOGI(TAG, "Gui EVENT thanh cong: %s", status);
+    if (err == ESP_OK) {
+        if (strcmp(type, "EVENT") == 0) {
+            ESP_LOGI(TAG, "Gui EVENT thanh cong: %s", status);
+        }
+    } else {
+        ESP_LOGE(TAG, "Gui HTTP Request THAT BAI! URL: %s, Err: 0x%x", clean_url, err);
     }
     esp_http_client_cleanup(client);
 }
@@ -289,9 +298,9 @@ static esp_err_t status_get_handler(httpd_req_t *req) {
         "</div>"
         "<form id='configForm' onsubmit='updateConfig(event)'>"
         "<label>Mã Thiết Bị IoT:</label><input type='text' id='dev_id' name='dev_id' required>"
-        "<label>Server Target (IP):</label><input type='text' id='srv_ip' name='srv_ip' required>"
+        "<label>Server Target (IP / mDNS Hostname):</label><input type='text' id='srv_ip' name='srv_ip' required>"
         "<label>API Path:</label><input type='text' id='api_path' name='api_path' required>"
-        "<label>Tên Miền mDNS (.local):</label><input type='text' id='hostname' name='hostname' required>"
+        "<label>Tên Miền mDNS ESP32 (.local):</label><input type='text' id='hostname' name='hostname' required>"
         "<div style='display:flex; gap:10px;'>"
         "<div style='flex:1;'><label>GPIO Chạy/Dừng:</label><input type='number' id='gpio_status' name='gpio_status' min='0' max='39' required></div>"
         "<div style='flex:1;'><label>GPIO Báo Lỗi:</label><input type='number' id='gpio_error' name='gpio_error' min='0' max='39' required></div>"
@@ -355,7 +364,7 @@ static esp_err_t reset_wifi_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-// --- 8. GIAO DIỆN SETUP WIFI (AP MODE) - BỔ SUNG Ô NHẬP mDNS HOSTNAME ---
+// --- 8. GIAO DIỆN SETUP WIFI (AP MODE) ---
 static esp_err_t config_get_handler(httpd_req_t *req) {
     const char *resp_html = 
         "<!DOCTYPE html><html lang='vi'><head><meta charset='UTF-8'><meta name='viewport' content='width=device-width, initial-scale=1'>"
@@ -514,19 +523,27 @@ static void start_webserver(bool is_ap) {
 static void event_handler(void* arg, esp_event_base_t event_base, int32_t event_id, void* event_data) {
     if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_START) {
         esp_wifi_connect();
-    } else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
+    } 
+    else if (event_base == WIFI_EVENT && event_id == WIFI_EVENT_STA_DISCONNECTED) {
+        wifi_event_sta_disconnected_t* event = (wifi_event_sta_disconnected_t*) event_data;
+        ESP_LOGE(TAG, "Mat ket noi Wi-Fi, Ly do: %d. Dang thu ket noi lai...", event->reason);
+        my_ip[0] = '\0'; // Xóa IP cũ
+        esp_wifi_connect();
+    } 
+    else if (event_base == IP_EVENT && event_id == IP_EVENT_STA_GOT_IP) {
         ip_event_got_ip_t* event = (ip_event_got_ip_t*) event_data;
         snprintf(my_ip, sizeof(my_ip), IPSTR, IP2STR(&event->ip_info.ip));
         strncpy(assigned_sta_ip, my_ip, sizeof(assigned_sta_ip));
-        ESP_LOGI(TAG, "Da nhan IP tu Router: %s", my_ip);
+        
+        ESP_LOGI(TAG, "==========================================");
+        ESP_LOGI(TAG, ">>> DA NHAN IP TU ROUTER: %s <<<", my_ip);
+        ESP_LOGI(TAG, "==========================================");
         
         stop_reboot_blink();
-
-        // Kích hoạt dịch vụ mDNS tên miền
         start_mdns_service();
-
         start_webserver(false);
 
+        // KÍCH HOẠT GỬI HTTP REQUEST NGAY KHI CÓ IP HỢP LỆ
         int err_level = gpio_get_level((gpio_num_t)gpio_error_pin);
         int status_level = gpio_get_level((gpio_num_t)gpio_status_pin);
         const char* current_status = "OFF";

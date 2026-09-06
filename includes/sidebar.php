@@ -429,7 +429,7 @@
       <span class="material-icons arrow-icon">expand_more</span>
     </a>
     
-    <div class="submenu">
+    <!-- <div class="submenu">
       <a href="/myweb/index.php?mainpage=dashboard&subpage=plan" class="submenu-item <?= ($mainpage === 'dashboard' && $subpage === 'plan') ? 'active' : '' ?>">
         <span class="material-icons sub-icon">tune</span>
         <span class="label">Kế hoạch sản xuất</span>
@@ -438,10 +438,30 @@
         <span class="material-icons sub-icon">check_circle_outline</span>
         <span class="label">Tỷ lệ thành phẩm</span>
       </a>
+    </div> -->
+  </div>
+
+    <!-- 2. Quản lý sản xuất -->
+  <div class="has-submenu <?= ($mainpage === 'production') ? 'open' : '' ?>">
+    <a href="/myweb/index.php?mainpage=production&subpage=production_planing" class="menu-item menu-parent <?= ($mainpage === 'production') ? 'active' : '' ?>">
+      <span class="material-icons">production_quantity_limits</span>
+      <span class="label">Quản lý sản xuất</span>
+      <span class="material-icons arrow-icon">expand_more</span>
+    </a>
+    
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=production&subpage=production_planing" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'production_planing') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">tune</span>
+        <span class="label">Kế hoạch sản xuất</span>
+      </a>
+      <a href="#" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'yield') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">check_circle_outline</span>
+        <span class="label">Tỷ lệ thành phẩm</span>
+      </a>
     </div>
   </div>
 
-  <!-- 2. Quản lý nhân sự -->
+  <!-- 3. Quản lý nhân sự -->
   <div class="has-submenu <?= ($mainpage === 'hrm') ? 'open' : '' ?>">
     <a href="/myweb/index.php?mainpage=hrm&subpage=list" class="menu-item menu-parent <?= ($mainpage === 'hrm') ? 'active' : '' ?>">
       <span class="material-icons">people</span>
@@ -469,27 +489,27 @@
 
   <!-- 3. Quản lý tài liệu -->
   <div class="has-submenu <?= ($mainpage === 'document') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=document&subpage=admin" class="menu-item menu-parent <?= ($mainpage === 'document') ? 'active' : '' ?>">
+    <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="menu-item menu-parent <?= ($mainpage === 'document') ? 'active' : '' ?>">
       <span class="material-icons">description</span>
       <span class="label">Quản lý tài liệu</span>
       <span class="material-icons arrow-icon">expand_more</span>
     </a>
     
     <div class="submenu">
-      <a href="/myweb/index.php?mainpage=document&subpage=admin" class="submenu-item <?= ($mainpage === 'document' && $subpage === 'admin') ? 'active' : '' ?>">
+      <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="submenu-item <?= ($mainpage === 'document' && $subpage === 'viewer') ? 'active' : '' ?>">
         <span class="material-icons sub-icon">list</span>
         <span class="label">Danh sách tài liệu</span>
       </a>
-      <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="submenu-item <?= ($mainpage === 'document' && $subpage === 'viewer') ? 'active' : '' ?>">
+      <!-- <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="submenu-item <?= ($mainpage === 'document' && $subpage === 'viewer') ? 'active' : '' ?>">
         <span class="material-icons sub-icon">visibility</span>
         <span class="label">Xem tài liệu</span>
-      </a>
+      </a> -->
     </div>
   </div>
 
   <!-- 4. Quản lý thiết bị -->
   <div class="has-submenu <?= ($mainpage === 'iot') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=iot&subpage=admin" class="menu-item menu-parent <?= ($mainpage === 'iot') ? 'active' : '' ?>">
+    <a href="/myweb/index.php?mainpage=iot&subpage=device_status" class="menu-item menu-parent <?= ($mainpage === 'iot') ? 'active' : '' ?>">
       <span class="material-icons">devices</span>
       <span class="label">Quản lý thiết bị</span>
       <span class="material-icons arrow-icon">expand_more</span>
@@ -503,6 +523,22 @@
       <a href="/myweb/index.php?mainpage=iot&subpage=device_history" class="submenu-item <?= ($mainpage === 'iot' && $subpage === 'device_history') ? 'active' : '' ?>">
         <span class="material-icons sub-icon">visibility</span>
         <span class="label">Xem lịch sử thiết bị</span>
+      </a>
+    </div>
+  </div>
+
+    <!-- 5. Cài đặt hệ thống -->
+  <div class="has-submenu <?= ($mainpage === 'system') ? 'open' : '' ?>">
+    <a href="#" class="menu-item menu-parent <?= ($mainpage === 'system') ? 'active' : '' ?>">
+      <span class="material-icons">settings</span>
+      <span class="label">Cài đặt hệ thống</span>
+      <span class="material-icons arrow-icon">expand_more</span>
+    </a>
+    
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=system&subpage=roles" class="submenu-item <?= ($mainpage === 'system' && $subpage === 'roles') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">list</span>
+        <span class="label">Vai trò người dùng</span>
       </a>
     </div>
   </div>
