@@ -1,24 +1,25 @@
 <?php
+ob_start();
+session_start();
 header('Content-Type: application/json; charset=utf-8');
-require_once '../config/db.php';
-require_once '../vendor/autoload.php'; // Đã cài PhpSpreadsheet
-
-use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Shared\Date;
-
-if (!isset($_FILES['excel_file'])) {
-    echo json_encode(['success' => false, 'message' => 'Vui lòng chọn file Excel báo cáo!']);
-    exit;
-}
+error_reporting(0);
+ini_set('display_errors', 0);
 
 try {
-    $spreadsheet = IOFactory::load($_FILES['excel_file']['tmp_name']);
-    $sheet = $spreadsheet->getActiveSheet();
-    $rows = $sheet->toArray(null, true, true, false);
+    require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../vendor/SimpleXLSX.php';
 
+    if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
+        throw new Exception('Vui lòng chọn file Excel hợp lệ!');
+    }
+
+    if (!($xlsx = \Shuchkin\SimpleXLSX::parse($_FILES['excel_file']['tmp_name']))) {
+        throw new Exception('Lỗi đọc file Excel: ' . \Shuchkin\SimpleXLSX::parseError());
+    }
+
+    $rows = $xlsx->rows();
     if (count($rows) <= 1) {
-        echo json_encode(['success' => false, 'message' => 'File Excel rỗng hoặc chỉ có dòng tiêu đề!']);
-        exit;
+        throw new Exception('File Excel rỗng hoặc chỉ chứa tiêu đề!');
     }
 
     function extractPipeSize($productCode) {
@@ -32,12 +33,14 @@ try {
 
     function parseExcelDate($val) {
         if (empty($val)) return date('Y-m-d');
-        if (is_numeric($val)) {
-            return date('Y-m-d', Date::excelToTimestamp($val));
-        }
-        return date('Y-m-d', strtotime($val));
+        if (is_numeric($val)) return date('Y-m-d', ($val - 25569) * 86400);
+        $ts = strtotime((string)$val);
+        return $ts ? date('Y-m-d', $ts) : date('Y-m-d');
     }
 
+    $conn->begin_transaction();
+
+    // SQL INSERT 41 cột dữ liệu chi tiết
     $sqlInsertLog = "INSERT INTO extrusion_actual_logs (
         import_date, production_date, employee_code, employee_name, shift, 
         mfg_order_code, product_code, pipe_size, cost_center, process_name, 
@@ -51,10 +54,12 @@ try {
     ) VALUES (" . implode(',', array_fill(0, 41, '?')) . ")";
 
     $stmtLog = $conn->prepare($sqlInsertLog);
+    if (!$stmtLog) throw new Exception('Lỗi SQL Prepare: ' . $conn->error);
+
     $dailyTotals = [];
 
     foreach ($rows as $index => $row) {
-        if ($index === 0 || empty($row[1])) continue; // Bỏ qua Header
+        if ($index === 0 || empty($row[1])) continue;
 
         $importDate     = parseExcelDate($row[0]);
         $productionDate = parseExcelDate($row[1]);
@@ -98,7 +103,10 @@ try {
         $inkType        = (string)($row[38] ?? '');
         $waitingMchCnt  = (int)($row[39] ?? 0);
 
-        $stmtLog->bind_param("sssssssssssdddddsissddisssisddddididssi",
+        // Chuỗi mã hóa 41 tham số chính xác tuyệt đối
+        $types = "sssssssssssdddddsissddidsssisdsdddididssi";
+
+        $stmtLog->bind_param($types,
             $importDate, $productionDate, $employeeCode, $employeeName, $shift,
             $mfgOrderCode, $productCode, $pipeSize, $costCenter, $processName,
             $deviceCode, $finishedQtyM, $finishedQtyKg, $ngQtyKg, $hardWasteQtyKg,
@@ -111,27 +119,34 @@ try {
         );
         $stmtLog->execute();
 
-        // Cộng dồn sản lượng theo Ngày & Size ống
+        // Tích lũy theo Tháng & Size ống
         $yearMonth = date('Y-m', strtotime($productionDate));
         $day       = (int)date('d', strtotime($productionDate));
         $dailyTotals[$yearMonth][$pipeSize][$day] = ($dailyTotals[$yearMonth][$pipeSize][$day] ?? 0) + $finishedQtyM;
     }
 
-    // Cập nhật bảng tổng hợp production_actuals
+    // Cập nhật bảng tổng hợp `production_actuals`
     $stmtAct = $conn->prepare("INSERT INTO production_actuals (year_month, pipe_size, day, actual_qty) 
         VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE actual_qty = VALUES(actual_qty)");
 
-    foreach ($dailyTotals as $ym => $sizeGroup) {
-        foreach ($sizeGroup as $size => $days) {
-            foreach ($days as $d => $qty) {
-                $stmtAct->bind_param("ssid", $ym, $size, $d, $qty);
-                $stmtAct->execute();
+    if ($stmtAct) {
+        foreach ($dailyTotals as $ym => $sizeGroup) {
+            foreach ($sizeGroup as $size => $days) {
+                foreach ($days as $d => $qty) {
+                    $stmtAct->bind_param("ssid", $ym, $size, $d, $qty);
+                    $stmtAct->execute();
+                }
             }
         }
     }
 
-    echo json_encode(['success' => true, 'message' => 'Import trọn vẹn 40 trường dữ liệu thành công!']);
+    $conn->commit();
+    ob_clean();
+    echo json_encode(['success' => true, 'message' => 'Upload thành công trọn vẹn dữ liệu từ Excel!']);
+
 } catch (Exception $e) {
-    echo json_encode(['success' => false, 'message' => 'Lỗi Import: ' . $e->getMessage()]);
+    if (isset($conn)) $conn->rollback();
+    ob_clean();
+    echo json_encode(['success' => false, 'message' => 'Lỗi Upload: ' . $e->getMessage()]);
 }
 ?>

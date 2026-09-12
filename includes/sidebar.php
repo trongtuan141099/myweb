@@ -454,6 +454,10 @@
         <span class="material-icons sub-icon">tune</span>
         <span class="label">Kế hoạch sản xuất</span>
       </a>
+        <a href="/myweb/index.php?mainpage=production&subpage=production_data" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'production_data') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">tune</span>
+        <span class="label">Dữ liệu thực tích</span>
+      </a>
       <a href="#" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'yield') ? 'active' : '' ?>">
         <span class="material-icons sub-icon">check_circle_outline</span>
         <span class="label">Tỷ lệ thành phẩm</span>
