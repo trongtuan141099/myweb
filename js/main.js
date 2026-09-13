@@ -1,13 +1,29 @@
 function toggleSidebar() {
   const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
   
-  // Kiểm tra nếu là màn hình Mobile/Tablet
-  if (window.innerWidth <= 768) {
+  // Mobile/tablet dùng sidebar dạng drawer; desktop dùng trạng thái thu gọn.
+  if (window.innerWidth <= 991.98) {
     sidebar.classList.toggle('open');
+    document.body.classList.toggle('sidebar-is-open', sidebar.classList.contains('open'));
+    updateMobileMenuState(sidebar.classList.contains('open'));
   } else {
-    // Màn hình Desktop: Thu gọn hoặc Mở rộng Sidebar
     sidebar.classList.toggle('collapsed');
   }
+}
+
+function closeSidebar() {
+  const sidebar = document.getElementById('sidebar');
+  if (!sidebar) return;
+
+  sidebar.classList.remove('open');
+  document.body.classList.remove('sidebar-is-open');
+  updateMobileMenuState(false);
+}
+
+function updateMobileMenuState(isOpen) {
+  const menuButton = document.querySelector('.mobile-menu-toggle');
+  if (menuButton) menuButton.setAttribute('aria-expanded', String(isOpen));
 }
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -26,6 +42,14 @@ document.addEventListener("DOMContentLoaded", function () {
         submenuContainer.classList.toggle("open");
       });
     }
+  });
+
+  document.querySelectorAll('#sidebar a[href]:not([href="#"])').forEach((link) => {
+    link.addEventListener('click', closeSidebar);
+  });
+
+  window.addEventListener('resize', function () {
+    if (window.innerWidth > 991.98) closeSidebar();
   });
 });
 

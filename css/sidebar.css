@@ -95,7 +95,48 @@
 .sidebar.collapsed .sidebar-footer { padding: 8px 0; display: flex; justify-content: center; }
 .sidebar.collapsed .user-info { justify-content: center; }
 
-@media (max-width: 768px) {
-  .sidebar { position: fixed; left: -100%; height: 100%; }
-  .sidebar.open { left: 0; }
+.sidebar-backdrop {
+  display: none;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: min(var(--sidebar-width), 86vw);
+    height: 100dvh;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    box-shadow: 8px 0 24px rgba(15, 23, 42, 0.16);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+
+  .sidebar.collapsed {
+    width: min(var(--sidebar-width), 86vw) !important;
+  }
+
+  .sidebar-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 99;
+    border: 0;
+    background: rgba(15, 23, 42, 0.42);
+  }
+
+  body.sidebar-is-open {
+    overflow: hidden;
+  }
+
+  body.sidebar-is-open .sidebar-backdrop {
+    display: block;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sidebar { transition: none; }
 }

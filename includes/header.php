@@ -1,6 +1,9 @@
 
   <div class="main-wrapper">
       <header class="top-header">
+        <button class="mobile-menu-toggle" type="button" aria-label="Mở menu điều hướng" aria-controls="sidebar" aria-expanded="false" onclick="toggleSidebar()">
+          <span class="material-icons">menu</span>
+        </button>
         <div class="header-actions">
           <div class="lang-selector">
             <button class="lang-btn active">VN</button>

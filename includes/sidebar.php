@@ -491,7 +491,7 @@
     </div>
   </div>
 
-  <!-- 3. Quản lý tài liệu -->
+  <!-- 4. Quản lý tài liệu -->
   <div class="has-submenu <?= ($mainpage === 'document') ? 'open' : '' ?>">
     <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="menu-item menu-parent <?= ($mainpage === 'document') ? 'active' : '' ?>">
       <span class="material-icons">description</span>
@@ -511,7 +511,7 @@
     </div>
   </div>
 
-  <!-- 4. Quản lý thiết bị -->
+  <!-- 5. Quản lý thiết bị -->
   <div class="has-submenu <?= ($mainpage === 'iot') ? 'open' : '' ?>">
     <a href="/myweb/index.php?mainpage=iot&subpage=device_status" class="menu-item menu-parent <?= ($mainpage === 'iot') ? 'active' : '' ?>">
       <span class="material-icons">devices</span>
@@ -531,7 +531,39 @@
     </div>
   </div>
 
-    <!-- 5. Cài đặt hệ thống -->
+    <!-- 6. Quản lý vật liệu -->
+  <div class="has-submenu <?= ($mainpage === 'materials') ? 'open' : '' ?>">
+    <a href="/myweb/index.php?mainpage=materials&subpage=viscoscity" class="menu-item menu-parent <?= ($mainpage === 'materials') ? 'active' : '' ?>">
+      <span class="material-icons">inventory</span>
+      <span class="label">Quản lý vật liệu</span>
+      <span class="material-icons arrow-icon">expand_more</span>
+    </a>
+    
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=materials&subpage=viscoscity" class="submenu-item <?= ($mainpage === 'materials' && $subpage === 'viscoscity') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">list</span>
+        <span class="label">Độ nhớt vật liệu</span>
+      </a>
+    </div>
+  </div>
+
+      <!-- 7. Quản lý 5S -->
+  <div class="has-submenu <?= ($mainpage === 'five_s') ? 'open' : '' ?>">
+    <a href="/myweb/index.php?mainpage=five_s&subpage=overview" class="menu-item menu-parent <?= ($mainpage === 'five_s') ? 'active' : '' ?>">
+      <span class="material-icons">inventory</span>
+      <span class="label">Quản lý 5S</span>
+      <span class="material-icons arrow-icon">expand_more</span>
+    </a>
+    
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=five_s&subpage=overview" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'overview') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">list</span>
+        <span class="label">Tổng quan</span>
+      </a>
+    </div>
+  </div>
+
+    <!-- 8. Cài đặt hệ thống -->
   <div class="has-submenu <?= ($mainpage === 'system') ? 'open' : '' ?>">
     <a href="#" class="menu-item menu-parent <?= ($mainpage === 'system') ? 'active' : '' ?>">
       <span class="material-icons">settings</span>
@@ -548,8 +580,6 @@
   </div>
 </nav>
 
-
-
       <div class="sidebar-footer">
         <div class="user-info">
           <div class="user-avatar">T</div>
@@ -560,3 +590,4 @@
           </div>
           </div>
     </aside>
+    <button class="sidebar-backdrop" type="button" aria-label="Đóng menu điều hướng" onclick="closeSidebar()"></button>
