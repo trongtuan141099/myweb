@@ -451,7 +451,7 @@
     
     <div class="submenu">
       <a href="/myweb/index.php?mainpage=production&subpage=production_planing" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'production_planing') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">tune</span>
+        <span class="material-icons sub-icon">analytics</span>
         <span class="label">Kế hoạch sản xuất</span>
       </a>
         <a href="/myweb/index.php?mainpage=production&subpage=production_data" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'production_data') ? 'active' : '' ?>">
@@ -521,7 +521,7 @@
     
     <div class="submenu">
       <a href="/myweb/index.php?mainpage=iot&subpage=device_status" class="submenu-item <?= ($mainpage === 'iot' && $subpage === 'device_status') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list</span>
+        <span class="material-icons sub-icon">precision_manufacturing</span>
         <span class="label">Trạng thái thiết bị</span>
       </a>
       <a href="/myweb/index.php?mainpage=iot&subpage=device_history" class="submenu-item <?= ($mainpage === 'iot' && $subpage === 'device_history') ? 'active' : '' ?>">
@@ -541,7 +541,7 @@
     
     <div class="submenu">
       <a href="/myweb/index.php?mainpage=materials&subpage=viscoscity" class="submenu-item <?= ($mainpage === 'materials' && $subpage === 'viscoscity') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list</span>
+        <span class="material-icons sub-icon">book</span>
         <span class="label">Độ nhớt vật liệu</span>
       </a>
     </div>
@@ -557,8 +557,21 @@
     
     <div class="submenu">
       <a href="/myweb/index.php?mainpage=five_s&subpage=overview" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'overview') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list</span>
+        <span class="material-icons sub-icon">home</span>
         <span class="label">Tổng quan</span>
+      </a>
+    </div>
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=five_s&subpage=list" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'list') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">list_alt</span>
+        <span class="label">Danh sách vi phạm</span>
+      </a>
+    </div>
+
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=five_s&subpage=proposals" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'proposals') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">lightbulb</span>
+        <span class="label">Đề xuất 5S</span>
       </a>
     </div>
   </div>
