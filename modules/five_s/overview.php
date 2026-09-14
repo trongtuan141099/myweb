@@ -57,7 +57,7 @@ $current_month = date('Y-m');
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
         <div>
-            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-shield-check me-2"></i>Tổng Quan 5S & Sơ Đồ Vi Phạm</h4>
+            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-shield-check me-2"></i>Tổng Quan 5S</h4>
             <p class="text-muted small mb-0">Hiển thị các điểm lỗi 5S phát sinh chưa được xử lý trên sơ đồ trực quan</p>
         </div>
         <div class="d-flex align-items-center gap-2">
@@ -68,6 +68,9 @@ $current_month = date('Y-m');
             </a>
             <button class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNewAudit">
                 <i class="bi bi-plus-lg me-1"></i>Tạo Phiếu Kiểm Tra
+            </button>
+            <button class="btn btn-outline-secondary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAssignment">
+                <i class="bi bi-person-gear me-1"></i>Phân Công
             </button>
         </div>
     </div>
@@ -247,7 +250,6 @@ $current_month = date('Y-m');
                         <label class="form-label fw-bold">Chọn Ảnh Khắc Phục <span class="text-danger">*</span></label>
                         <input type="file" id="input-after-image" class="form-control" accept="image/*" onchange="previewAndCropImage(event)" required>
                     </div>
-                    <!-- Khung cho phép xem trước và thu gọn ảnh tối ưu kích thước -->
                     <div class="mb-3 text-center d-none" id="crop-wrapper">
                         <label class="form-label small text-muted">Ảnh đã nén/chuẩn hóa kích thước khung:</label>
                         <div class="border p-2 bg-light d-inline-block rounded">
@@ -258,6 +260,42 @@ $current_month = date('Y-m');
                 <div class="modal-footer">
                     <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
                     <button type="submit" class="btn btn-success">Hoàn Tất Khắc Phục</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 4: CẤU HÌNH PHÂN CÔNG THEO THÁNG -->
+<div class="modal fade" id="modalAssignment" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-person-gear me-2"></i>Phân Công Trách Nhiệm 5S</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formAssignment" onsubmit="submitAssignment(event)">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Tháng Phân Công <span class="text-danger">*</span></label>
+                        <input type="month" name="month_year" class="form-control" value="<?php echo $current_month; ?>" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Khu Vực <span class="text-danger">*</span></label>
+                        <select name="zone_id" id="assign_zone_id" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Người Kiểm Tra (Inspector) <span class="text-danger">*</span></label>
+                        <select name="inspector_id" id="assign_inspector_id" class="form-select" required></select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Người Phụ Trách Khắc Phục (Assignee) <span class="text-danger">*</span></label>
+                        <select name="assignee_id" id="assign_assignee_id" class="form-select" required></select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-save me-1"></i>Lưu Phân Công</button>
                 </div>
             </form>
         </div>
@@ -283,11 +321,10 @@ function loadDashboardData() {
                 document.getElementById('kpi-pending').innerText = data.kpi.pending;
                 document.getElementById('kpi-rate').innerText = data.kpi.rate + '%';
                 
-                // Chỉ hiển thị điểm vi phạm CHƯA khắc phục trên sơ đồ
                 const pendingIssues = globalIssuesData.filter(i => i.status === 'pending');
                 renderLayoutPins(pendingIssues);
                 renderCategoryChart(data.chart_data);
-                populateDropdowns(data.zones);
+                populateDropdowns(data.zones, data.users);
             }
         });
 }
@@ -349,7 +386,6 @@ function openResolveModal(id) {
     new bootstrap.Modal(document.getElementById('modalResolve')).show();
 }
 
-// Hàm Xử lý Tải & Co Giãn / Nén Ảnh Trong Khung Cho Phép (Canvas)
 function previewAndCropImage(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -361,7 +397,6 @@ function previewAndCropImage(e) {
             const canvas = document.getElementById('crop-canvas');
             const ctx = canvas.getContext('2d');
             
-            // Kích thước chuẩn hóa khung (Max 800x600)
             const maxWidth = 800;
             const maxHeight = 600;
             let width = img.width;
@@ -385,7 +420,6 @@ function previewAndCropImage(e) {
 
             document.getElementById('crop-wrapper').classList.remove('d-none');
             
-            // Xuất Blob JPEG đã nén dung lượng 80%
             canvas.toBlob((blob) => {
                 croppedBlobData = blob;
             }, 'image/jpeg', 0.8);
@@ -428,9 +462,23 @@ function submitNewAudit(event) {
     });
 }
 
-function populateDropdowns(zones) {
-    if (!zones) return;
-    document.getElementById('audit_zone_id').innerHTML = zones.map(z => `<option value="${z.id}">${z.zone_name}</option>`).join('');
+function populateDropdowns(zones, users) {
+    const zoneSelect = document.getElementById('audit_zone_id');
+    const assignZoneSelect = document.getElementById('assign_zone_id');
+    const inspectorSelect = document.getElementById('assign_inspector_id');
+    const assigneeSelect = document.getElementById('assign_assignee_id');
+
+    if (zones) {
+        let options = zones.map(z => `<option value="${z.id}">${z.zone_name} (${z.zone_code})</option>`).join('');
+        zoneSelect.innerHTML = options;
+        assignZoneSelect.innerHTML = options;
+    }
+
+    if (users) {
+        let userOpts = users.map(u => `<option value="${u.id}">${u.fullname} (${u.username})</option>`).join('');
+        inspectorSelect.innerHTML = userOpts;
+        assigneeSelect.innerHTML = userOpts;
+    }
 }
 
 function renderCategoryChart(chartData) {
@@ -443,5 +491,21 @@ function renderCategoryChart(chartData) {
     if (chartInstance) chartInstance.destroy();
     chartInstance = new ApexCharts(document.querySelector("#chart-5s-categories"), options);
     chartInstance.render();
+}
+
+function submitAssignment(event) {
+    event.preventDefault();
+    const formData = new FormData(document.getElementById('formAssignment'));
+
+    fetch('api/five_s_save_assignment.php', { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(res => {
+        if(res.success) {
+            bootstrap.Modal.getInstance(document.getElementById('modalAssignment')).hide();
+            alert('Lưu phân công thành công');
+        } else {
+            alert(res.message || 'Có lỗi xảy ra!');
+        }
+    });
 }
 </script>

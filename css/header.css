@@ -56,3 +56,93 @@
   .header-actions .btn span:not(.material-icons) { display: none; }
   .header-actions .btn { padding: 6px; }
 }
+
+/* =========================================================
+   Topbar
+   ========================================================= */
+#topbar {
+    height: var(--topbar-height);
+    background-color: var(--sidebar-bg);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 90;
+}
+
+.sidebar-toggle {
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    text-decoration: none;
+    display: inline-flex;
+}
+
+.search-bar-top {
+    position: relative;
+    width: 320px;
+    max-width: 100%;
+}
+
+.search-bar-top input {
+    background-color: var(--hover-bg);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    padding: 9px 16px 9px 38px;
+    width: 100%;
+    font-size: 0.9rem;
+}
+
+.search-bar-top input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: #fff;
+}
+
+.search-bar-top i {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.topbar-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 18px;
+}
+
+.action-icon {
+    position: relative;
+    color: var(--text-secondary);
+    font-size: 1.1rem;
+    text-decoration: none;
+}
+
+.action-icon .badge {
+    position: absolute;
+    top: -3px;
+    right: -4px;
+    background-color: var(--danger-color);
+    border-radius: 50%;
+    width: 8px;
+    height: 8px;
+    padding: 0;
+}
+
+.user-profile .user-avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.user-name {
+    font-weight: 500;
+    font-size: 0.9rem;
+}

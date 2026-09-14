@@ -267,3 +267,40 @@ ESP32 phải kết nối được cùng mạng LAN với máy chạy Apache và 
 7. Kiểm tra trên desktop/mobile nếu thay đổi giao diện.
 8. Không xóa hoặc ghi đè các file `copy`, legacy hay thay đổi người dùng khi chưa xác định phạm vi.
 
+### Lưu trình kiểm tra 5S
+1. Nhân viên được phân công sẽ định kỳ đi kiểm tra 5S theo kế hoạch đã được thiết lập hằng ngày, thông báo công việc sẽ được hiển thị tại nút thông báo và hiển thị popup messege khi nhân viên đăng nhập, khi nhấn vào message sẽ dẫn hiển thị tổng quan các khu vực cần thực hiện kiểm tra. 
+2. Nhân viên tiến hành đi kiểm tra tại các vị trí chỉ định, để đảm bảo nhân viên đã đến vị trí cần kiểm tra, khi đến vị trí kiểm tra nhân viên phải thực hiện quét mã QR hoặc NFC tại khu vực đó. 
+3. Sau khi xác thực có mặt tại vị trí kiểm tra nhân viên phải thực hiện cập nhật form báo cáo nhân viên khi truy cập form sẽ thấy được ngay hình ảnh nhận biết OK và NG, nếu khu vực không có vi phạm chỉ cần thực hiện checklist các hạng mục cần kiểm tra sau đó chụp hình ghi nhận tại vị trí đó và công việc tuần tra tại khu vực đó thể hiện đã kiểm tra. nếu có vi phạm nhân viên sẽ tích chọn vào báo cáo vi phạm và nhập nội dung mô tả lỗi vi phạm, nhấn gửi lỗi vi phạm, ngay lập tức lỗi vi phạm sẽ được ghi nhận
+4. Khi có phát sinh vi phạm lỗi vi phạm ngay lập tức vị trí có lỗi sẽ được hiển thị trên dashboard đồng thời gửi thông báo đến người chịu trách nhiệm khu vực đó
+5. Người chịu trách nhiệm khu vực đó sẽ nhận được thông báo và sắp xếp nhân viên thực hiện dọn dẹp, sau khi vệ sinh hoàn tất thì cập nhật hình ảnh sau khi đối ứng hoàn tất.
+6. Trang dashboard bao gồm Toàn bộ dữ liệu vi phạm sẽ được tổng hợp lại để thống kê các lỗi thường xuyên phát sinh, khu vực hay phát sinh, tần suất khu vực nhân viên chịu trách nhiệm quản lý vi phạm và hình ảnh biểu ngữ các hoạt động 5S đang được duy trì thực hiện
+
+# LƯU TRÌNH KIỂM TRA & XỬ LÝ VI PHẠM 5S
+
+### 1. Nhận thông báo lịch tuần tra
+* **Hệ thống:** Tự động gửi thông báo (Notification/Popup) cho nhân viên phụ trách khi đăng nhập.
+* **Thao tác:** Nhấn vào thông báo để xem tổng quan danh sách các khu vực cần kiểm tra trong ngày.
+
+### 2. Xác thực vị trí kiểm tra
+* **Thao tác:** Nhân viên đến trực tiếp khu vực chỉ định và quét **mã QR** hoặc **NFC** để xác nhận có mặt.
+
+### 3. Thực hiện kiểm tra & Gửi báo cáo
+* **Giao diện:** Màn hình hiển thị ảnh mẫu chuẩn **OK / NG** và checklist hạng mục.
+* **Trường hợp ĐẠT (OK):** Tick checklist -> Chụp ảnh thực tế -> Hoàn thành kiểm tra khu vực.
+* **Trường hợp VI PHẠM (NG):** Tick "Báo cáo vi phạm" -> Nhập mô tả lỗi -> Nhấn "Gửi" để ghi nhận tức thì.
+
+### 4. Cảnh báo & Giao việc tự động
+* **Hệ thống:** 
+  * Cập nhật ngay vị trí lỗi lên **Dashboard trực quan**.
+  * Tự động gửi thông báo vi phạm đến **Người chịu trách nhiệm khu vực**.
+
+### 5. Khắc phục & Nghiệm thu
+* **Người chịu trách nhiệm:** Nhận thông báo -> Phân công xử lý/dọn dẹp.
+* **Thao tác:** Chụp và tải ảnh kết quả sau khi đối ứng để hoàn tất quy trình.
+
+### 6. Thống kê & Quản lý tập trung (Dashboard)
+* **Dữ liệu tổng hợp:**
+  * Thống kê loại lỗi/khu vực phát sinh vi phạm nhiều nhất.
+  * Tần suất vi phạm theo từng người chịu trách nhiệm.
+* **Truyền thông:** Hiển thị hình ảnh/biểu ngữ các hoạt động 5S đang duy trì tại nhà xưởng.
+

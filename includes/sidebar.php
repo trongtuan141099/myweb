@@ -574,6 +574,13 @@
         <span class="label">Đề xuất 5S</span>
       </a>
     </div>
+
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=five_s&subpage=mobile_audit" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'mobile_audit') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">lightbulb</span>
+        <span class="label">Công việc kiểm tra</span>
+      </a>
+    </div>
   </div>
 
     <!-- 8. Cài đặt hệ thống -->
