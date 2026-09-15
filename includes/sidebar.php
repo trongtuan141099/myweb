@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>DX Plastic Group</title>
   <link rel="stylesheet" href="resources/icon.css">
+  <link rel="stylesheet" href="css/material-icons.css">
   <link rel="stylesheet" href="css/main.css">
   <link rel="stylesheet" href="css/sidebar.css">
   <link rel="stylesheet" href="css/header.css">
@@ -600,14 +601,5 @@
   </div>
 </nav>
 
-      <div class="sidebar-footer">
-        <div class="user-info">
-          <div class="user-avatar">T</div>
-          <div class="user-details">
-            <span class="user-name" id="userFullname">-</span>
-            <!-- <span class="user-role"></span> -->
-          </div>
-          </div>
-          </div>
     </aside>
     <button class="sidebar-backdrop" type="button" aria-label="Đóng menu điều hướng" onclick="closeSidebar()"></button>

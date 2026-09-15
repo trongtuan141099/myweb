@@ -240,9 +240,10 @@ Các bước:
 1. Bật Apache và MySQL.
 2. Tạo database `myweb`.
 3. Import schema SQL đã được thống nhất trong `data/`.
-4. Cập nhật `config/db.php` theo môi trường cục bộ.
-5. Truy cập `http://localhost/myweb/`.
-6. Kiểm tra log PHP, console trình duyệt và response JSON khi một module không tải được.
+4. Chạy thêm `data/five_s_workflow.sql` để tạo lịch tuần tra, thông báo, checklist và mã khu vực 5S.
+5. Cập nhật `config/db.php` theo môi trường cục bộ.
+6. Truy cập `http://localhost/myweb/`.
+7. Kiểm tra log PHP, console trình duyệt và response JSON khi một module không tải được.
 
 Đường dẫn `/myweb/` đang được hard-code ở một số JavaScript/API client; nếu đổi tên virtual directory, phải rà soát các đường dẫn này.
 

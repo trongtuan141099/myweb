@@ -116,10 +116,15 @@ document.addEventListener("DOMContentLoaded", function () {
         });
 
         // 3. Cập nhật chữ cái Avatar trên Sidebar (Tùy chọn)
-        const avatarEl = document.querySelector('.user-avatar');
+        const avatarEl = document.getElementById('headerUserAvatar') || document.querySelector('.user-avatar');
         if (avatarEl) {
             const displayName = user.fullname || user.username || 'T';
             avatarEl.textContent = displayName.charAt(0).toUpperCase();
+        }
+
+        const headerNameEl = document.getElementById('headerUserName');
+        if (headerNameEl) {
+          headerNameEl.textContent = user.fullname || user.username || 'Người dùng';
         }
         }
 

@@ -302,6 +302,113 @@ $current_month = date('Y-m');
     </div>
 </div>
 
+<!-- MODAL POPUP THÔNG BÁO LỊCH TUẦN TRA (BƯỚC 1) -->
+<div class="modal fade" id="modalScheduleNotice" data-bs-backdrop="static" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content border-start border-4 border-warning">
+            <div class="modal-header bg-light">
+                <h5 class="modal-title fw-bold text-warning"><i class="bi bi-bell-fill me-2"></i>Lịch Tuần Tra 5S Hôm Nay</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Danh sách các khu vực bạn được phân công tuần tra trong ngày:</p>
+                <div class="list-group" id="schedule-list-group"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL BÁO CÁO KIỂM TRA CHUẨN OK/NG (BƯỚC 2 & 3) -->
+<div class="modal fade" id="modalChecklistAudit" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold"><i class="bi bi-qr-code-scan me-2"></i>Kiểm Tra 5S Khu Vực</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="formChecklistAudit" onsubmit="submitChecklistAudit(event)">
+                <input type="hidden" name="schedule_id" id="audit_schedule_id">
+                <input type="hidden" name="zone_id" id="audit_scan_zone_id">
+                <input type="hidden" name="qr_code" id="audit_qr_code">
+                <input type="hidden" name="checklist_json" value="[&quot;legacy-audit&quot;]">
+                
+                <div class="modal-body">
+                    <!-- Bước 2: Quét mã QR/NFC -->
+                    <div id="step-verify-location" class="p-3 bg-light rounded text-center mb-3">
+                        <h6><i class="bi bi-geo-alt me-1"></i>Xác Thực Vị Trí Về Mặt Bằng</h6>
+                        <div class="input-group my-2 w-75 mx-auto">
+                            <input type="text" id="input_qr_code" class="form-control" placeholder="Quét hoặc nhập mã QR/NFC khu vực...">
+                            <button type="button" class="btn btn-outline-primary" onclick="verifyLocation()">Xác Nhận</button>
+                        </div>
+                        <small id="verify-status" class="text-danger d-block"></small>
+                    </div>
+
+                    <!-- Bước 3: Form Checklist Đạt/Vi phạm (Ẩn cho đến khi xác thực thành công) -->
+                    <div id="step-audit-content" class="d-none">
+                        <!-- Mẫu chuẩn OK / NG -->
+                        <div class="row text-center mb-3 g-2">
+                            <div class="col-6">
+                                <div class="border rounded p-2 bg-success-subtle">
+                                    <span class="badge bg-success mb-1">Chuẩn OK</span>
+                                    <img src="resources/images/sample_ok.jpg" class="img-fluid rounded border d-block mx-auto" style="max-height:100px" onerror="this.src='https://via.placeholder.com/150x100?text=Mau+OK'">
+                                </div>
+                            </div>
+                            <div class="col-6">
+                                <div class="border rounded p-2 bg-danger-subtle">
+                                    <span class="badge bg-danger mb-1">Chuẩn NG (Lỗi)</span>
+                                    <img src="resources/images/sample_ng.jpg" class="img-fluid rounded border d-block mx-auto" style="max-height:100px" onerror="this.src='https://via.placeholder.com/150x100?text=Mau+NG'">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Chọn Trạng Thái -->
+                        <div class="mb-3 text-center">
+                            <label class="form-label fw-bold d-block">Đánh Giá Khu Vực:</label>
+                            <div class="btn-group w-50" role="group">
+                                <input type="radio" class="btn-check" name="audit_result" id="res_ok" value="OK" checked onchange="toggleAuditForm()">
+                                <label class="btn btn-outline-success" for="res_ok"><i class="bi bi-check-circle me-1"></i>ĐẠT (OK)</label>
+
+                                <input type="radio" class="btn-check" name="audit_result" id="res_ng" value="NG" onchange="toggleAuditForm()">
+                                <label class="btn btn-outline-danger" for="res_ng"><i class="bi bi-exclamation-triangle me-1"></i>VI PHẠM (NG)</label>
+                            </div>
+                        </div>
+
+                        <!-- Phần nhập khi NG -->
+                        <div id="ng-fields" class="d-none border-top pt-3">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Hạng Mục Lỗi</label>
+                                    <select name="s_category" class="form-select">
+                                        <option value="S1">S1 - Sàng lọc</option>
+                                        <option value="S2">S2 - Sắp xếp</option>
+                                        <option value="S3">S3 - Sạch sẽ</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold">Ảnh Minh Họa Lỗi <span class="text-danger">*</span></label>
+                                    <input type="file" name="before_image" id="before_image_input" class="form-control" accept="image/*">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-bold">Mô Tả Vi Phạm <span class="text-danger">*</span></label>
+                                    <textarea name="description" id="ng_desc_input" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-3">
+                            <label class="form-label fw-bold">Ảnh thực tế khu vực <span class="text-danger">*</span></label>
+                            <input type="file" name="actual_image" id="actual_image_input" class="form-control" accept="image/*" capture="environment" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" id="btn-submit-audit" class="btn btn-primary d-none">Gửi Báo Cáo</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
 let globalIssuesData = [];
 let chartInstance = null;
@@ -508,4 +615,112 @@ function submitAssignment(event) {
         }
     });
 }
+
+// Kiểm tra lịch và hiển thị Popup tự động khi nạp trang (Bước 1)
+document.addEventListener("DOMContentLoaded", function() {
+    loadDashboardData();
+    checkDailySchedules();
+});
+
+function checkDailySchedules() {
+    fetch('api/five_s_get_schedules.php')
+        .then(res => res.json())
+        .then(data => {
+            if (data.success && data.schedules.length > 0) {
+                const listGroup = document.getElementById('schedule-list-group');
+                listGroup.innerHTML = '';
+                
+                data.schedules.forEach(s => {
+                    const isDone = s.status === 'completed';
+                    listGroup.innerHTML += `
+                        <div class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${s.zone_name}</strong> (${s.zone_code})
+                                <br><small class="text-muted">Lịch: ${s.schedule_date}</small>
+                            </div>
+                            ${isDone ? '<span class="badge bg-success">Đã hoàn thành</span>' : 
+                            `<button class="btn btn-sm btn-primary" onclick="startAuditProcess(${s.id}, ${s.zone_id})">Kiểm Tra Ngay</button>`}
+                        </div>
+                    `;
+                });
+                
+                new bootstrap.Modal(document.getElementById('modalScheduleNotice')).show();
+            }
+        });
+}
+
+function startAuditProcess(scheduleId, zoneId) {
+    bootstrap.Modal.getInstance(document.getElementById('modalScheduleNotice')).hide();
+    document.getElementById('audit_schedule_id').value = scheduleId;
+    document.getElementById('audit_scan_zone_id').value = zoneId;
+    
+    // Resets
+    document.getElementById('step-verify-location').classList.remove('d-none');
+    document.getElementById('step-audit-content').classList.add('d-none');
+    document.getElementById('btn-submit-audit').classList.add('d-none');
+    document.getElementById('input_qr_code').value = '';
+    document.getElementById('verify-status').innerText = '';
+    
+    new bootstrap.Modal(document.getElementById('modalChecklistAudit')).show();
+}
+
+function verifyLocation() {
+    const zoneId = document.getElementById('audit_scan_zone_id').value;
+    const qrCode = document.getElementById('input_qr_code').value;
+
+    const formData = new FormData();
+    formData.append('zone_id', zoneId);
+    formData.append('qr_code', qrCode);
+
+    fetch('api/five_s_verify_location.php', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                document.getElementById('audit_qr_code').value = qrCode;
+                document.getElementById('step-verify-location').classList.add('d-none');
+                document.getElementById('step-audit-content').classList.remove('d-none');
+                document.getElementById('btn-submit-audit').classList.remove('d-none');
+            } else {
+                document.getElementById('verify-status').innerText = res.message;
+            }
+        });
+}
+
+function toggleAuditForm() {
+    const isNG = document.getElementById('res_ng').checked;
+    const ngFields = document.getElementById('ng-fields');
+    const imgInput = document.getElementById('before_image_input');
+    const descInput = document.getElementById('ng_desc_input');
+    const actualImageInput = document.getElementById('actual_image_input');
+
+    if (isNG) {
+        ngFields.classList.remove('d-none');
+        imgInput.required = true;
+        descInput.required = true;
+        actualImageInput.required = false;
+    } else {
+        ngFields.classList.add('d-none');
+        imgInput.required = false;
+        descInput.required = false;
+        actualImageInput.required = true;
+    }
+}
+
+function submitChecklistAudit(event) {
+    event.preventDefault();
+    const formData = new FormData(document.getElementById('formChecklistAudit'));
+
+    fetch('api/five_s_save_audit_full.php', { method: 'POST', body: formData })
+        .then(res => res.json())
+        .then(res => {
+            if (res.success) {
+                bootstrap.Modal.getInstance(document.getElementById('modalChecklistAudit')).hide();
+                loadDashboardData();
+                alert("Đã ghi nhận kết quả thành công!");
+            } else {
+                alert(res.message);
+            }
+        });
+}
+
 </script>
