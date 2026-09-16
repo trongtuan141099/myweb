@@ -276,7 +276,8 @@ ESP32 phải kết nối được cùng mạng LAN với máy chạy Apache và 
 5. Người chịu trách nhiệm khu vực đó sẽ nhận được thông báo và sắp xếp nhân viên thực hiện dọn dẹp, sau khi vệ sinh hoàn tất thì cập nhật hình ảnh sau khi đối ứng hoàn tất.
 6. Trang dashboard bao gồm Toàn bộ dữ liệu vi phạm sẽ được tổng hợp lại để thống kê các lỗi thường xuyên phát sinh, khu vực hay phát sinh, tần suất khu vực nhân viên chịu trách nhiệm quản lý vi phạm và hình ảnh biểu ngữ các hoạt động 5S đang được duy trì thực hiện
 
-# LƯU TRÌNH KIỂM TRA & XỬ LÝ VI PHẠM 5S
+# LƯU TRÌNH MODULE KIỂM TRA & THEO DÕI 5S
+Quản lý sẽ thiết lập khu vực và phân công nhân viên phụ trách kiểm tra và người chịu trách nhiệm khu vực
 
 ### 1. Nhận thông báo lịch tuần tra
 * **Hệ thống:** Tự động gửi thông báo (Notification/Popup) cho nhân viên phụ trách khi đăng nhập.
@@ -305,3 +306,9 @@ ESP32 phải kết nối được cùng mạng LAN với máy chạy Apache và 
   * Tần suất vi phạm theo từng người chịu trách nhiệm.
 * **Truyền thông:** Hiển thị hình ảnh/biểu ngữ các hoạt động 5S đang duy trì tại nhà xưởng.
 
+### 7. Đề xuất cải tiến
+* **Nếu nhân viên có đề xuất, ý kiến cải tiến:**
+  * Đăng ký, cập nhật thông tin đề xuất cải tiến
+  * Quản lý nhận được thông báo về ý kiến, kiểm tra nội dung
+  * Sau khi xác nhận nội dung quản lý lựa chọn hành động thực thi tương ứng
+  * Sau khi hoàn thành thực hiện cải tiến quản lý chuyển trạng thái sang "Hoàn thành" sau đó cập nhật hình ảnh sau khi hoàn tất

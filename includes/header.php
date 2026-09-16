@@ -81,7 +81,7 @@
           function renderFiveSNotifications(data) {
             const schedules = data.schedules || [];
             const notifications = data.notifications || [];
-            const pendingSchedules = schedules.filter(item => item.status !== 'completed');
+            const pendingSchedules = schedules.filter(item => Number(item.can_audit) === 1);
             const total = pendingSchedules.length + notifications.length;
             const count = document.getElementById('notificationCount');
             const list = document.getElementById('notificationList');

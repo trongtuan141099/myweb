@@ -33,12 +33,14 @@ try {
 
     // 1. Kiểm tra lịch tuần tra
     if ($schedule_id > 0) {
-        $stmtSchedule = $conn->prepare("SELECT id FROM five_s_schedules WHERE id = ? AND zone_id = ?");
-        $stmtSchedule->bind_param("ii", $schedule_id, $zone_id);
+        $stmtSchedule = $conn->prepare("SELECT id FROM five_s_schedules
+                                        WHERE id = ? AND zone_id = ? AND inspector_id = ?
+                                          AND schedule_date = ? AND status = 'pending'");
+        $stmtSchedule->bind_param("iiis", $schedule_id, $zone_id, $inspector_id, $audit_date);
         $stmtSchedule->execute();
         if (!$stmtSchedule->get_result()->fetch_assoc()) {
             ob_clean();
-            echo json_encode(['success' => false, 'message' => 'Lịch kiểm tra không hợp lệ hoặc đã hoàn thành']);
+            echo json_encode(['success' => false, 'message' => 'Chỉ được thực hiện phiếu kiểm tra đang chờ trong ngày hôm nay']);
             exit;
         }
     }
@@ -84,6 +86,7 @@ try {
     $image_url = 'documents/5s_images/' . $file_name;
 
     $conn->begin_transaction();
+    $transactionStarted = true;
 
     // 4. Kiểm tra sự tồn tại của cột actual_image trước khi lưu
     $checkCol = $conn->query("SHOW COLUMNS FROM five_s_audits LIKE 'actual_image'");
@@ -149,7 +152,7 @@ try {
     echo json_encode(['success' => true, 'message' => 'Lưu báo cáo kiểm tra thành công']);
 
 } catch (Exception $e) {
-    if (isset($conn) && $conn->inTransaction()) {
+    if (isset($conn) && !empty($transactionStarted)) {
         $conn->rollback();
     }
     ob_clean();

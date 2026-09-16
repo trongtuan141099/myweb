@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS five_s_schedules (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 ALTER TABLE five_s_zones ADD COLUMN qr_code_hash varchar(255) DEFAULT NULL;
+ALTER TABLE five_s_zones ADD COLUMN ok_reference_image varchar(255) DEFAULT NULL;
+ALTER TABLE five_s_zones ADD COLUMN ng_reference_image varchar(255) DEFAULT NULL;
 ALTER TABLE five_s_audits ADD COLUMN checklist_json text DEFAULT NULL;
 ALTER TABLE five_s_audits ADD COLUMN actual_image varchar(255) DEFAULT NULL;
 

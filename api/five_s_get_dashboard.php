@@ -14,7 +14,7 @@ $month = isset($_GET['month']) ? trim($_GET['month']) : date('Y-m');
 try {
     // 1. Lấy danh sách khu vực 5S
     $zones = [];
-    $resZones = $conn->query("SELECT id, zone_code, zone_name, layout_image FROM five_s_zones ORDER BY id ASC");
+    $resZones = $conn->query("SELECT * FROM five_s_zones ORDER BY id ASC");
     while ($row = $resZones->fetch_assoc()) {
         $zones[] = $row;
     }

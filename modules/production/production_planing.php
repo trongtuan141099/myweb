@@ -1,6 +1,3 @@
-<!-- BỔ SUNG CDN CẦN THIẾT NẾU INDEX CHƯA CÓ -->
-<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
-
 <style>
 /* Dashboard Professional Custom CSS */
 .dash-container { 

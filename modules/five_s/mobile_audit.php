@@ -2,6 +2,17 @@
 if (!defined('INDEX_AUTH')) { define('INDEX_AUTH', true); }
 ?>
 
+<style>
+    .schedule-toolbar { position: sticky; top: 0; z-index: 2; background: var(--bg-main); }
+    .schedule-section-title { font-size: .78rem; letter-spacing: .04em; text-transform: uppercase; }
+    .schedule-locked { background: #f1f3f5; color: #7b8087; }
+    .schedule-locked .text-muted { color: #8d939a !important; }
+    .reference-image { display: block; width: 100%; max-height: 180px; object-fit: contain; border-radius: 4px; background: var(--bg-main); }
+    .schedule-filter-slider { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .25rem; scrollbar-width: thin; }
+    .schedule-filter-slider .btn { flex: 0 0 auto; white-space: nowrap; }
+    .schedule-filter-slider .btn.active { color: #fff; background: var(--primary); border-color: var(--primary); }
+    @media (max-width: 575.98px) { .schedule-row { align-items: flex-start !important; flex-direction: column; } .schedule-row .btn, .schedule-row .badge { align-self: stretch; text-align: center; } }
+</style>
 <div class="container-fluid py-3" style="max-width: 760px; margin: 0 auto;">
     <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
         <div>
@@ -11,9 +22,29 @@ if (!defined('INDEX_AUTH')) { define('INDEX_AUTH', true); }
         <button class="btn btn-outline-primary btn-sm" type="button" onclick="loadSchedules()"><i class="bi bi-arrow-clockwise"></i></button>
     </div>
 
-    <div id="notification-box" class="alert alert-warning d-none"></div>
-    <div id="schedule-list" class="list-group shadow-sm"></div>
-    <div id="empty-state" class="text-center text-muted py-5 d-none">Hôm nay không có lịch tuần tra được phân công.</div>
+    <div class="row g-2 mb-3">
+        <div class="col-6 col-sm-3"><div class="card border-0 shadow-sm h-100"><div class="card-body py-2"><div class="small text-muted">Cần làm hôm nay</div><div class="h4 mb-0 text-primary" id="today-count">0</div></div></div></div>
+        <div class="col-6 col-sm-3"><div class="card border-0 shadow-sm h-100"><div class="card-body py-2"><div class="small text-muted">Chờ thực hiện</div><div class="h4 mb-0 text-warning" id="upcoming-count">0</div></div></div></div>
+        <div class="col-6 col-sm-3"><div class="card border-0 shadow-sm h-100"><div class="card-body py-2"><div class="small text-muted">Đã hoàn thành</div><div class="h4 mb-0 text-success" id="completed-count">0</div></div></div></div>
+        <div class="col-6 col-sm-3"><div class="card border-0 shadow-sm h-100"><div class="card-body py-2"><div class="small text-muted">Quá hạn</div><div class="h4 mb-0 text-secondary" id="expired-count">0</div></div></div></div>
+    </div>
+
+    <div class="schedule-toolbar pb-2">
+        <div id="notification-box" class="alert alert-warning d-none"></div>
+        <div class="row g-2">
+            <div class="col-12 col-sm-7"><label class="visually-hidden" for="schedule-search">Tìm khu vực hoặc mã thiết bị</label><input id="schedule-search" class="form-control" type="search" placeholder="Tìm khu vực, mã thiết bị..." oninput="renderSchedules()"></div>
+            <div class="col-12 col-sm-5"><label class="form-label small mb-1" for="schedule-date-filter">Lọc theo thời gian</label><input id="schedule-date-filter" class="form-control" type="date" onchange="renderSchedules()"></div>
+        </div>
+        <div class="schedule-filter-slider mt-2" role="tablist" aria-label="Lọc nhanh công việc">
+            <button type="button" class="btn btn-sm btn-primary active" data-filter="today" onclick="setQuickFilter(this)">Hôm nay</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="upcoming" onclick="setQuickFilter(this)">Vài ngày tới</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="completed" onclick="setQuickFilter(this)">Đã hoàn thành</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="expired" onclick="setQuickFilter(this)">Quá hạn</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-filter="all" onclick="setQuickFilter(this)">Tất cả</button>
+        </div>
+    </div>
+    <div id="schedule-list" class="mt-2"></div>
+    <div id="empty-state" class="text-center text-muted py-5 d-none">Chưa có công việc kiểm tra 5S được phân công.</div>
 </div>
 
 <div class="modal fade" id="auditModal" tabindex="-1" aria-hidden="true">
@@ -39,9 +70,25 @@ if (!defined('INDEX_AUTH')) { define('INDEX_AUTH', true); }
                     </div>
                     
                     <div id="audit-panel" class="d-none">
+                        <div class="row g-3 mb-3" id="reference-images">
+                            <div class="col-md-6">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="fw-bold text-success mb-2"><i class="bi bi-check-circle me-1"></i>Hình mẫu OK</div>
+                                    <img id="ok-reference-image" class="reference-image d-none" alt="Hình mẫu khu vực đạt chuẩn OK">
+                                    <div id="ok-reference-empty" class="small text-muted">Chưa cấu hình hình mẫu OK cho khu vực này.</div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="border rounded p-2 h-100">
+                                    <div class="fw-bold text-danger mb-2"><i class="bi bi-x-circle me-1"></i>Hình mẫu NG</div>
+                                    <img id="ng-reference-image" class="reference-image d-none" alt="Hình mẫu khu vực có lỗi NG">
+                                    <div id="ng-reference-empty" class="small text-muted">Chưa cấu hình hình mẫu NG cho khu vực này.</div>
+                                </div>
+                            </div>
+                        </div>
                         <div class="row g-2 text-center mb-3">
-                            <div class="col-6"><div class="border rounded p-2 bg-success-subtle"><b class="text-success">Chuẩn OK</b><div class="small">Khu vực sạch, đúng vị trí, đủ checklist</div></div></div>
-                            <div class="col-6"><div class="border rounded p-2 bg-danger-subtle"><b class="text-danger">Chuẩn NG</b><div class="small">Có lỗi cần ghi nhận và xử lý</div></div></div>
+                            <div class="col-6"><div class="border rounded p-2 bg-success-subtle"><b class="text-success">OK</b><div class="small">Khu vực sạch, đúng vị trí, đủ checklist</div></div></div>
+                            <div class="col-6"><div class="border rounded p-2 bg-danger-subtle"><b class="text-danger">NG</b><div class="small">Có lỗi cần ghi nhận và xử lý</div></div></div>
                         </div>
                         
                         <div class="border rounded p-3 mb-3">
@@ -96,43 +143,88 @@ if (!defined('INDEX_AUTH')) { define('INDEX_AUTH', true); }
 
 <script>
 let auditModal;
+let schedules = [];
+let quickFilter = 'today';
 document.addEventListener('DOMContentLoaded', loadSchedules);
 
 function loadSchedules() {
     fetch('api/five_s_get_schedules.php')
         .then(response => response.json())
         .then(data => {
-            const list = document.getElementById('schedule-list');
-            const empty = document.getElementById('empty-state');
             const notice = document.getElementById('notification-box');
-            
-            list.innerHTML = ''; 
+            schedules = data.schedules || [];
             notice.classList.toggle('d-none', !data.notifications || data.notifications.length === 0);
             
             if (data.notifications && data.notifications.length) {
                 notice.textContent = data.notifications[0].message;
             }
-            
-            empty.classList.toggle('d-none', data.schedules && data.schedules.length > 0);
-            
-            (data.schedules || []).forEach(schedule => {
+            updateScheduleCounts();
+            renderSchedules();
+        })
+        .catch(err => console.error('Lỗi nạp lịch tuần tra:', err));
+}
+
+function renderSchedules() {
+            const list = document.getElementById('schedule-list');
+            const empty = document.getElementById('empty-state');
+            const dateFilter = document.getElementById('schedule-date-filter').value;
+            const search = document.getElementById('schedule-search').value.trim().toLowerCase();
+            list.innerHTML = '';
+            const filtered = schedules.filter(schedule => {
+                const state = schedule.work_state;
+                const matchesFilter = quickFilter === 'all' || (quickFilter === 'today' && Number(schedule.can_audit) === 1) || state === quickFilter;
+                const matchesDate = !dateFilter || schedule.schedule_date === dateFilter;
+                const haystack = `${schedule.zone_name} ${schedule.zone_code}`.toLowerCase();
+                return matchesFilter && matchesDate && haystack.includes(search);
+            });
+            empty.classList.toggle('d-none', filtered.length > 0);
+            filtered.forEach(schedule => {
                 const row = document.createElement('div'); 
-                row.className = 'list-group-item d-flex justify-content-between align-items-center gap-3';
-                row.innerHTML = `<div><strong>${escapeHtml(schedule.zone_name)}</strong><div class="small text-muted">${escapeHtml(schedule.zone_code)} · ${schedule.schedule_date}</div></div>`;
+                const canAudit = Number(schedule.can_audit) === 1;
+                const statusLabel = schedule.work_state === 'completed' ? 'Đã hoàn thành' : schedule.work_state === 'upcoming' ? 'Chờ thực hiện' : schedule.work_state === 'expired' ? 'Đã khóa quá hạn' : 'Cần làm hôm nay';
+                const statusClass = schedule.work_state === 'completed' ? 'bg-success' : schedule.work_state === 'expired' ? 'bg-secondary' : canAudit ? 'bg-warning text-dark' : 'bg-light text-secondary border';
+                row.className = `list-group-item d-flex justify-content-between gap-3 schedule-row ${canAudit || schedule.work_state === 'completed' ? '' : 'schedule-locked'}`;
+                row.innerHTML = `<div><strong>${escapeHtml(schedule.zone_name)}</strong><div class="small text-muted">${escapeHtml(schedule.zone_code)} · ${formatScheduleDate(schedule.schedule_date)}</div></div>`;
                 
-                if (schedule.status === 'completed') {
-                    row.innerHTML += '<span class="badge bg-success">Đã hoàn thành</span>';
-                } else { 
+                if (canAudit) { 
                     const button = document.createElement('button'); 
                     button.className = 'btn btn-primary btn-sm'; 
                     button.textContent = 'Kiểm tra ngay'; 
                     button.onclick = () => openAudit(schedule); 
                     row.appendChild(button); 
+                } else {
+                    const badge = document.createElement('span');
+                    badge.className = `badge ${statusClass}`;
+                    badge.textContent = statusLabel;
+                    row.appendChild(badge);
                 }
                 list.appendChild(row);
             });
-        })
-        .catch(err => console.error('Lỗi nạp lịch tuần tra:', err));
+}
+
+function setQuickFilter(button) {
+    quickFilter = button.dataset.filter;
+    document.querySelectorAll('.schedule-filter-slider .btn').forEach(item => {
+        item.classList.toggle('active', item === button);
+        item.classList.toggle('btn-primary', item === button);
+        item.classList.toggle('btn-outline-secondary', item !== button);
+    });
+    renderSchedules();
+}
+
+function updateScheduleCounts() {
+    const counts = schedules.reduce((result, schedule) => {
+        const state = schedule.work_state;
+        if (Number(schedule.can_audit) === 1) result.today += 1;
+        if (state === 'upcoming') result.upcoming += 1;
+        if (state === 'completed') result.completed += 1;
+        if (state === 'expired') result.expired += 1;
+        return result;
+    }, { today: 0, upcoming: 0, completed: 0, expired: 0 });
+    document.getElementById('today-count').textContent = counts.today;
+    document.getElementById('upcoming-count').textContent = counts.upcoming;
+    document.getElementById('completed-count').textContent = counts.completed;
+    document.getElementById('expired-count').textContent = counts.expired;
 }
 
 function openAudit(schedule) {
@@ -140,6 +232,8 @@ function openAudit(schedule) {
     document.getElementById('schedule_id').value = schedule.id; 
     document.getElementById('zone_id').value = schedule.zone_id; 
     document.getElementById('audit-zone-name').textContent = schedule.zone_name;
+    setReferenceImage('ok-reference-image', 'ok-reference-empty', schedule.ok_reference_image);
+    setReferenceImage('ng-reference-image', 'ng-reference-empty', schedule.ng_reference_image);
     
     document.getElementById('verify-panel').classList.remove('d-none'); 
     document.getElementById('audit-panel').classList.add('d-none'); 
@@ -188,6 +282,25 @@ function toggleResult() {
     ngFields.classList.toggle('d-none', !isNg);
     auditImage.name = isNg ? 'before_image' : 'actual_image';
     description.required = isNg;
+}
+
+function setReferenceImage(imageId, emptyId, source) {
+    const image = document.getElementById(imageId);
+    const empty = document.getElementById(emptyId);
+    const hasImage = typeof source === 'string' && source.trim() !== '';
+    image.classList.toggle('d-none', !hasImage);
+    empty.classList.toggle('d-none', hasImage);
+    if (hasImage) {
+        image.src = source;
+    } else {
+        image.removeAttribute('src');
+    }
+}
+
+function formatScheduleDate(value) {
+    if (!value) return '';
+    const parts = value.split('-');
+    return parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : value;
 }
 
 function submitAudit(event) {

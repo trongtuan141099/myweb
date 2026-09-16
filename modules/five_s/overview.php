@@ -63,15 +63,15 @@ $current_month = date('Y-m');
         <div class="d-flex align-items-center gap-2">
             <label for="filter_month" class="form-label mb-0 fw-bold small text-nowrap">Chọn tháng:</label>
             <input type="month" id="filter_month" class="form-control form-control-sm" value="<?php echo $current_month; ?>" onchange="loadDashboardData()">
-            <a href="index.php?mainpage=five_s&subpage=list" class="btn btn-outline-primary btn-sm text-nowrap">
+            <!-- <a href="index.php?mainpage=five_s&subpage=list" class="btn btn-outline-primary btn-sm text-nowrap">
                 <i class="bi bi-table me-1"></i>Xem Danh Sách Chi Tiết
-            </a>
+            </a> -->
             <button class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNewAudit">
-                <i class="bi bi-plus-lg me-1"></i>Tạo Phiếu Kiểm Tra
+                <i class="bi bi-plus-lg me-1"></i>Báo cáo Patron 5S
             </button>
-            <button class="btn btn-outline-secondary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAssignment">
+            <!-- <button class="btn btn-outline-secondary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAssignment">
                 <i class="bi bi-person-gear me-1"></i>Phân Công
-            </button>
+            </button> -->
         </div>
     </div>
 
@@ -626,20 +626,19 @@ function checkDailySchedules() {
     fetch('api/five_s_get_schedules.php')
         .then(res => res.json())
         .then(data => {
-            if (data.success && data.schedules.length > 0) {
+            const todaySchedules = (data.schedules || []).filter(schedule => Number(schedule.can_audit) === 1);
+            if (data.success && todaySchedules.length > 0) {
                 const listGroup = document.getElementById('schedule-list-group');
                 listGroup.innerHTML = '';
                 
-                data.schedules.forEach(s => {
-                    const isDone = s.status === 'completed';
+                todaySchedules.forEach(s => {
                     listGroup.innerHTML += `
                         <div class="list-group-item d-flex justify-content-between align-items-center">
                             <div>
                                 <strong>${s.zone_name}</strong> (${s.zone_code})
                                 <br><small class="text-muted">Lịch: ${s.schedule_date}</small>
                             </div>
-                            ${isDone ? '<span class="badge bg-success">Đã hoàn thành</span>' : 
-                            `<button class="btn btn-sm btn-primary" onclick="startAuditProcess(${s.id}, ${s.zone_id})">Kiểm Tra Ngay</button>`}
+                            <button class="btn btn-sm btn-primary" onclick="startAuditProcess(${s.id}, ${s.zone_id})">Kiểm Tra Ngay</button>
                         </div>
                     `;
                 });

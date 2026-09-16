@@ -582,9 +582,31 @@
         <span class="label">Công việc kiểm tra</span>
       </a>
     </div>
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=five_s&subpage=settings" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'settings') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">settings</span>
+        <span class="label">Thiết lập 5S</span>
+      </a>
+    </div>
   </div>
 
-    <!-- 8. Cài đặt hệ thống -->
+      <!-- 8. Tiện ích -->
+  <div class="has-submenu <?= ($mainpage === 'utilities') ? 'open' : '' ?>">
+    <a href="/myweb/index.php?mainpage=utilities&subpage=color_mixer" class="menu-item menu-parent <?= ($mainpage === 'utilities') ? 'active' : '' ?>">
+      <span class="material-icons">settings</span>
+      <span class="label">Tiện ích</span>
+      <span class="material-icons arrow-icon">expand_more</span>
+    </a>
+    
+    <div class="submenu">
+      <a href="/myweb/index.php?mainpage=utilities&subpage=color_mixer" class="submenu-item <?= ($mainpage === 'utilities' && $subpage === 'color_mixer') ? 'active' : '' ?>">
+        <span class="material-icons sub-icon">list</span>
+        <span class="label">Tốc độ trộn màu</span>
+      </a>
+    </div>
+  </div>
+
+    <!-- 9. Cài đặt hệ thống -->
   <div class="has-submenu <?= ($mainpage === 'system') ? 'open' : '' ?>">
     <a href="#" class="menu-item menu-parent <?= ($mainpage === 'system') ? 'active' : '' ?>">
       <span class="material-icons">settings</span>
