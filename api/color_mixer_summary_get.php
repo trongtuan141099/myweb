@@ -25,15 +25,28 @@ try {
 
     $whereSql = implode(" AND ", $where);
 
-    // 1. LẤY DANH SÁCH CÁC CỘT (SIZE ỐNG + TỐC ĐỘ KÉO) DUY NHẤT
-    $sqlCols = "SELECT DISTINCT pipe_size, hauler_speed FROM color_mixer_settings WHERE $whereSql ORDER BY pipe_size ASC, hauler_speed ASC";
+    // 1. LẤY DANH SÁCH CÁC CỘT (SIZE ỐNG + TỐC ĐỘ KÉO) DUY NHẤT, SẮP XẾP SỐ HỌC
+    $sqlCols = "SELECT DISTINCT pipe_size, hauler_speed 
+                FROM color_mixer_settings 
+                WHERE $whereSql 
+                ORDER BY pipe_size ASC, CAST(hauler_speed AS DECIMAL(10,2)) ASC";
     $stmtCols = $conn->prepare($sqlCols);
     if ($types) $stmtCols->bind_param($types, ...$params);
     $stmtCols->execute();
-    $columns = $stmtCols->get_result()->fetch_all(MYSQLI_ASSOC);
+    $colsRaw = $stmtCols->get_result()->fetch_all(MYSQLI_ASSOC);
+
+    $columns = [];
+    foreach ($colsRaw as $c) {
+        $columns[] = [
+            'pipe_size' => $c['pipe_size'],
+            'hauler_speed' => number_format((float)$c['hauler_speed'], 2, '.', '')
+        ];
+    }
 
     // 2. LẤY TOÀN BỘ DỮ LIỆU TỐC ĐỘ THEO MÃ MÀU
-    $sqlData = "SELECT pipe_size, hauler_speed, color_code, $mixer_type AS speed_val FROM color_mixer_settings WHERE $whereSql";
+    $sqlData = "SELECT pipe_size, hauler_speed, color_code, $mixer_type AS speed_val 
+                FROM color_mixer_settings 
+                WHERE $whereSql";
     $stmtData = $conn->prepare($sqlData);
     if ($types) $stmtData->bind_param($types, ...$params);
     $stmtData->execute();
@@ -42,15 +55,25 @@ try {
     // Ghép dữ liệu thành mảng tra cứu dạng HashMap: Key = "Size_Speed_Color"
     $matrixData = [];
     foreach ($rows as $r) {
-        $key = $r['pipe_size'] . '_' . $r['hauler_speed'] . '_' . $r['color_code'];
+        $speedFormatted = number_format((float)$r['hauler_speed'], 2, '.', '');
+        $key = $r['pipe_size'] . '_' . $speedFormatted . '_' . $r['color_code'];
         $matrixData[$key] = $r['speed_val'];
     }
+
+    // 3. LẤY DANH SÁCH MÃ MÀU HIỆN CÓ
+    $sqlColors = "SELECT DISTINCT color_code FROM color_mixer_settings WHERE $whereSql ORDER BY color_code ASC";
+    $stmtColors = $conn->prepare($sqlColors);
+    if ($types) $stmtColors->bind_param($types, ...$params);
+    $stmtColors->execute();
+    $colorsRaw = $stmtColors->get_result()->fetch_all(MYSQLI_ASSOC);
+    $colorCodes = array_column($colorsRaw, 'color_code');
 
     ob_clean();
     echo json_encode([
         'success' => true,
         'columns' => $columns,
-        'matrixData' => $matrixData
+        'matrixData' => $matrixData,
+        'colorCodes' => $colorCodes
     ]);
 
 } catch (Exception $e) {

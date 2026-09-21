@@ -41,7 +41,7 @@ function initTree() {
 // Gọi API lấy danh sách file
 async function fetchDocuments() {
     try {
-        const res = await fetch('/myweb/api/get_documents.php');
+        const res = await fetch('api/get_documents.php');
         allDocuments = await res.json();
         initTree();
     } catch (error) {
@@ -190,7 +190,7 @@ async function handleSaveDocument(e) {
         formData.append("file", fileInput.files[0]);
     }
 
-    const apiUrl = isEdit ? '/myweb/api/edit_document.php' : '/myweb/api/upload_document.php';
+    const apiUrl = isEdit ? 'api/edit_document.php' : 'api/upload_document.php';
 
     try {
         const res = await fetch(apiUrl, { method: 'POST', body: formData });
@@ -237,7 +237,7 @@ async function confirmDeleteDocument() {
     formData.append("id", currentDoc.id);
 
     try {
-        const res = await fetch('/myweb/api/delete_document.php', { method: 'POST', body: formData });
+        const res = await fetch('api/delete_document.php', { method: 'POST', body: formData });
         const result = await res.json();
 
         if (result.success) {

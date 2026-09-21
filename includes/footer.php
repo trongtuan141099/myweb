@@ -1,15 +1,14 @@
-<!-- FOOTER ĐÓNG VÙNG MAIN-WRAPPER -->
-      <footer class="main-footer" style="padding: 12px 20px; font-size: 12px; color: var(--text-muted); border-top: 1px solid var(--border-color); background: var(--bg-card); display: flex; justify-content: space-between;">
-        <span>© 2026 Plastic Group - Factory Management</span>
-        <span>Version 1.0 | Developed by 3T</span>
-      </footer>
-    </div> <!-- END MAIN-WRAPPER -->
-  </div> <!-- END WRAPPER -->
+  </main> <!-- END CONTENT-AREA -->
 
-    </div> <!-- Thẻ đóng cho .main-wrapper -->
-  </div> <!-- Thẻ đóng cho .app-container -->
-  <!-- <script src="../js/main.js"></script>
-  <script src="../resources/js/bootstrap.bundle.min.js"></script> -->
-  <script src="js/main.js"></script>
+  <!-- FOOTER -->
+  <footer class="main-footer">
+    <span>&copy; <?= date('Y') ?> DX Plastic Group &mdash; Factory Management System</span>
+    <span>Version 2.0 &bull; Industrial Standard</span>
+  </footer>
+</div> <!-- END MAIN-WRAPPER -->
+</div> <!-- END APP-CONTAINER -->
+
+<!-- System Scripts -->
+<script src="js/main.js"></script>
 </body>
 </html>

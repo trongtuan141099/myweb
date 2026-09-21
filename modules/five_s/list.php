@@ -6,19 +6,22 @@ if (!defined('INDEX_AUTH')) {
 $current_month = date('Y-m');
 ?>
 
-<div class="container-fluid py-3">
+<div class="app-page-wrapper">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div class="app-page-header">
         <div>
-            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-list-check me-2"></i>Danh Sách Ghi Nhận Kiểm Tra 5S Chi Tiết</h4>
-            <p class="text-muted small mb-0">Quản lý, tìm kiếm và xóa thông tin các lượt ghi nhận vi phạm 5S</p>
+            <h1 class="app-page-title">
+                <span class="material-icons">rule</span>
+                Danh Sách Ghi Nhận Kiểm Tra 5S Chi Tiết
+            </h1>
+            <p class="app-page-subtitle">Quản lý, tìm kiếm và đối ứng các lượt ghi nhận vi phạm 5S</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <a href="index.php?mainpage=five_s&subpage=overview" class="btn btn-outline-secondary btn-sm text-nowrap">
-                <i class="bi bi-arrow-left me-1"></i>Quay Về Dashboard
+        <div class="app-page-actions">
+            <a href="index.php?mainpage=five_s&subpage=overview" class="app-btn app-btn-secondary">
+                <span class="material-icons">arrow_back</span> Về Dashboard 5S
             </a>
-            <input type="month" id="filter_month" class="form-control form-control-sm" value="<?php echo $current_month; ?>" onchange="loadListData()">
-            <select id="filter_status" class="form-select form-select-sm w-auto" onchange="renderTable()">
+            <input type="month" id="filter_month" class="app-form-control" value="<?php echo $current_month; ?>" onchange="loadListData()">
+            <select id="filter_status" class="app-form-select" onchange="renderTable()">
                 <option value="all">Tất cả trạng thái</option>
                 <option value="pending">Chưa khắc phục</option>
                 <option value="resolved">Đã khắc phục</option>
@@ -27,29 +30,27 @@ $current_month = date('Y-m');
     </div>
 
     <!-- Bảng Dữ Liệu Chi Tiết -->
-    <div class="card border-0 shadow-sm">
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>#</th>
-                            <th>Ngày kiểm tra</th>
-                            <th>Khu vực</th>
-                            <th>Tiêu chí 5S</th>
-                            <th>Mô tả vi phạm</th>
-                            <th>Ảnh trước</th>
-                            <th>Người phụ trách</th>
-                            <th>Trạng thái</th>
-                            <th>Ảnh sau</th>
-                            <th class="text-center">Thao tác</th>
-                        </tr>
-                    </thead>
-                    <tbody id="table-list-body">
-                        <!-- Data render Javascript -->
-                    </tbody>
-                </table>
-            </div>
+    <div class="app-card">
+        <div class="app-table-container">
+            <table class="app-table table-sticky-header">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Ngày kiểm tra</th>
+                        <th>Khu vực</th>
+                        <th>Tiêu chí 5S</th>
+                        <th>Mô tả vi phạm</th>
+                        <th>Ảnh trước</th>
+                        <th>Người phụ trách</th>
+                        <th>Trạng thái</th>
+                        <th>Ảnh sau</th>
+                        <th class="text-center">Thao tác</th>
+                    </tr>
+                </thead>
+                <tbody id="table-list-body">
+                    <!-- Data render Javascript -->
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -85,25 +86,34 @@ function renderTable() {
 
     filtered.forEach((item, index) => {
         const isResolved = item.status === 'resolved';
+        const badgeClass = isResolved ? 'badge-ok' : 'badge-ng';
+        const statusText = isResolved ? 'Đã khắc phục' : 'Chờ xử lý';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${index + 1}</td>
+            <td><b>${index + 1}</b></td>
             <td>${item.created_at}</td>
-            <td><span class="badge bg-secondary">${item.zone_name}</span></td>
-            <td><strong class="text-primary">${item.s_category}</strong></td>
-            <td>${item.description}</td>
-            <td><a href="${item.before_image}" target="_blank"><img src="${item.before_image}" class="rounded border" width="45" height="45"></a></td>
-            <td>${item.assignee_name || 'Chưa gán'}</td>
-            <td><span class="badge ${isResolved ? 'bg-success' : 'bg-danger'}">${isResolved ? 'Đã khắc phục' : 'Chờ xử lý'}</span></td>
-            <td>${item.after_image ? `<a href="${item.after_image}" target="_blank"><img src="${item.after_image}" class="rounded border" width="45" height="45"></a>` : '<span class="text-muted small">N/A</span>'}</td>
+            <td><span class="app-badge badge-stopped">${escapeHtml(item.zone_name)}</span></td>
+            <td><strong class="text-primary">${escapeHtml(item.s_category)}</strong></td>
+            <td>${escapeHtml(item.description)}</td>
+            <td><a href="${item.before_image}" target="_blank"><img src="${item.before_image}" class="rounded border" width="40" height="40" style="object-fit:cover;"></a></td>
+            <td>${escapeHtml(item.assignee_name || 'Chưa gán')}</td>
+            <td><span class="app-badge ${badgeClass}">${statusText}</span></td>
+            <td>${item.after_image ? `<a href="${item.after_image}" target="_blank"><img src="${item.after_image}" class="rounded border" width="40" height="40" style="object-fit:cover;"></a>` : '<span class="text-muted small">N/A</span>'}</td>
             <td class="text-center">
-                <button class="btn btn-sm btn-outline-danger" title="Xóa dòng này" onclick="deleteIssue(${item.id})">
-                    <i class="bi bi-trash"></i> Xóa
+                <button class="app-btn app-btn-danger app-btn-sm" title="Xóa dòng này" onclick="deleteIssue(${item.id})">
+                    <span class="material-icons" style="font-size:15px;">delete</span> Xóa
                 </button>
             </td>
         `;
         tbody.appendChild(tr);
     });
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text || '';
+    return div.innerHTML;
 }
 
 function deleteIssue(issueId) {

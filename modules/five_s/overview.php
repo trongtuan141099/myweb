@@ -53,25 +53,24 @@ $current_month = date('Y-m');
 
 <script src="resources/apexcharts/apexcharts.min.js"></script>
 
-<div class="container-fluid py-3">
+<div class="app-page-wrapper">
     <!-- Header -->
-    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <div class="app-page-header">
         <div>
-            <h4 class="fw-bold mb-1 text-primary"><i class="bi bi-shield-check me-2"></i>Tổng Quan 5S</h4>
-            <p class="text-muted small mb-0">Hiển thị các điểm lỗi 5S phát sinh chưa được xử lý trên sơ đồ trực quan</p>
+            <h1 class="app-page-title">
+                <span class="material-icons">verified</span>
+                Tổng Quan 5S Nhà Máy
+            </h1>
+            <p class="app-page-subtitle">Hiển thị các điểm lỗi 5S phát sinh chưa được xử lý trên sơ đồ trực quan</p>
         </div>
-        <div class="d-flex align-items-center gap-2">
-            <label for="filter_month" class="form-label mb-0 fw-bold small text-nowrap">Chọn tháng:</label>
-            <input type="month" id="filter_month" class="form-control form-control-sm" value="<?php echo $current_month; ?>" onchange="loadDashboardData()">
-            <!-- <a href="index.php?mainpage=five_s&subpage=list" class="btn btn-outline-primary btn-sm text-nowrap">
-                <i class="bi bi-table me-1"></i>Xem Danh Sách Chi Tiết
-            </a> -->
-            <button class="btn btn-primary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalNewAudit">
-                <i class="bi bi-plus-lg me-1"></i>Báo cáo Patron 5S
+        <div class="app-page-actions">
+            <div class="d-flex align-items-center gap-1">
+                <label for="filter_month" class="app-form-label mb-0 text-nowrap">Chọn tháng:</label>
+                <input type="month" id="filter_month" class="app-form-control" value="<?php echo $current_month; ?>" onchange="loadDashboardData()">
+            </div>
+            <button class="app-btn app-btn-primary" data-bs-toggle="modal" data-bs-target="#modalNewAudit">
+                <span class="material-icons">add</span> Báo cáo Patron 5S
             </button>
-            <!-- <button class="btn btn-outline-secondary btn-sm text-nowrap" data-bs-toggle="modal" data-bs-target="#modalAssignment">
-                <i class="bi bi-person-gear me-1"></i>Phân Công
-            </button> -->
         </div>
     </div>
 
@@ -589,11 +588,15 @@ function populateDropdowns(zones, users) {
 }
 
 function renderCategoryChart(chartData) {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
     const options = {
-        chart: { type: 'donut', height: 280 },
+        chart: { type: 'donut', height: 280, background: 'transparent' },
+        theme: { mode: isDark ? 'dark' : 'light' },
         series: chartData ? chartData.series : [0,0,0,0,0],
         labels: ['S1 - Sàng lọc', 'S2 - Sắp xếp', 'S3 - Sạch sẽ', 'S4 - Săn sóc', 'S5 - Sẵn sàng'],
-        colors: ['#e74c3c', '#e67e22', '#f1c40f', '#2ecc71', '#3498db']
+        colors: ['#ef4444', '#f97316', '#eab308', '#10b981', '#3b82f6'],
+        legend: { labels: { colors: isDark ? '#94a3b8' : '#475569' } },
+        stroke: { colors: [isDark ? '#111827' : '#ffffff'] }
     };
     if (chartInstance) chartInstance.destroy();
     chartInstance = new ApexCharts(document.querySelector("#chart-5s-categories"), options);
@@ -722,4 +725,8 @@ function submitChecklistAudit(event) {
         });
 }
 
+// Lắng nghe sự kiện đổi chế độ Sáng / Tối để vẽ lại biểu đồ
+window.addEventListener('dxThemeChanged', () => {
+    loadDashboardData();
+});
 </script>

@@ -1,627 +1,166 @@
-<!DOCTYPE html>
-<html lang="vi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DX Plastic Group</title>
-  <link rel="stylesheet" href="resources/icon.css">
-  <link rel="stylesheet" href="css/material-icons.css">
-  <link rel="stylesheet" href="css/main.css">
-  <link rel="stylesheet" href="css/sidebar.css">
-  <link rel="stylesheet" href="css/header.css">
-  <link rel="stylesheet" href="css/footer.css">
-  <link rel="stylesheet" href="resources/css/bootstrap.min.css">
-  <script src="resources/apexcharts.js"></script>
-  <script src="resources/js/bootstrap.bundle.min.js"></script>
-
-
-      <!-- <style>
-        :root {
-            --primary-color: #1976d2;
-            --primary-dark: #1565c0;
-            --sidebar-bg: #263238;
-            --sidebar-hover: #37474f;
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: #f5f5f5;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            margin: 0;
-            padding: 0;
-        }
-
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            padding: 0.5rem 0 !important;
-            flex-shrink: 0;
-            min-height: auto;
-        }
-
-        .navbar-brand {
-            font-weight: 600;
-            font-size: 1.5rem;
-            color: white !important;
-            line-height: 1.2;
-        }
-
-        .navbar .nav-link {
-            color: white !important;
-            padding-top: 0.25rem !important;
-            padding-bottom: 0.25rem !important;
-            line-height: 1.2;
-            height: auto;
-        }
-
-        .navbar .navbar-nav {
-            align-items: center;
-        }
-
-        .navbar-toggler {
-            padding: 0.25rem 0.5rem !important;
-            font-size: 1rem;
-        }
-
-        .navbar .nav-item {
-            display: flex;
-            align-items: center;
-            height: auto;
-        }
-
-        .navbar .d-flex {
-            gap: 0.5rem;
-            align-items: center;
-        }
-
-        .navbar .form-control {
-            border-radius: 20px;
-            border: none;
-            padding: 0.4rem 1rem;
-            height: 36px;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-
-        .navbar .btn-outline-light {
-            border-radius: 20px;
-            padding: 0.4rem 1rem;
-            height: 36px;
-            flex-shrink: 0;
-        }
-
-        .navbar .dropdown-menu {
-            background-color: white;
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        }
-
-        .navbar .dropdown-item:hover {
-            background-color: #f0f0f0;
-            color: var(--primary-color);
-        }
-
-        .navbar-content {
-            display: flex;
-            align-items: center;
-            width: 100%;
-            padding: 0 1rem;
-        }
-
-        .navbar-collapse {
-            padding-top: 0 !important;
-            padding-bottom: 0 !important;
-        }
-
-        .navbar .form-control,
-        .navbar .btn {
-            margin: 0;
-        }
-
-        .container-wrapper {
-            display: flex;
-            flex-direction: column;
-            flex: 1;
-            min-height: 0;
-        }
-
-        .main-content {
-            display: flex;
-            flex: 1;
-            min-height: 0;
-        }
-
-        .sidebar {
-            width: 260px;
-            background-color: var(--sidebar-bg);
-            color: white;
-            padding: 20px 0;
-            box-shadow: 2px 0 8px rgba(0,0,0,0.1);
-        }
-
-        .sidebar .accordion-flush {
-            background-color: var(--sidebar-bg) !important;
-        }
-
-        .sidebar .accordion-button {
-            background-color: var(--sidebar-bg) !important;
-            color: white !important;
-            border: none;
-            padding: 12px 20px;
-            font-weight: 500;
-        }
-
-        .sidebar .accordion-button.collapsed {
-            background-color: var(--sidebar-bg) !important;
-            color: white !important;
-        }
-
-        .sidebar .accordion-button:not(.collapsed) {
-            background-color: var(--sidebar-hover) !important;
-            color: white !important;
-        }
-
-        .sidebar .accordion-button:focus {
-            box-shadow: none !important;
-            background-color: var(--sidebar-hover) !important;
-            color: white !important;
-            outline: none;
-        }
-
-        .sidebar .accordion-button::after {
-            filter: invert(1) brightness(2);
-        }
-
-        .sidebar .accordion-item {
-            background-color: transparent !important;
-            border: none !important;
-        }
-
-        .sidebar .accordion-body {
-            padding: 0;
-            background-color: #37474f;
-        }
-
-        .sidebar .list-group {
-            background-color: #37474f !important;
-        }
-
-        .sidebar .list-group-item {
-            background-color: #37474f !important;
-            border: none !important;
-            color: #ccc !important;
-            padding: 10px 30px;
-            font-size: 0.95rem;
-            transition: all 0.3s;
-        }
-
-        .sidebar .list-group-item:hover,
-        .sidebar .list-group-item.active {
-            background-color: var(--primary-color) !important;
-            color: white !important;
-            padding-left: 40px;
-        }
-
-        .sidebar .list-group-item:focus {
-            background-color: var(--primary-color) !important;
-            color: white !important;
-            box-shadow: none !important;
-        }
-
-        .content-area {
-            flex: 1;
-            padding: 30px;
-            background-color: #f5f5f5;
-        }
-
-        .card {
-            border: none;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-            border-radius: 8px;
-        }
-
-        .card-header {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
-            color: white;
-            border: none;
-            border-radius: 8px 8px 0 0;
-            padding: 15px 20px;
-            font-weight: 600;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            border: none;
-            border-radius: 5px;
-            padding: 8px 20px;
-            transition: all 0.3s;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--primary-dark);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(25, 118, 210, 0.3);
-        }
-
-        .btn-success {
-            background-color: #388e3c;
-            border: none;
-            border-radius: 5px;
-        }
-
-        .btn-success:hover {
-            background-color: #2e7d32;
-        }
-
-        .btn-danger {
-            background-color: #d32f2f;
-            border: none;
-            border-radius: 5px;
-        }
-
-        .btn-danger:hover {
-            background-color: #c62828;
-        }
-
-        .table {
-            background-color: white;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-
-        .table thead {
-            background-color: #f5f5f5;
-        }
-
-        .table th {
-            color: var(--primary-color);
-            font-weight: 600;
-            border: none;
-            padding: 15px;
-        }
-
-        .table td {
-            padding: 12px 15px;
-            border: none;
-            border-bottom: 1px solid #eee;
-        }
-
-        .table tbody tr:hover {
-            background-color: #fafafa;
-        }
-
-        .form-label {
-            color: var(--primary-color);
-            font-weight: 500;
-            margin-bottom: 8px;
-        }
-
-        .form-control:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.15);
-        }
-
-        .form-select:focus {
-            border-color: var(--primary-color);
-            box-shadow: 0 0 0 0.2rem rgba(25, 118, 210, 0.15);
-        }
-
-        .stat-card {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-bottom: 20px;
-        }
-
-        .stat-card .stat-value {
-            font-size: 2rem;
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .stat-card .stat-label {
-            color: #666;
-            font-size: 0.9rem;
-            margin-top: 10px;
-        }
-
-        .footer {
-            background-color: #f5f5f5;
-            padding: 20px;
-            text-align: center;
-            color: #999;
-            border-top: 1px solid #ddd;
-            font-size: 0.9rem;
-            flex-shrink: 0;
-        }
-
-        .badge-success {
-            background-color: #4caf50;
-        }
-
-        .badge-danger {
-            background-color: #f44336;
-        }
-
-        .badge-warning {
-            background-color: #ff9800;
-        }
-
-        .badge-info {
-            background-color: #2196f3;
-        }
-
-        @media (max-width: 768px) {
-            .sidebar {
-                width: 100%;
-                position: relative;
-            }
-
-            .main-content {
-                flex-direction: column;
-            }
-
-            .content-area {
-                padding: 15px;
-            }
-        }
-    </style> -->
-
-</head>
-
-  <div class="app-container">
-    <aside class="sidebar" id="sidebar">
-      <!-- logo area -->
-      <div class="sidebar-header">
-        <div class="logo-area">
-          <!-- <span class="material-icons logo-icon">precision_manufacturing</span> -->
-          <style>
-                .logo{
-            width:38px;
-            height:38px;
-
-            border-radius:10px;
-
-            background:linear-gradient(
-                135deg,
-                #005BAC,
-                #2F80ED
-            );
-
-            display:flex;
-            align-items:center;
-            justify-content:center;
-
-            color:white;
-            font-weight:bold;
-        }
-          </style>
-          <div class="logo">DX</div>
-          <span class="logo-text">Plastic Group</span>
-        </div>
-        <button class="btn-toggle" onclick="toggleSidebar()">
-          <span class="material-icons">menu</span>
-        </button>
-      </div>
-
-      <nav class="sidebar-menu">
-  <?php 
-    // Lấy tham số mainpage và subpage từ URL
-    $mainpage = isset($_GET['mainpage']) ? $_GET['mainpage'] : 'dashboard';
-    $subpage = isset($_GET['subpage']) ? $_GET['subpage'] : 'overview';
-  ?>
-
-  <!-- 1. Tổng quan -->
-  <div class="has-submenu <?= ($mainpage === 'dashboard') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=dashboard&subpage=overview" class="menu-item menu-parent <?= ($mainpage === 'dashboard') ? 'active' : '' ?>">
-      <span class="material-icons">dashboard</span>
-      <span class="label">Tổng quan</span>
-      <span class="material-icons arrow-icon">expand_more</span>
+<?php
+/**
+ * DX Plastic Group - Sidebar Navigation
+ * Quản lý menu 2 cấp đồng bộ theo mô hình mainpage/subpage
+ */
+$current_main = $mainpage ?? ($_GET['mainpage'] ?? 'dashboard');
+$current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
+?>
+
+<aside class="sidebar" id="sidebar">
+  <!-- Sidebar Header / Brand Logo -->
+  <div class="sidebar-header">
+    <a href="index.php?mainpage=dashboard&subpage=overview" class="sidebar-logo">
+      <div class="logo-badge">DX</div>
+      <span class="logo-text">Plastic Group</span>
     </a>
-    
-    <!-- <div class="submenu">
-      <a href="/myweb/index.php?mainpage=dashboard&subpage=plan" class="submenu-item <?= ($mainpage === 'dashboard' && $subpage === 'plan') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">tune</span>
-        <span class="label">Kế hoạch sản xuất</span>
-      </a>
-      <a href="/myweb/index.php?mainpage=dashboard&subpage=yield" class="submenu-item <?= ($mainpage === 'dashboard' && $subpage === 'yield') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">check_circle_outline</span>
-        <span class="label">Tỷ lệ thành phẩm</span>
-      </a>
-    </div> -->
+    <button class="sidebar-toggle-btn d-none d-lg-flex" type="button" aria-label="Thu gọn menu" onclick="toggleSidebar()">
+      <span class="material-icons">menu_open</span>
+    </button>
   </div>
 
-    <!-- 2. Quản lý sản xuất -->
-  <div class="has-submenu <?= ($mainpage === 'production') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=production&subpage=production_planing" class="menu-item menu-parent <?= ($mainpage === 'production') ? 'active' : '' ?>">
-      <span class="material-icons">production_quantity_limits</span>
-      <span class="label">Quản lý sản xuất</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=production&subpage=production_planing" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'production_planing') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">analytics</span>
-        <span class="label">Kế hoạch sản xuất</span>
-      </a>
-        <a href="/myweb/index.php?mainpage=production&subpage=production_data" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'production_data') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">tune</span>
-        <span class="label">Dữ liệu thực tích</span>
-      </a>
-      <a href="#" class="submenu-item <?= ($mainpage === 'production' && $subpage === 'yield') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">check_circle_outline</span>
-        <span class="label">Tỷ lệ thành phẩm</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- 3. Quản lý nhân sự -->
-  <div class="has-submenu <?= ($mainpage === 'hrm') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=hrm&subpage=list" class="menu-item menu-parent <?= ($mainpage === 'hrm') ? 'active' : '' ?>">
-      <span class="material-icons">people</span>
-      <span class="label">Quản lý nhân sự</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=hrm&subpage=list" class="submenu-item <?= ($mainpage === 'hrm' && $subpage === 'list') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">people</span>
-        <span class="label">Danh sách nhân viên</span>
-      </a>
-      
-      <a href="/myweb/index.php?mainpage=hrm&subpage=add_employee" class="submenu-item <?= ($mainpage === 'hrm' && $subpage === 'add_employee') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">person_add</span>
-        <span class="label">Thêm nhân viên</span>
-      </a>
-
-      <a href="/myweb/index.php?mainpage=hrm&subpage=chart" class="submenu-item <?= ($mainpage === 'hrm' && $subpage === 'chart') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">bar_chart</span>
-        <span class="label">Sơ đồ tổ chức</span>
-      </a>
-    </div>
-  </div>
-
-  <!-- 4. Quản lý tài liệu -->
-  <div class="has-submenu <?= ($mainpage === 'document') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="menu-item menu-parent <?= ($mainpage === 'document') ? 'active' : '' ?>">
-      <span class="material-icons">description</span>
-      <span class="label">Quản lý tài liệu</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="submenu-item <?= ($mainpage === 'document' && $subpage === 'viewer') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list</span>
-        <span class="label">Danh sách tài liệu</span>
-      </a>
-      <!-- <a href="/myweb/index.php?mainpage=document&subpage=viewer" class="submenu-item <?= ($mainpage === 'document' && $subpage === 'viewer') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">visibility</span>
-        <span class="label">Xem tài liệu</span>
-      </a> -->
-    </div>
-  </div>
-
-  <!-- 5. Quản lý thiết bị -->
-  <div class="has-submenu <?= ($mainpage === 'iot') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=iot&subpage=device_status" class="menu-item menu-parent <?= ($mainpage === 'iot') ? 'active' : '' ?>">
-      <span class="material-icons">devices</span>
-      <span class="label">Quản lý thiết bị</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=iot&subpage=device_status" class="submenu-item <?= ($mainpage === 'iot' && $subpage === 'device_status') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">precision_manufacturing</span>
-        <span class="label">Trạng thái thiết bị</span>
-      </a>
-      <a href="/myweb/index.php?mainpage=iot&subpage=device_history" class="submenu-item <?= ($mainpage === 'iot' && $subpage === 'device_history') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">visibility</span>
-        <span class="label">Xem lịch sử thiết bị</span>
-      </a>
-    </div>
-  </div>
-
-    <!-- 6. Quản lý vật liệu -->
-  <div class="has-submenu <?= ($mainpage === 'materials') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=materials&subpage=viscoscity" class="menu-item menu-parent <?= ($mainpage === 'materials') ? 'active' : '' ?>">
-      <span class="material-icons">inventory</span>
-      <span class="label">Quản lý vật liệu</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=materials&subpage=viscoscity" class="submenu-item <?= ($mainpage === 'materials' && $subpage === 'viscoscity') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">book</span>
-        <span class="label">Độ nhớt vật liệu</span>
-      </a>
-    </div>
-  </div>
-
-      <!-- 7. Quản lý 5S -->
-  <div class="has-submenu <?= ($mainpage === 'five_s') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=five_s&subpage=overview" class="menu-item menu-parent <?= ($mainpage === 'five_s') ? 'active' : '' ?>">
-      <span class="material-icons">inventory</span>
-      <span class="label">Quản lý 5S</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=five_s&subpage=overview" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'overview') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">home</span>
+  <!-- Sidebar Navigation Menu -->
+  <nav class="sidebar-menu">
+    <!-- 1. Tổng quan (Dashboard) -->
+    <div class="has-submenu <?= ($current_main === 'dashboard') ? 'open' : '' ?>">
+      <a href="index.php?mainpage=dashboard&subpage=overview" class="menu-item menu-parent <?= ($current_main === 'dashboard') ? 'active' : '' ?>">
+        <span class="material-icons">dashboard</span>
         <span class="label">Tổng quan</span>
       </a>
     </div>
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=five_s&subpage=list" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'list') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list_alt</span>
-        <span class="label">Danh sách vi phạm</span>
+
+    <!-- 2. Quản lý sản xuất -->
+    <div class="has-submenu <?= ($current_main === 'production') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'production') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">precision_manufacturing</span>
+        <span class="label">Quản lý sản xuất</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=production&subpage=production_planing" class="submenu-item <?= ($current_main === 'production' && $current_sub === 'production_planing') ? 'active' : '' ?>">
+          <span class="material-icons">analytics</span>
+          <span class="label">Kế hoạch sản xuất</span>
+        </a>
+        <a href="index.php?mainpage=production&subpage=production_data" class="submenu-item <?= ($current_main === 'production' && $current_sub === 'production_data') ? 'active' : '' ?>">
+          <span class="material-icons">tune</span>
+          <span class="label">Dữ liệu thực tích</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 3. Quản lý nhân sự -->
+    <div class="has-submenu <?= ($current_main === 'hrm') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'hrm') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">people</span>
+        <span class="label">Quản lý nhân sự</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=hrm&subpage=list" class="submenu-item <?= ($current_main === 'hrm' && $current_sub === 'list') ? 'active' : '' ?>">
+          <span class="material-icons">view_list</span>
+          <span class="label">Danh sách nhân viên</span>
+        </a>
+        <a href="index.php?mainpage=hrm&subpage=add_employee" class="submenu-item <?= ($current_main === 'hrm' && $current_sub === 'add_employee') ? 'active' : '' ?>">
+          <span class="material-icons">person_add</span>
+          <span class="label">Thêm nhân viên</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 4. Quản lý tài liệu -->
+    <div class="has-submenu <?= ($current_main === 'document') ? 'open' : '' ?>">
+      <a href="index.php?mainpage=document&subpage=viewer" class="menu-item menu-parent <?= ($current_main === 'document') ? 'active' : '' ?>">
+        <span class="material-icons">description</span>
+        <span class="label">Quản lý tài liệu</span>
       </a>
     </div>
 
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=five_s&subpage=proposals" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'proposals') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">lightbulb</span>
-        <span class="label">Đề xuất 5S</span>
+    <!-- 5. Quản lý thiết bị IoT -->
+    <div class="has-submenu <?= ($current_main === 'iot') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'iot') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">sensors</span>
+        <span class="label">Quản lý thiết bị</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=iot&subpage=device_status" class="submenu-item <?= ($current_main === 'iot' && $current_sub === 'device_status') ? 'active' : '' ?>">
+          <span class="material-icons">monitor_heart</span>
+          <span class="label">Trạng thái thiết bị</span>
+        </a>
+        <a href="index.php?mainpage=iot&subpage=device_history" class="submenu-item <?= ($current_main === 'iot' && $current_sub === 'device_history') ? 'active' : '' ?>">
+          <span class="material-icons">history</span>
+          <span class="label">Lịch sử thiết bị</span>
+        </a>
+      </div>
+    </div>
+
+    <!-- 6. Quản lý vật liệu -->
+    <div class="has-submenu <?= ($current_main === 'materials') ? 'open' : '' ?>">
+      <a href="index.php?mainpage=materials&subpage=viscoscity" class="menu-item menu-parent <?= ($current_main === 'materials') ? 'active' : '' ?>">
+        <span class="material-icons">science</span>
+        <span class="label">Độ nhớt vật liệu</span>
       </a>
     </div>
 
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=five_s&subpage=mobile_audit" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'mobile_audit') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">lightbulb</span>
-        <span class="label">Công việc kiểm tra</span>
-      </a>
+    <!-- 7. Quản lý 5S -->
+    <div class="has-submenu <?= ($current_main === 'five_s') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'five_s') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">verified</span>
+        <span class="label">Quản lý 5S</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=five_s&subpage=overview" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'overview') ? 'active' : '' ?>">
+          <span class="material-icons">dashboard</span>
+          <span class="label">Tổng quan 5S</span>
+        </a>
+        <a href="index.php?mainpage=five_s&subpage=list" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'list') ? 'active' : '' ?>">
+          <span class="material-icons">rule</span>
+          <span class="label">Danh sách vi phạm</span>
+        </a>
+        <a href="index.php?mainpage=five_s&subpage=proposals" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'proposals') ? 'active' : '' ?>">
+          <span class="material-icons">lightbulb</span>
+          <span class="label">Đề xuất cải tiến</span>
+        </a>
+        <a href="index.php?mainpage=five_s&subpage=mobile_audit" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'mobile_audit') ? 'active' : '' ?>">
+          <span class="material-icons">fact_check</span>
+          <span class="label">Công việc kiểm tra</span>
+        </a>
+        <a href="index.php?mainpage=five_s&subpage=settings" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'settings') ? 'active' : '' ?>">
+          <span class="material-icons">tune</span>
+          <span class="label">Thiết lập 5S</span>
+        </a>
+      </div>
     </div>
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=five_s&subpage=settings" class="submenu-item <?= ($mainpage === 'five_s' && $subpage === 'settings') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">settings</span>
-        <span class="label">Thiết lập 5S</span>
-      </a>
-    </div>
-  </div>
 
-      <!-- 8. Tiện ích -->
-  <div class="has-submenu <?= ($mainpage === 'utilities') ? 'open' : '' ?>">
-    <a href="/myweb/index.php?mainpage=utilities&subpage=color_mixer" class="menu-item menu-parent <?= ($mainpage === 'utilities') ? 'active' : '' ?>">
-      <span class="material-icons">settings</span>
-      <span class="label">Tiện ích</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=utilities&subpage=color_mixer" class="submenu-item <?= ($mainpage === 'utilities' && $subpage === 'color_mixer') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list</span>
-        <span class="label">Tốc độ trộn màu</span>
-      </a>
+    <!-- 8. Tiện ích -->
+    <div class="has-submenu <?= ($current_main === 'utilities') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'utilities') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">handyman</span>
+        <span class="label">Tiện ích</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=utilities&subpage=color_mixer" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'color_mixer') ? 'active' : '' ?>">
+          <span class="material-icons">palette</span>
+          <span class="label">Tra cứu trộn màu</span>
+        </a>
+        <a href="index.php?mainpage=utilities&subpage=color_mixer_summary" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'color_mixer_summary') ? 'active' : '' ?>">
+          <span class="material-icons">grid_view</span>
+          <span class="label">Bảng tổng quan trộn</span>
+        </a>
+      </div>
     </div>
-  </div>
 
     <!-- 9. Cài đặt hệ thống -->
-  <div class="has-submenu <?= ($mainpage === 'system') ? 'open' : '' ?>">
-    <a href="#" class="menu-item menu-parent <?= ($mainpage === 'system') ? 'active' : '' ?>">
-      <span class="material-icons">settings</span>
-      <span class="label">Cài đặt hệ thống</span>
-      <span class="material-icons arrow-icon">expand_more</span>
-    </a>
-    
-    <div class="submenu">
-      <a href="/myweb/index.php?mainpage=system&subpage=roles" class="submenu-item <?= ($mainpage === 'system' && $subpage === 'roles') ? 'active' : '' ?>">
-        <span class="material-icons sub-icon">list</span>
-        <span class="label">Vai trò người dùng</span>
+    <div class="has-submenu <?= ($current_main === 'system') ? 'open' : '' ?>">
+      <a href="index.php?mainpage=system&subpage=roles" class="menu-item menu-parent <?= ($current_main === 'system') ? 'active' : '' ?>">
+        <span class="material-icons">admin_panel_settings</span>
+        <span class="label">Vai trò & Quyền</span>
       </a>
     </div>
-  </div>
-</nav>
+  </nav>
+</aside>
 
-    </aside>
-    <button class="sidebar-backdrop" type="button" aria-label="Đóng menu điều hướng" onclick="closeSidebar()"></button>
+<!-- Nền mờ cho Mobile Sidebar -->
+<button class="sidebar-backdrop" id="sidebarBackdrop" type="button" aria-label="Đóng menu" onclick="closeSidebar()"></button>

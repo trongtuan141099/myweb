@@ -1,70 +1,42 @@
-<!-- CSS TÙY CHỈNH TỐI ƯU GIAO DIỆN & THANH CUỘN BẢNG -->
 <style>
-.act-container { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; color: #334155; }
-.act-card { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); padding: 20px; margin-bottom: 20px; }
-.act-header { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px; }
-.act-title { font-size: 20px; font-weight: 700; color: #0f172a; margin: 0; }
-.act-subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }
-.act-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
-.act-input, .act-select { background-color: #f8fafc; border: 1px solid #cbd5e1; color: #334155; padding: 8px 12px; font-size: 13px; border-radius: 8px; outline: none; transition: border 0.2s; }
-.act-input:focus, .act-select:focus { border-color: #2563eb; background-color: #fff; }
-.act-btn { border: none; padding: 8px 14px; font-size: 13px; font-weight: 600; border-radius: 8px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
-.act-btn-success { background-color: #10b981; color: #ffffff; }
-.act-btn-success:hover { background-color: #059669; }
-.act-btn-primary { background-color: #2563eb; color: #ffffff; }
-.act-btn-primary:hover { background-color: #1d4ed8; }
-.act-btn-danger { background-color: #ef4444; color: #ffffff; }
-.act-btn-danger:hover { background-color: #dc2626; }
-.act-btn-secondary { background-color: #e2e8f0; color: #475569; }
-.act-btn-secondary:hover { background-color: #cbd5e1; }
-
-/* 1. KHUNG CHỨA BẢNG TỰ ĐỘNG HIỂN THỊ CẢ 2 THANH CUỘN (NGANG & DỌC) */
+/* CSS RIÊNG CỦA MODULE DỮ LIỆU THỰC TÍCH SẢN XUẤT */
 .act-table-wrapper { 
     overflow-x: auto; 
     overflow-y: auto; 
-    max-height: calc(100vh - 280px); /* Đảm bảo thấy ngay thanh cuộn ngang không cần zoom màn hình */
-    border: 1px solid #e2e8f0; 
-    border-radius: 8px; 
-    background: #ffffff;
+    max-height: calc(100vh - 280px); 
+    border: 1px solid var(--dx-border); 
+    border-radius: var(--dx-radius-sm); 
+    background: var(--dx-bg-card, #ffffff);
 }
 
-/* Custom Scrollbar cho Bảng mỏng và mượt */
-.act-table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
-.act-table-wrapper::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
-.act-table-wrapper::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-.act-table-wrapper::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-
-/* 2. STYLE BẢNG VÀ CỐ ĐỊNH (STICKY) CỘT THAO TÁC */
 .act-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 12px; white-space: nowrap; text-align: left; }
-
 .act-table th { 
-    background-color: #f8fafc; 
-    color: #475569; 
+    background-color: var(--dx-bg-subtle, #f8fafc); 
+    color: var(--dx-text-muted, #475569); 
     font-weight: 700; 
-    padding: 10px 12px; 
-    border-bottom: 1px solid #e2e8f0; 
-    border-right: 1px solid #f1f5f9;
+    padding: 9px 12px; 
+    border-bottom: 1px solid var(--dx-border); 
+    border-right: 1px solid var(--dx-border);
     position: sticky; 
     top: 0; 
     z-index: 10; 
 }
-
 .act-table td { 
     padding: 8px 12px; 
-    border-bottom: 1px solid #f1f5f9; 
-    border-right: 1px solid #f8fafc;
-    color: #334155; 
+    border-bottom: 1px solid var(--dx-border); 
+    border-right: 1px solid var(--dx-border);
+    color: var(--dx-text-main, #334155); 
 }
-.act-table tr:hover td { background-color: #f8fafc; }
+.act-table tr:hover td { background-color: var(--dx-bg-hover, #f8fafc); }
 
 /* Cố định cột Checkbox (Cột 1) khi cuộn ngang */
 .act-table th:nth-child(1),
 .act-table td:nth-child(1) {
     position: sticky;
     left: 0;
-    background-color: #ffffff;
+    background-color: var(--dx-bg-card, #ffffff);
     z-index: 12;
-    border-right: 1px solid #e2e8f0;
+    border-right: 1px solid var(--dx-border);
 }
 
 /* Cố định cột Hành động (Cột 2) khi cuộn ngang */
@@ -72,62 +44,114 @@
 .act-table td:nth-child(2) {
     position: sticky;
     left: 40px;
-    background-color: #ffffff;
+    background-color: var(--dx-bg-card, #ffffff);
     z-index: 12;
-    border-right: 2px solid #cbd5e1;
+    border-right: 2px solid var(--dx-border-strong);
 }
 
 .act-table th:nth-child(1),
 .act-table th:nth-child(2) {
-    z-index: 20; /* Đảm bảo Header của 2 cột cố định đè lên trên */
-    background-color: #f8fafc;
+    z-index: 20;
+    background-color: var(--dx-bg-subtle, #f8fafc);
 }
 
 /* Modal Design */
-.act-modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.55); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 20px; }
-.act-modal-content { background: #ffffff; border-radius: 12px; width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); overflow: hidden; }
+.act-modal { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); backdrop-filter: blur(4px); z-index: 1050; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.act-modal-content { background: var(--dx-bg-card, #ffffff); color: var(--dx-text-main); border: 1px solid var(--dx-border); border-radius: var(--dx-radius-md); width: 100%; max-width: 900px; max-height: 90vh; display: flex; flex-direction: column; box-shadow: var(--dx-shadow-lg); overflow: hidden; }
+
+/* Custom Inputs & Buttons cho form Modal */
+.act-input {
+    width: 100%;
+    padding: 6px 10px;
+    border: 1px solid var(--dx-border);
+    border-radius: var(--dx-radius-sm);
+    background: var(--dx-bg-subtle);
+    color: var(--dx-text-main);
+    font-size: 12px;
+}
+.act-input:focus {
+    background: var(--dx-bg-card);
+    border-color: var(--dx-primary);
+    outline: none;
+    box-shadow: 0 0 0 2px var(--dx-primary-light);
+}
+.act-subtitle {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--dx-text-muted);
+    margin-bottom: 4px;
+    display: block;
+}
+.act-card {
+    background: var(--dx-bg-card);
+    border: 1px solid var(--dx-border);
+    border-radius: var(--dx-radius-md);
+    box-shadow: var(--dx-shadow-sm);
+}
+.act-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: var(--dx-radius-sm);
+    border: 1px solid transparent;
+    cursor: pointer;
+    transition: all var(--dx-transition-fast);
+}
+.act-btn-primary { background: var(--dx-primary); color: #fff; }
+.act-btn-primary:hover { background: var(--dx-primary-hover); color: #fff; }
+.act-btn-secondary { background: var(--dx-bg-subtle); color: var(--dx-text-main); border-color: var(--dx-border); }
+.act-btn-secondary:hover { background: var(--dx-bg-hover); color: var(--dx-text-main); }
+.act-btn-danger { background: var(--dx-danger); color: #fff; }
+.act-btn-danger:hover { opacity: 0.9; color: #fff; }
+.act-btn-success { background: var(--dx-success); color: #fff; }
+.act-btn-success:hover { opacity: 0.9; color: #fff; }
 </style>
 
-<div class="act-container">
+<div class="app-page-wrapper">
 
     <!-- BAR TIÊU ĐỀ VÀ THANH LỌC DỮ LIỆU -->
-    <div class="act-card" style="margin-bottom: 12px; padding: 15px 20px;">
-        <div class="act-header">
-            <div>
-                <h1 class="act-title">📋 QUẢN LÝ THỰC TÍCH SẢN XUẤT CHI TIẾT (押出)</h1>
-                <div class="act-subtitle">Tra cứu, lọc, chỉnh sửa, xóa hàng loạt và xuất dữ liệu thực tích sang Excel</div>
-            </div>
-
-            <div class="act-controls">
-                <button onclick="openUploadModal()" class="act-btn act-btn-success">
-                    📥 Upload Excel Thực Tích
-                </button>
-                <button onclick="exportExcel()" class="act-btn act-btn-primary">
-                    📤 Download Excel
-                </button>
-            </div>
+    <div class="app-page-header">
+        <div>
+            <h1 class="app-page-title">
+                <span class="material-icons">fact_check</span>
+                Quản Lý Thực Tích Sản Xuất Chi Tiết (押出)
+            </h1>
+            <p class="app-page-subtitle">Tra cứu, lọc, chỉnh sửa, xóa hàng loạt và xuất dữ liệu thực tích sang Excel</p>
         </div>
 
-        <hr style="margin: 12px 0; border: 0; border-top: 1px solid #e2e8f0;">
+        <div class="app-page-actions">
+            <button onclick="openUploadModal()" class="app-btn app-btn-success">
+                <span class="material-icons">file_upload</span> Upload Excel Thực Tích
+            </button>
+            <button onclick="exportExcel()" class="app-btn app-btn-primary">
+                <span class="material-icons">file_download</span> Download Excel
+            </button>
+        </div>
+    </div>
 
-        <!-- BỘ LỌC CHI TIẾT -->
-        <div class="act-controls">
-            <select id="filterMode" class="act-select" onchange="toggleFilterMode()">
+    <!-- BỘ LỌC CHI TIẾT -->
+    <div class="app-filter-card">
+        <div class="d-flex align-items-center gap-2 flex-wrap w-100">
+            <select id="filterMode" class="app-form-select" onchange="toggleFilterMode()">
                 <option value="month">Theo Tháng</option>
                 <option value="range">Theo Khoảng Ngày</option>
             </select>
 
             <div id="monthFilterContainer">
-                <input type="month" id="filterMonth" value="2026-08" class="act-input" onchange="loadActualData(1)">
+                <input type="month" id="filterMonth" value="2026-08" class="app-form-control" onchange="loadActualData(1)">
             </div>
 
-            <div id="rangeFilterContainer" style="display:none;">
-                <input type="date" id="filterStartDate" class="act-input" onchange="loadActualData(1)">
-                <span style="color:#94a3b8;">-</span>
-                <input type="date" id="filterEndDate" class="act-input" onchange="loadActualData(1)">
+            <div id="rangeFilterContainer" style="display:none;" class="d-flex align-items-center gap-1">
+                <input type="date" id="filterStartDate" class="app-form-control" onchange="loadActualData(1)">
+                <span class="text-muted">-</span>
+                <input type="date" id="filterEndDate" class="app-form-control" onchange="loadActualData(1)">
             </div>
 
-            <select id="filterPipeSize" class="act-select" onchange="loadActualData(1)">
+            <select id="filterPipeSize" class="app-form-select" onchange="loadActualData(1)">
                 <option value="ALL">Tất cả Size ống</option>
                 <option value="TU04">TU04</option><option value="TU06">TU06</option>
                 <option value="TU08">TU08</option><option value="TU10">TU10</option>
@@ -137,10 +161,13 @@
                 <option value="TIUB13">TIUB13</option>
             </select>
 
-            <input type="text" id="filterSearch" placeholder="🔍 Mã NV, Tên NV, Mã CTSX, Mã SP..." class="act-input" style="width: 240px;" onkeyup="delaySearch()">
+            <div class="app-input-with-icon">
+                <span class="material-icons">search</span>
+                <input type="text" id="filterSearch" placeholder="Tìm NV, Mã CTSX, Mã SP..." class="app-form-control" style="width: 240px;" onkeyup="delaySearch()">
+            </div>
 
-            <button id="btnDeleteSelected" onclick="deleteSelectedRows()" class="act-btn act-btn-danger" style="display:none;">
-                🗑️ Xóa Đã Chọn (<span id="selectedCount">0</span>)
+            <button id="btnDeleteSelected" onclick="deleteSelectedRows()" class="app-btn app-btn-danger ms-auto" style="display:none;">
+                <span class="material-icons">delete</span> Xóa Đã Chọn (<span id="selectedCount">0</span>)
             </button>
         </div>
     </div>
@@ -191,15 +218,15 @@
     <!-- MODAL UPLOAD FILE EXCEL -->
     <div id="uploadModal" class="act-modal" style="display:none;">
         <div class="act-modal-content" style="max-width: 450px;">
-            <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-                <h3 style="margin:0; font-size:16px; font-weight:700;">📥 Upload Dữ Liệu Thực Tích Excel</h3>
-                <button onclick="closeUploadModal()" style="border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
+            <div style="padding: 15px 20px; border-bottom: 1px solid var(--dx-border); display: flex; justify-content: space-between; align-items: center; background: var(--dx-bg-subtle);">
+                <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--dx-text-main);">📥 Upload Dữ Liệu Thực Tích Excel</h3>
+                <button onclick="closeUploadModal()" style="border:none; background:none; font-size:22px; cursor:pointer; color:var(--dx-text-muted);">&times;</button>
             </div>
             <div style="padding: 20px;">
-                <label style="font-size: 13px; font-weight: 600; color: #475569; display: block; margin-bottom: 8px;">Chọn file báo cáo (.xlsx, .xls):</label>
+                <label style="font-size: 13px; font-weight: 600; color: var(--dx-text-muted); display: block; margin-bottom: 8px;">Chọn file báo cáo (.xlsx, .xls):</label>
                 <input type="file" id="excelFileInput" accept=".xlsx, .xls" class="act-input" style="width: 100%;">
             </div>
-            <div style="padding: 12px 20px; border-top: 1px solid #e2e8f0; text-align: right; background: #f8fafc;">
+            <div style="padding: 12px 20px; border-top: 1px solid var(--dx-border); text-align: right; background: var(--dx-bg-subtle);">
                 <button onclick="closeUploadModal()" class="act-btn act-btn-secondary">Hủy</button>
                 <button id="btnSubmitUpload" onclick="handleUploadExcel()" class="act-btn act-btn-success">Bắt Đầu Upload</button>
             </div>
@@ -209,9 +236,9 @@
     <!-- MODAL CHỈNH SỬA DÒNG THỰC TÍCH -->
     <div id="editModal" class="act-modal" style="display:none;">
         <div class="act-modal-content">
-            <div style="padding: 15px 20px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: #f8fafc;">
-                <h3 style="margin:0; font-size:16px; font-weight:700;">✏️ Chỉnh Sửa Thực Tích Sản Xuất</h3>
-                <button onclick="closeEditModal()" style="border:none; background:none; font-size:22px; cursor:pointer;">&times;</button>
+            <div style="padding: 15px 20px; border-bottom: 1px solid var(--dx-border); display: flex; justify-content: space-between; align-items: center; background: var(--dx-bg-subtle);">
+                <h3 style="margin:0; font-size:16px; font-weight:700; color:var(--dx-text-main);">✏️ Chỉnh Sửa Thực Tích Sản Xuất</h3>
+                <button onclick="closeEditModal()" style="border:none; background:none; font-size:22px; cursor:pointer; color:var(--dx-text-muted);">&times;</button>
             </div>
             <div style="padding: 20px; overflow-y: auto; max-height: calc(90vh - 130px);">
                 <form id="editActualForm" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
@@ -266,7 +293,7 @@
                     </div>
                 </form>
             </div>
-            <div style="padding: 12px 20px; border-top: 1px solid #e2e8f0; text-align: right; background: #f8fafc;">
+            <div style="padding: 12px 20px; border-top: 1px solid var(--dx-border); text-align: right; background: var(--dx-bg-subtle);">
                 <button onclick="closeEditModal()" class="act-btn act-btn-secondary">Hủy</button>
                 <button onclick="saveEditRow()" class="act-btn act-btn-primary">Lưu Cập Nhật</button>
             </div>
@@ -307,7 +334,7 @@ async function loadActualData(page = 1) {
     const pipeSize = document.getElementById("filterPipeSize").value;
     const search = document.getElementById("filterSearch").value.trim();
 
-    let url = `/myweb/api/get_extrusion_actuals.php?page=${page}&limit=50&mode=${mode}&pipe_size=${pipeSize}&search=${encodeURIComponent(search)}`;
+    let url = `api/get_extrusion_actuals.php?page=${page}&limit=50&mode=${mode}&pipe_size=${pipeSize}&search=${encodeURIComponent(search)}`;
     if (mode === 'month') url += `&month=${month}`;
     else url += `&start_date=${startDate}&end_date=${endDate}`;
 
@@ -356,9 +383,9 @@ function renderTableRows(rows) {
                 <td>${r.shift}</td>
                 <td>${r.mfg_order_code}</td>
                 <td><b>${r.product_code}</b></td>
-                <td><span style="background:#eff6ff; color:#2563eb; padding:2px 6px; border-radius:4px; font-weight:700;">${r.pipe_size}</span></td>
+                <td><span style="background:var(--dx-primary-bg, #eff6ff); color:var(--dx-primary, #2563eb); border:1px solid var(--dx-primary-border, rgba(37,99,235,0.2)); padding:2px 6px; border-radius:4px; font-weight:700;">${r.pipe_size}</span></td>
                 <td>${r.device_code}</td>
-                <td style="font-weight:700; color:#059669;">${Number(r.finished_qty_m).toLocaleString()}</td>
+                <td style="font-weight:700; color:var(--dx-success, #059669);">${Number(r.finished_qty_m).toLocaleString()}</td>
                 <td>${Number(r.finished_qty_kg).toLocaleString()}</td>
                 <td>${Number(r.ng_qty_kg).toLocaleString()}</td>
                 <td>${Number(r.hard_waste_qty_kg).toLocaleString()}</td>
@@ -426,7 +453,7 @@ async function deleteSelectedRows() {
     if (!confirm(`Bạn có chắc chắn muốn xóa ${ids.length} dòng dữ liệu thực tích đã chọn?`)) return;
 
     try {
-        const res = await fetch('/myweb/api/delete_extrusion_actuals.php', {
+        const res = await fetch('api/delete_extrusion_actuals.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: ids })
@@ -448,7 +475,7 @@ async function deleteSingleRow(id) {
     if (!confirm(`Xác nhận xóa bản ghi ID: ${id}?`)) return;
 
     try {
-        const res = await fetch('/myweb/api/delete_extrusion_actuals.php', {
+        const res = await fetch('api/delete_extrusion_actuals.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ids: [id] })
@@ -507,7 +534,7 @@ async function saveEditRow() {
     };
 
     try {
-        const res = await fetch('/myweb/api/save_extrusion_actual_row.php', {
+        const res = await fetch('api/save_extrusion_actual_row.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
@@ -545,7 +572,7 @@ async function handleUploadExcel() {
     formData.append("excel_file", fileInput.files[0]);
 
     try {
-        const res = await fetch('/myweb/api/upload_extrusion_actuals.php', {
+        const res = await fetch('api/upload_extrusion_actuals.php', {
             method: 'POST',
             body: formData
         });
@@ -575,10 +602,15 @@ function exportExcel() {
     const pipeSize = document.getElementById("filterPipeSize").value;
     const search = document.getElementById("filterSearch").value.trim();
 
-    let url = `/myweb/api/export_extrusion_actuals.php?mode=${mode}&pipe_size=${pipeSize}&search=${encodeURIComponent(search)}`;
+    let url = `api/export_extrusion_actuals.php?mode=${mode}&pipe_size=${pipeSize}&search=${encodeURIComponent(search)}`;
     if (mode === 'month') url += `&month=${month}`;
     else url += `&start_date=${startDate}&end_date=${endDate}`;
 
     window.location.href = url;
 }
+
+// Lắng nghe sự kiện thay đổi theme
+window.addEventListener('dxThemeChanged', () => {
+    loadActualData(currentPage);
+});
 </script>

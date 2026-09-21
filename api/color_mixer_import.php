@@ -32,12 +32,12 @@ try {
     $updatedCount = 0;
     $insertedCount = 0;
 
-    // Chuẩn bị câu lệnh Kiểm tra trùng lắp
-    $stmtCheck = $conn->prepare("SELECT id FROM color_mixer_settings WHERE color_type = ? AND pipe_type = ? AND pipe_size = ? AND color_code = ? LIMIT 1");
+    // Chuẩn bị câu lệnh Kiểm tra trùng lắp (phân biệt cả tốc độ kéo hauler_speed)
+    $stmtCheck = $conn->prepare("SELECT id FROM color_mixer_settings WHERE color_type = ? AND pipe_type = ? AND pipe_size = ? AND color_code = ? AND hauler_speed = ? LIMIT 1");
     
-    // Câu lệnh Update ghi đè
+    // Câu lệnh Update ghi đè khi trùng khớp đúng size, màu và tốc độ kéo
     $stmtUpdate = $conn->prepare("UPDATE color_mixer_settings SET 
-        hauler_speed = ?, mixer_speed_large = ?, mixer_speed_small = ?, virgin_resin_output = ?, color_masterbatch_output = ?, updated_by = ?, updated_by_name = ? 
+        mixer_speed_large = ?, mixer_speed_small = ?, virgin_resin_output = ?, color_masterbatch_output = ?, updated_by = ?, updated_by_name = ? 
         WHERE id = ?");
 
     // Câu lệnh Insert mới
@@ -59,20 +59,20 @@ try {
             $virgin_resin_output = floatval(trim($row[7]));
             $color_masterbatch_output = floatval(trim($row[8]));
 
-            // Kiểm tra trùng
-            $stmtCheck->bind_param("ssss", $color_type, $pipe_type, $pipe_size, $color_code);
+            // Kiểm tra trùng theo cả tốc độ kéo
+            $stmtCheck->bind_param("ssssd", $color_type, $pipe_type, $pipe_size, $color_code, $hauler_speed);
             $stmtCheck->execute();
             $resCheck = $stmtCheck->get_result();
 
             if ($resCheck->num_rows > 0) {
                 // TỒN TẠI -> THỰC HIỆN GHI ĐÈ CẬP NHẬT
                 $existingId = $resCheck->fetch_assoc()['id'];
-                $stmtUpdate->bind_param("sssddisi", $hauler_speed, $mixer_speed_large, $mixer_speed_small, $virgin_resin_output, $color_masterbatch_output, $user_id, $user_name, $existingId);
+                $stmtUpdate->bind_param("ssddisi", $mixer_speed_large, $mixer_speed_small, $virgin_resin_output, $color_masterbatch_output, $user_id, $user_name, $existingId);
                 $stmtUpdate->execute();
                 $updatedCount++;
             } else {
                 // CHƯA CÓ -> THÊM MỚI
-                $stmtInsert->bind_param("sssssssddis", $color_type, $pipe_type, $pipe_size, $color_code, $hauler_speed, $mixer_speed_large, $mixer_speed_small, $virgin_resin_output, $color_masterbatch_output, $user_id, $user_name);
+                $stmtInsert->bind_param("ssssdssddis", $color_type, $pipe_type, $pipe_size, $color_code, $hauler_speed, $mixer_speed_large, $mixer_speed_small, $virgin_resin_output, $color_masterbatch_output, $user_id, $user_name);
                 $stmtInsert->execute();
                 $insertedCount++;
             }

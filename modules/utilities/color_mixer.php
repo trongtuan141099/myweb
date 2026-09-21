@@ -1,89 +1,82 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
-
 <style>
-  .filter-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  }
-  .bg-unused {
-    background-color: #f1f5f9 !important;
-    color: #94a3b8 !important;
-    font-style: italic;
-    font-weight: normal !important;
-  }
-  .bg-pending {
-    background-color: #fffbeb !important;
-    color: #b45309 !important;
-    border: 1px dashed #fcd34d !important;
-    font-weight: 500 !important;
-  }
-  .table-scroll-container {
-    max-height: 550px;
-    overflow-x: auto;
-    overflow-y: auto;
-  }
-  .table-scroll-container th {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    background-color: #f8fafc;
-    color: #475569;
-    font-size: 0.82rem;
-    text-transform: uppercase;
-    white-space: nowrap;
-    box-shadow: inset 0 -1px 0 #e2e8f0;
-  }
-  .btn-action-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border-radius: 6px;
-  }
+/* CSS RIÊNG CỦA MODULE BỘ TRỘN MÀU */
+.bg-unused {
+  background-color: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  font-style: italic;
+  font-weight: normal !important;
+}
+.bg-pending {
+  background-color: #fffbeb !important;
+  color: #b45309 !important;
+  border: 1px dashed #fcd34d !important;
+  font-weight: 500 !important;
+}
+[data-theme="dark"] .bg-unused {
+  background-color: #1e293b !important;
+  color: #64748b !important;
+}
+[data-theme="dark"] .bg-pending {
+  background-color: rgba(245, 158, 11, 0.15) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+.table-scroll-container {
+  max-height: 550px;
+  overflow-x: auto;
+  overflow-y: auto;
+}
+.btn-action-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border-radius: 6px;
+}
 </style>
 
-<div class="container-fluid py-3">
+<div class="app-page-wrapper">
   <!-- HEADER & THAO TÁC -->
-  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+  <div class="app-page-header">
     <div>
-      <h4 class="fw-bold text-primary mb-1"><i class="bi bi-sliders me-2"></i>Tra Cứu Thông Số Bộ Trộn Màu</h4>
-      <p class="text-muted small mb-0">Hỗ trợ tra cứu nhanh thông số kéo ống và cài đặt bộ trộn màu (Trục lớn / Trục nhỏ)</p>
+      <h1 class="app-page-title">
+        <span class="material-icons">palette</span>
+        Tra Cứu Thông Số Bộ Trộn Màu
+      </h1>
+      <p class="app-page-subtitle">Hỗ trợ tra cứu nhanh thông số kéo ống và cài đặt bộ trộn màu (Trục lớn / Trục nhỏ)</p>
     </div>
     
-    <div class="d-flex gap-2">
-
-      <!-- Nút chuyển sang trang Tổng quan Ma Trận vừa tạo -->
-      <a href="index.php?mainpage=utilities&subpage=color_mixer_summary" class="btn btn-warning btn-sm fw-bold">
-        <i class="bi bi-grid-3x3-gap-fill me-1"></i>Xem Bảng Tổng Quan
+    <div class="app-page-actions">
+      <!-- Nút chuyển sang trang Tổng quan Ma Trận -->
+      <a href="index.php?mainpage=utilities&subpage=color_mixer_summary" class="app-btn app-btn-warning">
+        <span class="material-icons">grid_view</span> Xem Bảng Tổng Quan
       </a>
 
       <!-- Nút xóa nhiều mục được chọn -->
-      <button class="btn btn-danger btn-sm d-none" id="btnDeleteMultiple" onclick="deleteMultipleSettings()">
-        <i class="bi bi-trash-fill me-1"></i>Xóa Mục Đã Chọn (<span id="selectedCount">0</span>)
+      <button class="app-btn app-btn-danger d-none" id="btnDeleteMultiple" onclick="deleteMultipleSettings()">
+        <span class="material-icons">delete</span> Xóa Mục Đã Chọn (<span id="selectedCount">0</span>)
       </button>
 
-      <button class="btn btn-outline-primary btn-sm" onclick="exportDataCsv()">
-        <i class="bi bi-download me-1"></i>Xuất CSV Dữ Liệu
+      <button class="app-btn app-btn-secondary" onclick="exportDataCsv()">
+        <span class="material-icons">file_download</span> Xuất CSV Dữ Liệu
       </button>
-      <button class="btn btn-outline-success btn-sm" onclick="openImportCsvModal()">
-        <i class="bi bi-file-earmark-spreadsheet me-1"></i>Import dữ liệu
+      <button class="app-btn app-btn-success" onclick="openImportCsvModal()">
+        <span class="material-icons">file_upload</span> Import Dữ Liệu
       </button>
-      <button class="btn btn-primary btn-sm" onclick="openAddFormModal()">
-        <i class="bi bi-plus-circle me-1"></i>Thêm Mới Form
+      <button class="app-btn app-btn-primary" onclick="openAddFormModal()">
+        <span class="material-icons">add_circle</span> Thêm Mới Form
       </button>
     </div>
   </div>
 
   <!-- BỘ LỌC THÔNG SỐ SIÊU TỐC -->
-  <div class="filter-card p-3 mb-3">
-    <div class="row g-2">
+  <div class="app-filter-card">
+    <div class="row g-2 w-100">
       <div class="col-6 col-md-3">
-        <label class="form-label fw-bold small text-primary mb-1">Loại Màu</label>
-        <select id="filter_color_type" class="form-select form-select-sm" onchange="applyFilterAndFetch(1)">
+        <label class="app-form-label">Loại Màu</label>
+        <select id="filter_color_type" class="app-form-select w-100" onchange="applyFilterAndFetch(1)">
           <option value="">-- Tất cả loại màu --</option>
           <option value="BASF">BASF</option>
           <option value="COVESTRO">COVESTRO</option>
@@ -92,16 +85,16 @@
         </select>
       </div>
       <div class="col-6 col-md-3">
-        <label class="form-label fw-bold small text-secondary mb-1">Loại Ống</label>
-        <select id="filter_pipe_type" class="form-select form-select-sm" onchange="applyFilterAndFetch(1)">
+        <label class="app-form-label">Loại Ống</label>
+        <select id="filter_pipe_type" class="app-form-select w-100" onchange="applyFilterAndFetch(1)">
           <option value="">-- Tất cả loại ống --</option>
           <option value="TPU">TPU</option>
           <option value="NYLON-T">NYLON-T</option>
         </select>
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label fw-bold small text-secondary mb-1">Size Ống</label>
-        <select id="filter_pipe_size" class="form-select form-select-sm" onchange="applyFilterAndFetch(1)">
+        <label class="app-form-label">Size Ống</label>
+        <select id="filter_pipe_size" class="app-form-select w-100" onchange="applyFilterAndFetch(1)">
           <option value="">-- Tất cả size --</option>
           <option value="TU0425">TU0425</option>
           <option value="TU0604">TU0604</option>
@@ -117,8 +110,8 @@
         </select>
       </div>
       <div class="col-6 col-md-2">
-        <label class="form-label fw-bold small text-secondary mb-1">Mã Màu</label>
-        <select id="filter_color_code" class="form-select form-select-sm" onchange="applyFilterAndFetch(1)">
+        <label class="app-form-label">Mã Màu</label>
+        <select id="filter_color_code" class="app-form-select w-100" onchange="applyFilterAndFetch(1)">
           <option value="">-- Tất cả mã màu --</option>
           <option value="B">B</option>
           <option value="BU">BU</option>
@@ -151,61 +144,61 @@
         </select>
       </div>
       <div class="col-12 col-md-2 d-flex align-items-end">
-        <button class="btn btn-light btn-sm w-100 border text-muted" onclick="resetFilters()">
-          <i class="bi bi-arrow-counterclockwise me-1"></i>Xóa Bộ Lọc
+        <button class="app-btn app-btn-secondary w-100" onclick="resetFilters()">
+          <span class="material-icons">restart_alt</span> Xóa Lọc
         </button>
       </div>
     </div>
   </div>
 
-  <!-- BẢNG DỮ LIỆU CÓ PHÂN TRANG & THAO TÁC XÓA NHIỀU -->
-  <div class="card border-0 shadow-sm mb-3">
-    <div class="card-body p-0">
-      <div class="table-scroll-container">
-        <table class="table table-hover align-middle mb-0 text-nowrap">
-          <thead>
-            <tr>
-              <!-- Checkbox Chọn tất cả -->
-              <th class="ps-3" style="width: 40px;">
-                <input type="checkbox" class="form-check-input" id="checkAll" onchange="toggleSelectAll(this)">
-              </th>
-              <th>#</th>
-              <th>Loại Màu</th>
-              <th>Loại Ống</th>
-              <th>Size</th>
-              <th>Mã Màu</th>
-              <th class="text-center text-primary">Tốc Độ Kéo (m/p)</th>
-              <th class="text-center bg-danger-subtle text-danger">Bộ Trộn TRỤC LỚN (RPM)</th>
-              <th class="text-center bg-warning-subtle text-warning-emphasis">Bộ Trộn TRỤC NHỎ (RPM)</th>
-              <th class="text-end">Nhựa Nguyên Sinh (kg/h)</th>
-              <th class="text-end">Lưu Lượng Màu (kg/h)</th>
-              <th>Người & Ngày Cập Nhật</th>
-              <th class="text-center">Thao Tác</th>
-            </tr>
-          </thead>
-          <tbody id="mixer-table-body">
-            <!-- Render từ API -->
-          </tbody>
-        </table>
-      </div>
+  <!-- BẢNG DỮ LIỆU CÓ PHÂN TRANG -->
+  <div class="app-card mb-3">
+    <div class="app-table-container table-scroll-container">
+      <table class="app-table table-sticky-header">
+        <thead>
+          <tr>
+            <th class="ps-3" style="width: 40px;">
+              <input type="checkbox" class="form-check-input" id="checkAll" onchange="toggleSelectAll(this)">
+            </th>
+            <th>#</th>
+            <th>Loại Màu</th>
+            <th>Loại Ống</th>
+            <th>Size</th>
+            <th>Mã Màu</th>
+            <th class="text-center text-primary">Tốc Độ Kéo (m/p)</th>
+            <th class="text-center bg-danger-subtle text-danger">Bộ Trộn TRỤC LỚN (RPM)</th>
+            <th class="text-center bg-warning-subtle text-warning-emphasis">Bộ Trộn TRỤC NHỎ (RPM)</th>
+            <th class="text-end">Nhựa Nguyên Sinh (kg/h)</th>
+            <th class="text-end">Lưu Lượng Màu (kg/h)</th>
+            <th>Người & Ngày Cập Nhật</th>
+            <th class="text-center">Thao Tác</th>
+          </tr>
+        </thead>
+        <tbody id="mixer-table-body">
+          <!-- Render từ API -->
+        </tbody>
+      </table>
     </div>
-  </div>
 
-  <!-- PHÂN TRANG -->
-  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <div class="text-muted small" id="pagination-info">Hiển thị 0 dòng</div>
-    <nav>
-      <ul class="pagination pagination-sm mb-0" id="pagination-list"></ul>
-    </nav>
+    <!-- PHÂN TRANG -->
+    <div class="app-card-footer">
+      <div class="text-muted small" id="pagination-info">Hiển thị 0 dòng</div>
+      <nav>
+        <ul class="pagination pagination-sm mb-0" id="pagination-list"></ul>
+      </nav>
+    </div>
   </div>
 </div>
 
-<!-- MODAL FORM -->
+<!-- MODAL FORM ĐĂNG KÝ MỚI -->
 <div class="modal fade" id="modalAddForm" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold" id="formModalTitle"><i class="bi bi-plus-circle me-2"></i>Đăng Ký Thông Số Mới</h5>
+        <h5 class="modal-title fw-bold" id="formModalTitle">
+          <span class="material-icons text-primary me-2">add_circle</span>
+          Đăng Ký Thông Số Mới
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="addMixerForm" onsubmit="saveFormSetting(event)">
@@ -213,46 +206,46 @@
         <div class="modal-body">
           <div class="row g-3">
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Loại Màu</label>
-              <input type="text" name="color_type" id="form_color_type" class="form-control" placeholder="VD: BASF, TPU" required>
+              <label class="app-form-label">Loại Màu</label>
+              <input type="text" name="color_type" id="form_color_type" class="app-form-control w-100" placeholder="VD: BASF, TPU" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Loại Ống</label>
-              <input type="text" name="pipe_type" id="form_pipe_type" class="form-control" placeholder="VD: TPU, NYLON-T" required>
+              <label class="app-form-label">Loại Ống</label>
+              <input type="text" name="pipe_type" id="form_pipe_type" class="app-form-control w-100" placeholder="VD: TPU, NYLON-T" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Size Ống</label>
-              <input type="text" name="pipe_size" id="form_pipe_size" class="form-control" placeholder="VD: TU0425" required>
+              <label class="app-form-label">Size Ống</label>
+              <input type="text" name="pipe_size" id="form_pipe_size" class="app-form-control w-100" placeholder="VD: TU0425" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Mã Màu</label>
-              <input type="text" name="color_code" id="form_color_code" class="form-control" placeholder="VD: BU1" required>
+              <label class="app-form-label">Mã Màu</label>
+              <input type="text" name="color_code" id="form_color_code" class="app-form-control w-100" placeholder="VD: BU1" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Tốc Độ Kéo Ống (m/p)</label>
-              <input type="number" step="0.01" name="hauler_speed" id="form_hauler_speed" class="form-control" required>
+              <label class="app-form-label">Tốc Độ Kéo Ống (m/p)</label>
+              <input type="number" step="0.01" name="hauler_speed" id="form_hauler_speed" class="app-form-control w-100" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Bộ Trộn Trục Lớn (RPM)</label>
-              <input type="text" name="mixer_speed_large" id="form_mixer_speed_large" class="form-control" placeholder="Nhập số, - hoặc để trống">
+              <label class="app-form-label">Bộ Trộn Trục Lớn (RPM)</label>
+              <input type="text" name="mixer_speed_large" id="form_mixer_speed_large" class="app-form-control w-100" placeholder="Nhập số, - hoặc để trống">
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Bộ Trộn Trục Nhỏ (RPM)</label>
-              <input type="text" name="mixer_speed_small" id="form_mixer_speed_small" class="form-control" placeholder="Nhập số, - hoặc để trống">
+              <label class="app-form-label">Bộ Trộn Trục Nhỏ (RPM)</label>
+              <input type="text" name="mixer_speed_small" id="form_mixer_speed_small" class="app-form-control w-100" placeholder="Nhập số, - hoặc để trống">
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Lượng Nhựa Nguyên Sinh (kg/h)</label>
-              <input type="number" step="0.01" name="virgin_resin" id="form_virgin_resin" class="form-control" required>
+              <label class="app-form-label">Lượng Nhựa Nguyên Sinh (kg/h)</label>
+              <input type="number" step="0.01" name="virgin_resin" id="form_virgin_resin" class="app-form-control w-100" required>
             </div>
             <div class="col-md-4">
-              <label class="form-label fw-bold small">Lưu Lượng Nhựa Màu (kg/h)</label>
-              <input type="number" step="0.01" name="color_output" id="form_color_output" class="form-control" required>
+              <label class="app-form-label">Lưu Lượng Nhựa Màu (kg/h)</label>
+              <input type="number" step="0.01" name="color_output" id="form_color_output" class="app-form-control w-100" required>
             </div>
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Hủy</button>
-          <button type="submit" class="btn btn-primary fw-bold">Lưu Thông Số</button>
+          <button type="button" class="app-btn app-btn-secondary" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="app-btn app-btn-primary">Lưu Thông Số</button>
         </div>
       </form>
     </div>
@@ -264,25 +257,28 @@
   <div class="modal-dialog">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title fw-bold"><i class="bi bi-file-earmark-spreadsheet me-2 text-success"></i>Nhập Thông Số Từ File CSV</h5>
+        <h5 class="modal-title fw-bold">
+          <span class="material-icons text-success me-2">file_upload</span>
+          Nhập Thông Số Từ File CSV
+        </h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
       </div>
       <form id="importCsvForm" onsubmit="submitCsvImport(event)">
         <div class="modal-body">
           <div class="mb-3">
-            <label class="form-label fw-bold small">Chọn tập tin CSV (.csv)</label>
-            <input type="file" id="csv_file_input" name="csv_file" class="form-control" accept=".csv" required>
+            <label class="app-form-label">Chọn tập tin CSV (.csv)</label>
+            <input type="file" id="csv_file_input" name="csv_file" class="app-form-control w-100" accept=".csv" required>
           </div>
           <div class="alert alert-info small mb-0">
-            <i class="bi bi-info-circle me-1"></i> Tải file mẫu cấu trúc chuẩn: 
+            <span class="material-icons align-middle me-1" style="font-size: 16px;">info</span> Tải file mẫu cấu trúc chuẩn: 
             <a href="javascript:void(0)" onclick="downloadColorMixerTemplate()" class="fw-bold text-decoration-underline text-primary">Tải về mẫu CSV</a>
             <br>
             <span class="text-danger fw-bold">* Lưu ý:</span> Hệ thống sẽ tự động cập nhật ghi đè nếu trùng (Loại màu, Loại ống, Size ống, Mã màu).
           </div>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-light" data-bs-dismiss="modal">Đóng</button>
-          <button type="submit" class="btn btn-success fw-bold">Bắt Đầu Nhập Dữ Liệu</button>
+          <button type="button" class="app-btn app-btn-secondary" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="app-btn app-btn-success">Bắt Đầu Nhập Dữ Liệu</button>
         </div>
       </form>
     </div>
@@ -306,7 +302,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function formatSpeed(val) {
   if (val === null || val === undefined || val.toString().trim() === '') {
-    return `<span class="badge bg-pending w-100 py-2"><i class="bi bi-hourglass-split me-1"></i>Đang chờ bổ sung</span>`;
+    return `<span class="badge bg-pending w-100 py-2">Đang chờ bổ sung</span>`;
   }
   if (val.toString().trim() === '-') {
     return `<span class="badge bg-unused w-100 py-2">Không sử dụng</span>`;
@@ -368,9 +364,9 @@ function renderTable(data, startIndex = 0) {
         <input type="checkbox" class="form-check-input item-checkbox" value="${item.id}" ${isChecked} onchange="toggleItemSelect(${item.id}, this.checked)">
       </td>
       <td class="fw-bold text-muted">${startIndex + index + 1}</td>
-      <td><span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1">${item.color_type}</span></td>
+      <td><span class="app-badge badge-info">${item.color_type}</span></td>
       <td><strong>${item.pipe_type}</strong></td>
-      <td><span class="badge bg-secondary">${item.pipe_size}</span></td>
+      <td><span class="app-badge badge-stopped">${item.pipe_size}</span></td>
       <td><strong class="text-dark">${item.color_code}</strong></td>
       <td class="text-center fw-bold text-primary">${parseFloat(item.hauler_speed).toFixed(2)}</td>
       <td class="text-center bg-danger-subtle text-danger">${formatSpeed(item.mixer_speed_large)}</td>
@@ -379,14 +375,14 @@ function renderTable(data, startIndex = 0) {
       <td class="text-end fw-bold text-success">${parseFloat(colorOutput).toFixed(2)}</td>
       <td class="small">
         <div class="fw-bold text-dark">${item.updated_by_name || 'Hệ thống'}</div>
-        <div class="text-muted fs-7">${item.updated_at || ''}</div>
+        <div class="text-muted" style="font-size: 11px;">${item.updated_at || ''}</div>
       </td>
       <td class="text-center">
-        <button class="btn btn-sm btn-outline-primary btn-action-icon me-1" onclick="editSetting(${item.id})" title="Chỉnh sửa">
-          <i class="bi bi-pencil-fill"></i>
+        <button class="app-btn app-btn-outline app-btn-sm btn-action-icon me-1" onclick="editSetting(${item.id})" title="Chỉnh sửa">
+          <span class="material-icons" style="font-size: 15px;">edit</span>
         </button>
-        <button class="btn btn-sm btn-outline-danger btn-action-icon" onclick="deleteSetting(${item.id})" title="Xóa">
-          <i class="bi bi-trash-fill"></i>
+        <button class="app-btn app-btn-danger app-btn-sm btn-action-icon" onclick="deleteSetting(${item.id})" title="Xóa">
+          <span class="material-icons" style="font-size: 15px;">delete</span>
         </button>
       </td>
     `;
@@ -394,7 +390,6 @@ function renderTable(data, startIndex = 0) {
   });
 }
 
-// THAO TÁC XÓA NHIỀU MỤC (BULK DELETE)
 function toggleSelectAll(master) {
   const checkboxes = document.querySelectorAll('.item-checkbox');
   checkboxes.forEach(cb => {
@@ -494,7 +489,7 @@ function editSetting(id) {
   const item = loadedDatabaseData.find(d => d.id == id);
   if (!item) return;
 
-  document.getElementById('formModalTitle').innerHTML = `<i class="bi bi-pencil-square me-2"></i>Chỉnh Sửa Thông Số`;
+  document.getElementById('formModalTitle').innerHTML = `<span class="material-icons text-primary me-2">edit</span>Chỉnh Sửa Thông Số`;
   document.getElementById('edit_id').value = item.id;
   document.getElementById('form_color_type').value = item.color_type;
   document.getElementById('form_pipe_type').value = item.pipe_type;
@@ -533,7 +528,7 @@ function deleteSetting(id) {
 function openAddFormModal() {
   document.getElementById('addMixerForm').reset();
   document.getElementById('edit_id').value = '';
-  document.getElementById('formModalTitle').innerHTML = `<i class="bi bi-plus-circle me-2"></i>Đăng Ký Thông Số Mới`;
+  document.getElementById('formModalTitle').innerHTML = `<span class="material-icons text-primary me-2">add_circle</span>Đăng Ký Thông Số Mới`;
   formModalInstance.show();
 }
 
