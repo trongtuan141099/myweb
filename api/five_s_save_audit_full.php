@@ -10,11 +10,7 @@ try {
     require_once __DIR__ . '/../config/db.php';
     require_once __DIR__ . '/../core/check_permission.php';
 
-    if (!isset($_SESSION['user_id'])) {
-        ob_clean();
-        echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập hệ thống']);
-        exit;
-    }
+    requireApiPermission(['five_s.audit', 'api.five_s.save_audit_full']);
 
     $inspector_id = $_SESSION['user_id'];
     $zone_id = intval($_POST['zone_id'] ?? 0);

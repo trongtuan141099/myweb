@@ -1,6 +1,8 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['mixer.view', 'api.mixer.get']);
 
 $page = max(1, intval($_GET['page'] ?? 1));
 $limit = max(1, intval($_GET['limit'] ?? 15));

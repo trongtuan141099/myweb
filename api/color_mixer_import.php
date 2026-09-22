@@ -9,6 +9,8 @@ try {
     require_once __DIR__ . '/../config/db.php';
     require_once __DIR__ . '/../core/check_permission.php';
 
+    requireApiPermission(['mixer.edit', 'api.mixer.import']);
+
     if (!isset($_FILES['csv_file']) || $_FILES['csv_file']['error'] !== UPLOAD_ERR_OK) {
         ob_clean();
         echo json_encode(['success' => false, 'message' => 'Vui lòng chọn tập tin CSV để tải lên']);

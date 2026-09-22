@@ -457,27 +457,95 @@ checkAuth();
   background: var(--dx-primary-light);
 }
 
+/* Print Preview Modal & Sheet Styles */
+.print-paper-backdrop {
+  background: #cbd5e1;
+  padding: 24px;
+  overflow: auto;
+  display: flex;
+  justify-content: center;
+}
+[data-theme="dark"] .print-paper-backdrop {
+  background: #0f172a;
+}
+.print-paper-sheet {
+  background: #ffffff;
+  color: #0f172a;
+  width: 100%;
+  max-width: 1200px;
+  min-height: 720px;
+  padding: 32px 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  position: relative;
+  box-sizing: border-box;
+}
+.print-paper-sheet .table {
+  color: #0f172a !important;
+}
+
 /* Khi In ấn (Print Styles) */
 @media print {
-  body { background: #fff !important; }
-  .sidebar, .header, .footer, .ioc-toolbar, .ioc-zoom-float, .app-page-actions {
-    display: none !important;
+  @page {
+    size: landscape;
+    margin: 8mm;
   }
-  .ioc-canvas-container {
+  html, body {
+    width: 100% !important;
     height: auto !important;
     overflow: visible !important;
-    border: none !important;
-    background: none !important;
+    background: #fff !important;
   }
-  .ioc-tree-viewport {
+  .sidebar, .top-header, .main-footer, .app-page-header, .ioc-kpi-grid, .ioc-toolbar, 
+  .ioc-canvas-container, .ioc-zoom-float, .app-page-actions, .modal-backdrop, .print-controls-bar {
+    display: none !important;
+  }
+  #printPreviewModal {
     position: static !important;
-    transform: none !important;
+    display: block !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    opacity: 1 !important;
+  }
+  #printPreviewModal .modal-dialog {
+    max-width: 100% !important;
+    margin: 0 !important;
     padding: 0 !important;
   }
-  .ioc-node-card {
-    border: 1.5px solid #000 !important;
+  #printPreviewModal .modal-content {
+    border: none !important;
     box-shadow: none !important;
-    break-inside: avoid;
+    background: transparent !important;
+  }
+  #printPreviewModal .modal-body {
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  .print-paper-backdrop {
+    background: transparent !important;
+    padding: 0 !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+  .print-paper-sheet {
+    box-shadow: none !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .ioc-node-card {
+    border: 1.5px solid #1e293b !important;
+    box-shadow: none !important;
+    break-inside: avoid !important;
+    background: #fff !important;
+    color: #000 !important;
+  }
+  .dx-org-tree li::before, .dx-org-tree li::after, .dx-org-tree ul::before {
+    border-color: #475569 !important;
   }
 }
 </style>
@@ -485,14 +553,14 @@ checkAuth();
 <div class="app-page-wrapper">
   <!-- 1. Header Trang & Thao Tác Chính -->
   <div class="app-page-header">
-    <div class="app-page-title">
-      <span class="material-icons text-primary" style="font-size: 28px;">account_tree</span>
-      <div>
-        <h1 style="font-size: 19px; font-weight: 800; margin: 0;">SƠ ĐỒ TỔ CHỨC NHÂN SỰ KIỂM KÊ</h1>
-        <p class="text-muted small mb-0">Thiết lập cấu trúc cây phân cấp chỉ đạo và phân công nhân sự kiểm kê kho bãi, vật tư, máy móc</p>
-      </div>
+    <div>
+      <h1 class="app-page-title">
+        <span class="material-icons">account_tree</span>
+        Sơ Đồ Tổ Chức Nhân Sự Kiểm Kê
+      </h1>
+      <p class="app-page-subtitle">Thiết lập cấu trúc cây phân cấp chỉ đạo và phân công nhân sự kiểm kê kho bãi, vật tư, máy móc</p>
     </div>
-    <div class="app-page-actions d-flex align-items-center gap-2">
+    <div class="app-page-actions">
       <!-- Chọn đợt kiểm kê -->
       <div class="dropdown">
         <button class="app-btn app-btn-secondary dropdown-toggle" type="button" id="campaignDropdownBtn" data-bs-toggle="dropdown" aria-expanded="false">
@@ -522,8 +590,9 @@ checkAuth();
       </button>
 
       <!-- Nút In / Xuất Sơ Đồ -->
-      <button class="app-btn app-btn-secondary" type="button" onclick="window.print()" title="In hoặc xuất PDF sơ đồ">
-        <span class="material-icons">print</span>
+      <button class="app-btn app-btn-secondary" type="button" onclick="openPrintPreviewModal()" title="Xem trước và in báo cáo sơ đồ tổ chức">
+        <span class="material-icons">visibility</span>
+        <span class="d-none d-sm-inline">Xem Trước & In</span>
       </button>
     </div>
   </div>
@@ -614,6 +683,11 @@ checkAuth();
       </button>
       <button class="app-btn app-btn-secondary btn-sm" type="button" onclick="collapseAllNodes()" title="Thu gọn toàn bộ cây">
         <span class="material-icons fs-6">unfold_less</span> Thu gọn
+      </button>
+
+      <div class="vr mx-1" style="height: 24px;"></div>
+      <button class="app-btn app-btn-secondary btn-sm" type="button" onclick="openPrintPreviewModal()" title="Xem trước và In báo cáo sơ đồ tổ chức">
+        <span class="material-icons fs-6">print</span> Xem trước / In
       </button>
     </div>
   </div>
@@ -774,24 +848,37 @@ checkAuth();
               </div>
             </div>
 
-            <!-- 5. Khu vực kiểm kê phụ trách -->
-            <div class="col-md-6">
-              <label class="form-label fw-bold small text-muted">Khu Vực Kiểm Kê Phụ Trách</label>
-              <input type="text" class="app-form-control" id="nodeArea" name="area_assigned" list="areaSuggestions" placeholder="VD: Kho Hạt Nhựa, Xưởng Ép Đùn...">
-              <datalist id="areaSuggestions">
-                <option value="Bộ phận Plastic">
-                <option value="A00330 - Nhóm Đùn nhựa">
-                <option value="A00442 - Nhóm Nghiền nhựa">
-                <option value="A00852 - Nhóm Nylon T">
-                <option value="A00330-1 - Tồn NVL">
-                <option value="A00330-2 - Tồn BTP">
-                <option value="A00330-3 - Kho CCDC">
-                <option value="A00442-1 - Tồn NVL trước nghiền">
-                <option value="A00442-2 - Tồn NVL trước nghiền">
-                <option value="A00852-1 - Tồn NVL">
-                <option value="A00852-2 - Tồn BTP">
-                <option value="Bảo trì thiết bị">
-              </datalist>
+            <!-- 5. Khu vực kiểm kê phụ trách (Đa khu vực) -->
+            <div class="col-md-12">
+              <label class="form-label fw-bold small text-muted d-flex align-items-center justify-content-between mb-1">
+                <span>
+                  <span class="material-icons fs-6 align-middle text-primary">place</span>
+                  Khu Vực Kiểm Kê Phụ Trách <span class="badge bg-primary-subtle text-primary ms-1" id="areaSelectedCount">0 khu vực</span>
+                </span>
+                <span class="text-muted fw-normal" style="font-size: 11px;">(Có thể chọn hoặc nhập nhiều khu vực)</span>
+              </label>
+
+              <!-- Container hiển thị các tag khu vực đã chọn -->
+              <div id="selectedAreaTagsContainer" class="p-2 border rounded bg-white mb-2 d-flex flex-wrap align-items-center gap-1" style="min-height: 40px;">
+                <span class="text-muted small fst-italic">Chưa chọn khu vực (Mặc định: Toàn Nhà Máy)</span>
+              </div>
+              <input type="hidden" id="nodeArea" name="area_assigned">
+
+              <!-- Ô nhập thêm khu vực tùy biến & nút Thêm -->
+              <div class="input-group input-group-sm mb-2">
+                <input type="text" class="form-control" id="customAreaInput" placeholder="Nhập tên khu vực / kho bãi mới rồi nhấn Enter hoặc bấm Thêm..." onkeydown="handleCustomAreaKeydown(event)">
+                <button class="btn btn-outline-primary" type="button" onclick="addCustomAreaFromInput()">
+                  <span class="material-icons fs-6 align-middle">add</span> Thêm khu vực
+                </button>
+              </div>
+
+              <!-- Danh sách các khu vực gợi ý nhanh thường dùng trong nhà máy -->
+              <div class="small text-muted">
+                <span class="me-1">Gợi ý nhanh (nhấp để thêm/bỏ):</span>
+                <div class="d-inline-flex flex-wrap gap-1 mt-1" id="quickAreaSuggestions">
+                  <!-- Được điền động bằng JS -->
+                </div>
+              </div>
             </div>
 
             <!-- 6. Kênh liên lạc / Số điện thoại / Bộ đàm -->
@@ -1037,6 +1124,143 @@ checkAuth();
 </div>
 
 <!-- ======================================================================= -->
+<!-- MODAL 5: XEM TRƯỚC VÀ IN ẤN SƠ ĐỒ BÁO CÁO (PRINT & PREVIEW MODAL)         -->
+<!-- ======================================================================= -->
+<div class="modal fade" id="printPreviewModal" tabindex="-1" aria-labelledby="printPreviewModalLabel" aria-hidden="true" style="z-index: 1060;">
+  <div class="modal-dialog modal-fullscreen modal-dialog-scrollable">
+    <div class="modal-content border-0">
+      <!-- Modal Header with Print Controls -->
+      <div class="modal-header bg-dark text-white py-2 px-3 print-controls-bar d-flex align-items-center justify-content-between">
+        <div class="d-flex align-items-center gap-2">
+          <span class="material-icons text-primary fs-5">visibility</span>
+          <h5 class="modal-title fs-6 fw-bold m-0" id="printPreviewModalLabel">
+            Xem Trước & In Báo Cáo Sơ Đồ Tổ Chức Kiểm Kê
+          </h5>
+          <span class="badge bg-primary ms-2" id="previewModeBadge">Khổ Ngang (Landscape)</span>
+        </div>
+
+        <!-- Controls: View type, Scale, Print button -->
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+          <!-- View toggle: Tree or Table -->
+          <div class="btn-group btn-group-sm" role="group">
+            <button type="button" class="btn btn-outline-light btn-sm active" id="btnPreviewTree" onclick="switchPreviewMode('tree')">
+              <span class="material-icons fs-6 align-middle">account_tree</span> Sơ đồ cây
+            </button>
+            <button type="button" class="btn btn-outline-light btn-sm" id="btnPreviewTable" onclick="switchPreviewMode('table')">
+              <span class="material-icons fs-6 align-middle">table_rows</span> Bảng phân công
+            </button>
+          </div>
+
+          <div class="vr bg-secondary" style="height: 20px;"></div>
+
+          <!-- Scale controls -->
+          <div class="d-flex align-items-center gap-1">
+            <span class="small text-light me-1 d-none d-md-inline">Thu phóng:</span>
+            <button class="btn btn-outline-light btn-sm px-2 py-0" type="button" onclick="setPreviewScale(0.5)">50%</button>
+            <button class="btn btn-outline-light btn-sm px-2 py-0" type="button" onclick="setPreviewScale(0.7)">70%</button>
+            <button class="btn btn-outline-light btn-sm px-2 py-0" type="button" onclick="setPreviewScale(0.85)">85%</button>
+            <button class="btn btn-outline-light btn-sm px-2 py-0 active" id="btnScale100" type="button" onclick="setPreviewScale(1)">100%</button>
+            <button class="btn btn-outline-light btn-sm px-2 py-0" id="btnScaleFit" type="button" onclick="fitPreviewScale()">Vừa trang</button>
+          </div>
+
+          <div class="vr bg-secondary" style="height: 20px;"></div>
+
+          <!-- Action buttons -->
+          <button type="button" class="btn btn-primary btn-sm fw-bold d-flex align-items-center gap-1 shadow-sm px-3" onclick="executePrint()">
+            <span class="material-icons fs-6">print</span> In Báo Cáo
+          </button>
+          <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">
+            <span class="material-icons fs-6">close</span> Đóng
+          </button>
+        </div>
+      </div>
+
+      <!-- Modal Body (Paper Sheet Canvas) -->
+      <div class="modal-body p-0 print-paper-backdrop">
+        <div class="print-paper-sheet" id="printPaperSheet">
+          <!-- Report Header Banner -->
+          <div class="print-report-header">
+            <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
+              <div>
+                <div class="fw-bold text-uppercase" style="font-size: 14px; letter-spacing: 0.5px; color: #1e3a8a;">
+                  CÔNG TY CỔ PHẦN SX-TM NHỰA ĐẠI XUÂN (DX PLASTIC GROUP)
+                </div>
+                <div class="small text-muted">Hệ Thống Quản Lý Sản Xuất & Kiểm Kê Định Kỳ Nhà Máy</div>
+              </div>
+              <div class="text-end small text-muted">
+                <div>Mẫu số: <strong>DX-KK-ORG-01</strong></div>
+                <div>Thời điểm in: <span id="printReportTime"></span></div>
+              </div>
+            </div>
+
+            <div class="text-center my-3">
+              <h3 class="fw-bold text-uppercase mb-1" style="font-size: 21px; color: #0f172a; letter-spacing: 0.5px;">
+                SƠ ĐỒ TỔ CHỨC BAN ĐIỀU HÀNH & NHÂN SỰ KIỂM KÊ
+              </h3>
+              <div class="fw-semibold text-primary" id="printReportCampaign" style="font-size: 14.5px;"></div>
+            </div>
+
+            <!-- Summary KPI Box -->
+            <div class="d-flex justify-content-around py-2 px-3 mb-4 rounded bg-light border text-center small">
+              <div><span class="text-muted">Tổng nhân sự:</span> <strong id="printStatMembers">0</strong> người</div>
+              <div><span class="text-muted">Cấp bậc chỉ đạo:</span> <strong id="printStatLevels">0</strong> cấp</div>
+              <div><span class="text-muted">Khu vực phụ trách:</span> <strong id="printStatAreas">0</strong> khu vực</div>
+              <div><span class="text-muted">Trưởng ban:</span> <strong id="printStatLeader" class="text-primary">-</strong></div>
+            </div>
+          </div>
+
+          <!-- Main Report Content -->
+          <div id="printPreviewTreeWrapper" style="overflow: visible; display: flex; justify-content: center; transform-origin: top center; transition: transform 0.15s ease;">
+            <div id="printPreviewTreeContent" class="dx-org-tree">
+              <!-- Render cây sơ đồ thu nhỏ -->
+            </div>
+          </div>
+
+          <div id="printPreviewTableWrapper" class="d-none">
+            <table class="table table-bordered table-sm small align-middle w-100">
+              <thead class="table-light">
+                <tr class="text-center">
+                  <th style="width: 45px;">STT</th>
+                  <th style="width: 80px;">Cấp Bậc</th>
+                  <th>Chức Danh Kiểm Kê</th>
+                  <th>Họ Tên Nhân Sự</th>
+                  <th style="width: 90px;">Mã NV</th>
+                  <th>Phòng Ban</th>
+                  <th>Khu Vực Phụ Trách</th>
+                  <th>Báo Cáo Cho</th>
+                  <th>Điện Thoại</th>
+                </tr>
+              </thead>
+              <tbody id="printPreviewTableBody">
+                <!-- Render danh sách nhân sự kiểm kê -->
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Report Signatures Footer -->
+          <div class="print-report-footer mt-5 pt-3 border-top">
+            <div class="row text-center small text-muted">
+              <div class="col-4">
+                <div class="fw-bold text-dark text-uppercase mb-1">Người Lập Sơ Đồ</div>
+                <div class="fst-italic" style="height: 50px;">(Ký & ghi rõ họ tên)</div>
+              </div>
+              <div class="col-4">
+                <div class="fw-bold text-dark text-uppercase mb-1">Thư Ký / Phó Ban</div>
+                <div class="fst-italic" style="height: 50px;">(Ký & ghi rõ họ tên)</div>
+              </div>
+              <div class="col-4">
+                <div class="fw-bold text-dark text-uppercase mb-1">Trưởng Ban Kiểm Kê / Giám Đốc</div>
+                <div class="fst-italic" style="height: 50px;">(Ký, đóng dấu & ghi rõ họ tên)</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ======================================================================= -->
 <!-- JAVASCRIPT ĐIỀU KHIỂN SƠ ĐỒ CÂY TỔ CHỨC KIỂM KÊ                         -->
 <!-- ======================================================================= -->
 <script>
@@ -1161,16 +1385,29 @@ function buildNodeHtml(node) {
   const hasChildren = node.children && node.children.length > 0;
   const childCount = hasChildren ? node.children.length : 0;
 
+  const nodeAreas = (node.areas_list && node.areas_list.length > 0)
+    ? node.areas_list
+    : (node.area_assigned ? node.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+
+  let areaTagHtml = '';
+  if (nodeAreas.length === 0) {
+    areaTagHtml = `<span class="ioc-node-area-tag" title="Chưa phân khu"><span class="material-icons" style="font-size: 12px;">place</span>Toàn NM</span>`;
+  } else if (nodeAreas.length === 1) {
+    areaTagHtml = `<span class="ioc-node-area-tag" title="${escapeHtml(nodeAreas[0])}"><span class="material-icons" style="font-size: 12px;">place</span>${escapeHtml(nodeAreas[0])}</span>`;
+  } else {
+    areaTagHtml = `<span class="ioc-node-area-tag" title="${escapeHtml(nodeAreas.join(', '))}" style="max-width: 140px;">
+      <span class="material-icons" style="font-size: 12px;">place</span>${escapeHtml(nodeAreas[0])}
+      <span class="badge bg-primary text-white ms-1" style="font-size: 9px; padding: 1px 4px; border-radius: 8px;">+${nodeAreas.length - 1}</span>
+    </span>`;
+  }
+
   let html = `
     <li id="tree-li-${node.id}">
-      <div class="ioc-node-card" id="tree-card-${node.id}" data-id="${node.id}" data-level="${node.level_number}" data-area="${escapeHtml(node.area_assigned || '')}">
+      <div class="ioc-node-card" id="tree-card-${node.id}" data-id="${node.id}" data-level="${node.level_number}" data-area="${escapeHtml(nodeAreas.join(', '))}">
         <!-- Header -->
         <div class="ioc-node-header">
           <span class="ioc-node-level-badge ${colorClass}">Cấp ${node.level_number}</span>
-          <span class="ioc-node-area-tag" title="${escapeHtml(node.area_assigned || 'Chưa phân khu')}">
-            <span class="material-icons" style="font-size: 12px;">place</span>
-            ${escapeHtml(node.area_assigned || 'Toàn NM')}
-          </span>
+          ${areaTagHtml}
         </div>
 
         <!-- Body -->
@@ -1323,7 +1560,14 @@ function renderOrgTable(nodes) {
         </td>
         <td>${escapeHtml(n.department || '-')} ${n.job_level ? `<span class="badge bg-secondary ms-1">${escapeHtml(n.job_level)}</span>` : ''}</td>
         <td>
-          ${n.area_assigned ? `<span class="badge bg-light text-dark border">📍 ${escapeHtml(n.area_assigned)}</span>` : '-'}
+          ${(() => {
+            const arr = (n.areas_list && n.areas_list.length > 0)
+              ? n.areas_list
+              : (n.area_assigned ? n.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+            return arr.length > 0 
+              ? arr.map(a => `<span class="badge bg-light text-dark border me-1 mb-1">📍 ${escapeHtml(a)}</span>`).join('') 
+              : '-';
+          })()}
         </td>
         <td><small>${parentTitle}</small></td>
         <td><small class="text-muted">${escapeHtml(n.phone || '-')}</small></td>
@@ -1546,10 +1790,16 @@ function populateAreaFilters() {
   const curVal = sel.value;
   const areas = [];
   flatNodesList.forEach(n => {
-    if (n.area_assigned && !areas.includes(n.area_assigned)) {
-      areas.push(n.area_assigned);
-    }
+    const list = (n.areas_list && n.areas_list.length > 0)
+      ? n.areas_list
+      : (n.area_assigned ? n.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    list.forEach(a => {
+      if (a && !areas.includes(a)) {
+        areas.push(a);
+      }
+    });
   });
+  areas.sort();
 
   sel.innerHTML = '<option value="">-- Tất cả khu vực --</option>';
   areas.forEach(a => {
@@ -1567,6 +1817,7 @@ function openAddNodeModal(parentId) {
   document.getElementById('nodeCampaignId').value = currentCampaignId;
   document.getElementById('nodeModalTitleText').textContent = 'Thêm Vị Trí Nhân Sự Kiểm Kê';
   clearEmployeeSelection();
+  initSelectedAreaTags('');
 
   // Đổ dữ liệu cây vào select Cấp Trên (Parent)
   populateParentSelect(0, parentId);
@@ -1604,7 +1855,7 @@ function openEditNodeModal(nodeId) {
 
   // Điền thông tin form
   document.getElementById('nodePositionTitle').value = node.position_title || '';
-  document.getElementById('nodeArea').value = node.area_assigned || '';
+  initSelectedAreaTags(node.area_assigned || '');
   document.getElementById('nodePhone').value = node.phone || '';
   document.getElementById('nodeDuties').value = node.duties || '';
   document.getElementById('nodeSortOrder').value = node.sort_order || 1;
@@ -2101,18 +2352,27 @@ function openNodeDetail(nodeId) {
   if (directChildren.length > 0) {
     childrenListHtml = '<ul class="list-group list-group-flush border rounded mt-1">';
     directChildren.forEach(ch => {
+      const chAreas = (ch.areas_list && ch.areas_list.length > 0)
+        ? ch.areas_list
+        : (ch.area_assigned ? ch.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+      const chAreaText = chAreas.length > 0 ? chAreas.join(', ') : 'Chưa phân khu';
+
       childrenListHtml += `
         <li class="list-group-item d-flex align-items-center justify-content-between p-2 small">
           <div>
             <strong>${escapeHtml(ch.position_title)}</strong>: ${escapeHtml(ch.full_name || 'Chưa gán')}
             <span class="text-muted font-monospace">(${ch.employee_code || 'N/A'})</span>
           </div>
-          <span class="badge bg-light text-dark border">📍 ${escapeHtml(ch.area_assigned || 'Chưa phân khu')}</span>
+          <span class="badge bg-light text-dark border">📍 ${escapeHtml(chAreaText)}</span>
         </li>
       `;
     });
     childrenListHtml += '</ul>';
   }
+
+  const nodeDetailAreas = (node.areas_list && node.areas_list.length > 0)
+    ? node.areas_list
+    : (node.area_assigned ? node.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
 
   const body = document.getElementById('nodeDetailBody');
   body.innerHTML = `
@@ -2139,15 +2399,19 @@ function openNodeDetail(nodeId) {
         <span class="text-muted d-block">Cấp bậc sơ đồ:</span>
         <span class="ioc-node-level-badge ${colorClass}">Cấp ${node.level_number} - ${escapeHtml(node.level_name || '')}</span>
       </div>
-      <div class="col-6 mt-2">
-        <span class="text-muted d-block">Khu vực phụ trách:</span>
-        <strong>📍 ${escapeHtml(node.area_assigned || 'Toàn bộ nhà máy')}</strong>
+      <div class="col-12 mt-2">
+        <span class="text-muted d-block mb-1">Khu vực kiểm kê phụ trách (${nodeDetailAreas.length}):</span>
+        <div class="d-flex flex-wrap gap-1">
+          ${nodeDetailAreas.length > 0 
+            ? nodeDetailAreas.map(a => `<span class="badge bg-light text-dark border p-1 px-2"><span class="material-icons align-middle text-primary" style="font-size: 13px;">place</span> ${escapeHtml(a)}</span>`).join('') 
+            : '<span class="badge bg-light text-muted border">Toàn bộ nhà máy</span>'}
+        </div>
       </div>
       <div class="col-6 mt-2">
         <span class="text-muted d-block">Điện thoại / Bộ đàm:</span>
         <strong>📞 ${escapeHtml(node.phone || 'Chưa cấu hình')}</strong>
       </div>
-      <div class="col-12 mt-2">
+      <div class="col-6 mt-2">
         <span class="text-muted d-block">Báo cáo trực tiếp cho:</span>
         <strong>↳ ${parentName}</strong>
       </div>
@@ -2205,6 +2469,347 @@ function getAvatarColor(str) {
   }
   const index = Math.abs(hash) % colors.length;
   return colors[index];
+}
+
+// =========================================================================
+// QUẢN LÝ ĐA KHU VỰC TRONG MODAL (MULTI-AREA SELECTOR)
+// =========================================================================
+let currentSelectedAreas = [];
+
+const PRESET_FACTORY_AREAS = [
+  'Toàn Nhà Máy',
+  'Bộ phận Plastic',
+  'A00330 - Nhóm Đùn nhựa',
+  'A00330-1 - Tồn NVL',
+  'A00330-2 - Tồn BTP',
+  'A00330-3 - Kho CCDC',
+  'A00442 - Nhóm Nghiền nhựa',
+  'A00442-1 - Tồn NVL trước nghiền',
+  'A00442-2 - Tồn BTP sau nghiền',
+  'A00852 - Nhóm Nylon T',
+  'A00852-1 - Tồn NVL',
+  'A00852-2 - Tồn BTP',
+  'Kho Thành Phẩm',
+  'Bảo trì thiết bị'
+];
+
+function initSelectedAreaTags(areaString) {
+  currentSelectedAreas = [];
+  if (areaString) {
+    currentSelectedAreas = areaString.split(',').map(s => s.trim()).filter(Boolean);
+  }
+  renderSelectedAreaTags();
+  renderQuickAreaSuggestions();
+}
+
+function renderSelectedAreaTags() {
+  const container = document.getElementById('selectedAreaTagsContainer');
+  const countBadge = document.getElementById('areaSelectedCount');
+  const hiddenInput = document.getElementById('nodeArea');
+
+  if (!container) return;
+
+  if (currentSelectedAreas.length === 0) {
+    container.innerHTML = '<span class="text-muted small fst-italic">Chưa chọn khu vực (Mặc định: Toàn Nhà Máy)</span>';
+    if (countBadge) countBadge.textContent = '0 khu vực';
+    if (hiddenInput) hiddenInput.value = '';
+  } else {
+    let html = '';
+    currentSelectedAreas.forEach(a => {
+      html += `
+        <span class="badge bg-primary-subtle text-primary border d-inline-flex align-items-center gap-1 py-1 px-2" style="font-size: 12px;">
+          <span class="material-icons" style="font-size: 13px;">place</span>
+          <span>${escapeHtml(a)}</span>
+          <button type="button" class="btn-close ms-1" style="font-size: 8px;" onclick="removeAreaTag('${escapeHtml(a).replace(/'/g, "\\'")}')"></button>
+        </span>
+      `;
+    });
+    container.innerHTML = html;
+    if (countBadge) countBadge.textContent = `${currentSelectedAreas.length} khu vực`;
+    if (hiddenInput) hiddenInput.value = currentSelectedAreas.join(', ');
+  }
+
+  renderQuickAreaSuggestions();
+}
+
+function toggleAreaTag(area) {
+  const idx = currentSelectedAreas.indexOf(area);
+  if (idx >= 0) {
+    currentSelectedAreas.splice(idx, 1);
+  } else {
+    currentSelectedAreas.push(area);
+  }
+  renderSelectedAreaTags();
+}
+
+function removeAreaTag(area) {
+  currentSelectedAreas = currentSelectedAreas.filter(a => a !== area);
+  renderSelectedAreaTags();
+}
+
+function addCustomAreaFromInput() {
+  const input = document.getElementById('customAreaInput');
+  if (!input) return;
+  const val = input.value.trim();
+  if (val) {
+    const parts = val.split(',').map(s => s.trim()).filter(Boolean);
+    parts.forEach(p => {
+      if (!currentSelectedAreas.includes(p)) {
+        currentSelectedAreas.push(p);
+      }
+    });
+    input.value = '';
+    renderSelectedAreaTags();
+  }
+}
+
+function handleCustomAreaKeydown(e) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    addCustomAreaFromInput();
+  }
+}
+
+function renderQuickAreaSuggestions() {
+  const container = document.getElementById('quickAreaSuggestions');
+  if (!container) return;
+
+  const allSuggestions = [...PRESET_FACTORY_AREAS];
+  flatNodesList.forEach(n => {
+    const list = (n.areas_list && n.areas_list.length > 0)
+      ? n.areas_list
+      : (n.area_assigned ? n.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+    list.forEach(a => {
+      if (a && !allSuggestions.includes(a)) {
+        allSuggestions.push(a);
+      }
+    });
+  });
+
+  let html = '';
+  allSuggestions.slice(0, 16).forEach(a => {
+    const isSelected = currentSelectedAreas.includes(a);
+    const badgeClass = isSelected ? 'bg-primary text-white' : 'bg-light text-dark border';
+    html += `
+      <span class="badge ${badgeClass} cursor-pointer" onclick="toggleAreaTag('${escapeHtml(a).replace(/'/g, "\\'")}')" style="user-select: none;">
+        ${isSelected ? '✓ ' : '+ '}${escapeHtml(a)}
+      </span>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+// =========================================================================
+// XEM TRƯỚC VÀ IN BÁO CÁO SƠ ĐỒ KIỂM KÊ (PRINT & PREVIEW)
+// =========================================================================
+let currentPreviewScale = 1;
+let currentPreviewMode = 'tree';
+
+function openPrintPreviewModal() {
+  if (!orgTreeData) {
+    alert('Dữ liệu sơ đồ chưa sẵn sàng!');
+    return;
+  }
+
+  // 1. Điền thông tin tiêu đề báo cáo
+  const campaignName = (orgTreeData.campaign && orgTreeData.campaign.campaign_name) 
+    ? orgTreeData.campaign.campaign_name 
+    : (document.getElementById('currentCampaignName').textContent || 'Đợt Kiểm Kê Toàn Nhà Máy');
+  
+  const auditDate = (orgTreeData.campaign && orgTreeData.campaign.audit_date) 
+    ? orgTreeData.campaign.audit_date 
+    : new Date().toLocaleDateString('vi-VN');
+
+  document.getElementById('printReportCampaign').textContent = `Đợt: ${campaignName} (Ngày thực hiện: ${auditDate})`;
+
+  const now = new Date();
+  const timeStr = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')} ngày ${now.getDate().toString().padStart(2, '0')}/${(now.getMonth()+1).toString().padStart(2, '0')}/${now.getFullYear()}`;
+  document.getElementById('printReportTime').textContent = timeStr;
+
+  // Điền chỉ số thống kê
+  document.getElementById('printStatMembers').textContent = orgTreeData.kpi.total_members || flatNodesList.length;
+  document.getElementById('printStatLevels').textContent = orgTreeData.kpi.total_levels || configuredLevels.length;
+  document.getElementById('printStatAreas').textContent = orgTreeData.kpi.total_areas || 0;
+
+  // Tìm Trưởng ban
+  const leaderNode = flatNodesList.find(n => n.level_number == 1);
+  document.getElementById('printStatLeader').textContent = leaderNode 
+    ? `${leaderNode.full_name || leaderNode.position_title} (${leaderNode.position_title})` 
+    : 'Chưa chỉ định';
+
+  // 2. Render Cây sơ đồ trong preview
+  renderPreviewTree(orgTreeData.tree);
+
+  // 3. Render Bảng danh sách trong preview
+  renderPreviewTable(flatNodesList);
+
+  // 4. Mặc định hiển thị sơ đồ cây
+  switchPreviewMode('tree');
+
+  // Mở modal
+  const modalEl = document.getElementById('printPreviewModal');
+  const modal = new bootstrap.Modal(modalEl);
+  modal.show();
+
+  // Tự động căn chỉnh vừa khổ giấy sau khi modal hiển thị
+  setTimeout(() => {
+    fitPreviewScale();
+  }, 350);
+}
+
+function renderPreviewTree(treeData) {
+  const container = document.getElementById('printPreviewTreeContent');
+  if (!container) return;
+
+  if (!treeData || treeData.length === 0) {
+    container.innerHTML = '<div class="text-center p-4 text-muted">Chưa có vị trí nào trong sơ đồ đợt kiểm kê này.</div>';
+    return;
+  }
+
+  let html = '<ul>';
+  treeData.forEach(rootNode => {
+    html += buildPreviewNodeHtml(rootNode);
+  });
+  html += '</ul>';
+  container.innerHTML = html;
+}
+
+function buildPreviewNodeHtml(node) {
+  const nodeAreas = (node.areas_list && node.areas_list.length > 0)
+    ? node.areas_list
+    : (node.area_assigned ? node.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+
+  const colorClass = `badge-lvl-${node.badge_color || 'primary'}`;
+  const avatarBg = getAvatarColor(node.full_name || node.position_title);
+  const initials = getInitials(node.full_name || node.position_title);
+  const hasChildren = node.children && node.children.length > 0;
+
+  let areaText = nodeAreas.length > 0 ? nodeAreas.join(', ') : 'Toàn NM';
+
+  let html = `
+    <li>
+      <div class="ioc-node-card" style="width: 240px; box-shadow: none; border: 1.5px solid #334155;">
+        <div class="ioc-node-header" style="background: #f1f5f9; padding: 4px 8px;">
+          <span class="ioc-node-level-badge ${colorClass}" style="font-size: 10px;">Cấp ${node.level_number}</span>
+          <span class="ioc-node-area-tag" title="${escapeHtml(areaText)}" style="max-width: 140px; font-size: 10.5px;">
+            <span class="material-icons" style="font-size: 11px;">place</span> ${escapeHtml(nodeAreas[0] || 'Toàn NM')}
+            ${nodeAreas.length > 1 ? `<span class="badge bg-primary text-white ms-1" style="font-size: 8.5px; padding: 1px 3px;">+${nodeAreas.length - 1}</span>` : ''}
+          </span>
+        </div>
+        <div class="ioc-node-body" style="padding: 8px 10px;">
+          <div class="ioc-node-avatar" style="background: ${avatarBg}; width: 34px; height: 34px; font-size: 12px;">
+            ${initials}
+          </div>
+          <div class="ioc-node-info">
+            <div class="ioc-node-role fw-bold" style="font-size: 11.5px; color: #0f172a;">${escapeHtml(node.position_title)}</div>
+            <div class="ioc-node-name fw-bold text-primary" style="font-size: 11px;">${escapeHtml(node.full_name || 'Chưa gán')}</div>
+            <div class="ioc-node-meta small" style="font-size: 9.5px; color: #64748b;">
+              ${node.employee_code ? `<span class="badge bg-light text-dark border p-0 px-1 font-monospace">${escapeHtml(node.employee_code)}</span>` : ''}
+              ${node.department ? `<span>${escapeHtml(node.department)}</span>` : ''}
+            </div>
+          </div>
+        </div>
+        ${node.phone ? `
+          <div class="px-2 pb-1 small text-muted" style="font-size: 9.5px;">
+            📞 ${escapeHtml(node.phone)}
+          </div>
+        ` : ''}
+      </div>
+  `;
+
+  if (hasChildren) {
+    html += '<ul>';
+    node.children.forEach(child => {
+      html += buildPreviewNodeHtml(child);
+    });
+    html += '</ul>';
+  }
+
+  html += '</li>';
+  return html;
+}
+
+function renderPreviewTable(nodes) {
+  const tbody = document.getElementById('printPreviewTableBody');
+  if (!tbody) return;
+
+  let html = '';
+  nodes.forEach((n, idx) => {
+    const parentNode = flatNodesList.find(p => p.id == n.parent_id);
+    const parentTitle = parentNode ? `${parentNode.position_title} (${parentNode.full_name || ''})` : 'Gốc (Cấp 1)';
+    const nodeAreas = (n.areas_list && n.areas_list.length > 0)
+      ? n.areas_list
+      : (n.area_assigned ? n.area_assigned.split(',').map(s=>s.trim()).filter(Boolean) : []);
+
+    html += `
+      <tr>
+        <td class="text-center font-monospace">${idx + 1}</td>
+        <td class="text-center"><span class="badge bg-secondary">Cấp ${n.level_number}</span></td>
+        <td><strong>${escapeHtml(n.position_title)}</strong></td>
+        <td><strong>${escapeHtml(n.full_name || 'Chưa chỉ định')}</strong></td>
+        <td class="font-monospace text-center">${escapeHtml(n.employee_code || '-')}</td>
+        <td>${escapeHtml(n.department || '-')}</td>
+        <td>
+          ${nodeAreas.length > 0 
+            ? nodeAreas.map(a => `<span class="badge bg-light text-dark border me-1 mb-1">📍 ${escapeHtml(a)}</span>`).join('') 
+            : '<span class="text-muted">Toàn NM</span>'}
+        </td>
+        <td><small>${escapeHtml(parentTitle)}</small></td>
+        <td><small>${escapeHtml(n.phone || '-')}</small></td>
+      </tr>
+    `;
+  });
+
+  tbody.innerHTML = html;
+}
+
+function switchPreviewMode(mode) {
+  currentPreviewMode = mode;
+  const treeWrapper = document.getElementById('printPreviewTreeWrapper');
+  const tableWrapper = document.getElementById('printPreviewTableWrapper');
+  const btnTree = document.getElementById('btnPreviewTree');
+  const btnTable = document.getElementById('btnPreviewTable');
+
+  if (mode === 'tree') {
+    treeWrapper.classList.remove('d-none');
+    tableWrapper.classList.add('d-none');
+    btnTree.classList.add('active');
+    btnTable.classList.remove('active');
+  } else {
+    treeWrapper.classList.add('d-none');
+    tableWrapper.classList.remove('d-none');
+    btnTree.classList.remove('active');
+    btnTable.classList.add('active');
+  }
+}
+
+function setPreviewScale(scale) {
+  currentPreviewScale = scale;
+  const wrapper = document.getElementById('printPreviewTreeWrapper');
+  if (wrapper) {
+    wrapper.style.transform = `scale(${scale})`;
+  }
+}
+
+function fitPreviewScale() {
+  const sheet = document.getElementById('printPaperSheet');
+  const treeContent = document.getElementById('printPreviewTreeContent');
+  if (!sheet || !treeContent) return;
+
+  const availableWidth = sheet.clientWidth - 80;
+  const contentWidth = treeContent.scrollWidth || 1200;
+
+  if (contentWidth > availableWidth) {
+    const ratio = Math.max(0.4, Math.min(1, availableWidth / contentWidth));
+    const roundedScale = Math.round(ratio * 100) / 100;
+    setPreviewScale(roundedScale);
+  } else {
+    setPreviewScale(1);
+  }
+}
+
+function executePrint() {
+  window.print();
 }
 
 function escapeHtml(str) {

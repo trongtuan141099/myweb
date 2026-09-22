@@ -7,6 +7,8 @@ ini_set('display_errors', 0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['production.data', 'api.production.extrusion_upload']);
     require_once __DIR__ . '/../vendor/SimpleXLSX.php';
 
     if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {

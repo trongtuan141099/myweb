@@ -68,9 +68,11 @@ $current_month = date('Y-m');
                 <label for="filter_month" class="app-form-label mb-0 text-nowrap">Chọn tháng:</label>
                 <input type="month" id="filter_month" class="app-form-control" value="<?php echo $current_month; ?>" onchange="loadDashboardData()">
             </div>
+            <?php if (hasPermission('five_s.audit')): ?>
             <button class="app-btn app-btn-primary" data-bs-toggle="modal" data-bs-target="#modalNewAudit">
                 <span class="material-icons">add</span> Báo cáo Patron 5S
             </button>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -416,7 +418,11 @@ let croppedBlobData = null;
 document.addEventListener("DOMContentLoaded", loadDashboardData);
 
 function loadDashboardData() {
-    const month = document.getElementById('filter_month').value;
+    let month = document.getElementById('filter_month').value;
+    if (!month) {
+        month = new Date().toISOString().slice(0, 7);
+        document.getElementById('filter_month').value = month;
+    }
     fetch(`api/five_s_get_dashboard.php?month=${month}`)
         .then(res => res.json())
         .then(data => {

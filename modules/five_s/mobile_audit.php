@@ -49,12 +49,12 @@ if (!defined('INDEX_AUTH')) { define('INDEX_AUTH', true); }
     <div class="audit-max-width">
         <!-- Header -->
         <div class="app-page-header">
-            <div class="app-page-title">
-                <span class="material-icons text-primary">fact_check</span>
-                <div>
-                    <h1 style="font-size: 18px; margin: 0;">CÔNG VIỆC KIỂM TRA 5S</h1>
-                    <p class="text-muted small mb-0">Chọn lịch hôm nay, xác thực vị trí QR/NFC và nộp kết quả</p>
-                </div>
+            <div>
+                <h1 class="app-page-title">
+                    <span class="material-icons">fact_check</span>
+                    Công Việc Kiểm Tra 5S
+                </h1>
+                <p class="app-page-subtitle">Chọn lịch hôm nay, xác thực vị trí QR/NFC và nộp kết quả</p>
             </div>
             <div class="app-page-actions">
                 <button class="app-btn app-btn-secondary" type="button" onclick="loadSchedules()" title="Tải lại">

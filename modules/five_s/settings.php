@@ -53,12 +53,12 @@ $currentMonth = date('Y-m');
 <div class="app-page-wrapper">
     <!-- Header -->
     <div class="app-page-header">
-        <div class="app-page-title">
-            <span class="material-icons text-primary">tune</span>
-            <div>
-                <h1 style="font-size: 18px; margin: 0;">THIẾT LẬP HỆ THỐNG 5S</h1>
-                <p class="text-muted small mb-0">Quản lý danh mục khu vực, ảnh chuẩn đối sánh và phân công kiểm tra định kỳ</p>
-            </div>
+        <div>
+            <h1 class="app-page-title">
+                <span class="material-icons">tune</span>
+                Thiết Lập Hệ Thống 5S
+            </h1>
+            <p class="app-page-subtitle">Quản lý danh mục khu vực, ảnh chuẩn đối sánh và phân công kiểm tra định kỳ</p>
         </div>
         <div class="app-page-actions">
             <button class="app-btn app-btn-primary" type="button" onclick="newZone()">

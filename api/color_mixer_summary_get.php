@@ -7,6 +7,8 @@ header('Content-Type: application/json; charset=utf-8');
 
 try {
     require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['mixer.view', 'api.mixer.summary']);
 
     $mixer_type = $_GET['mixer_type'] ?? 'mixer_speed_small';
     if (!in_array($mixer_type, ['mixer_speed_small', 'mixer_speed_large'])) {

@@ -139,9 +139,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <div class="app-page-wrapper">
     <!-- Header -->
     <div class="app-page-header">
-        <div class="app-page-title">
-            <span class="material-icons text-primary"><?= $isEdit ? 'edit_note' : 'person_add'; ?></span>
-            <h1><?= $isEdit ? 'CHỈNH SỬA THÔNG TIN NHÂN VIÊN' : 'THÊM MỚI NHÂN VIÊN'; ?></h1>
+        <div>
+            <h1 class="app-page-title">
+                <span class="material-icons"><?= $isEdit ? 'edit_note' : 'person_add'; ?></span>
+                <?= $isEdit ? 'Chỉnh Sửa Thông Tin Nhân Viên' : 'Thêm Mới Nhân Viên'; ?>
+            </h1>
+            <p class="app-page-subtitle"><?= $isEdit ? 'Cập nhật hồ sơ và chức vụ nhân sự nhà máy' : 'Đăng ký thông tin nhân sự và chức danh lao động mới'; ?></p>
         </div>
         <div class="app-page-actions">
             <a href="index.php?mainpage=hrm&subpage=list" class="app-btn app-btn-secondary">

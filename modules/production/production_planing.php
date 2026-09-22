@@ -34,7 +34,7 @@
             </select>
 
             <div id="monthFilterContainer">
-                <input type="month" id="reportMonth" value="2026-08" class="app-form-control" onchange="loadReportData()">
+                <input type="month" id="reportMonth" value="<?= date('Y-m') ?>" class="app-form-control" onchange="loadReportData()">
             </div>
 
             <div id="rangeFilterContainer" style="display:none;" class="d-flex align-items-center gap-1">
@@ -122,7 +122,7 @@
                     
                     <div style="display:flex; align-items:center; gap:8px; background:var(--dx-bg-card); border:1px solid var(--dx-border); padding:4px 10px; border-radius:8px; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
                         <span style="font-size:12px; font-weight:600; color:var(--dx-text-muted);">Tháng kế hoạch:</span>
-                        <input type="month" id="modalPlanMonth" class="app-form-control" style="padding:3px 8px; font-weight:700; color:var(--dx-primary); border:none; background:transparent;" onchange="loadMatrixByMonth()">
+                        <input type="month" id="modalPlanMonth" value="<?= date('Y-m') ?>" class="app-form-control" style="padding:3px 8px; font-weight:700; color:var(--dx-primary); border:none; background:transparent;" onchange="loadMatrixByMonth()">
                     </div>
                 </div>
 
@@ -177,7 +177,11 @@ function toggleFilterMode() {
 // Tải báo cáo và truyền thông tin điểm Annotations
 async function loadReportData() {
     const mode = document.getElementById("filterMode").value;
-    const month = document.getElementById("reportMonth").value;
+    let month = document.getElementById("reportMonth").value;
+    if (!month) {
+        month = new Date().toISOString().slice(0, 7);
+        document.getElementById("reportMonth").value = month;
+    }
     const startDate = document.getElementById("startDate").value;
     const endDate = document.getElementById("endDate").value;
     const pipeSize = document.getElementById("pipeSizeSelect").value;

@@ -1,5 +1,7 @@
 <?php
 header('Content-Type: application/json');
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['document.edit', 'api.document.edit']);
 
 $uploadDir = __DIR__ . '/../documents/';
 $dataFile = __DIR__ . '/../data/documents.json';
@@ -41,9 +43,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $targetFilePath = $uploadDir . $fileName;
 
         if (move_uploaded_file($_FILES['file']['tmp_name'], $targetFilePath)) {
-            $documents[$foundIndex]['file_path'] = '/myweb/documents/' . $fileName;
+            $documents[$foundIndex]['file_path'] = 'documents/' . $fileName;
         }
     }
+    $documents[$foundIndex]['updated_at'] = date('Y-m-d');
 
     file_put_contents($dataFile, json_encode($documents, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE));
     echo json_encode(['success' => true, 'data' => $documents[$foundIndex]]);

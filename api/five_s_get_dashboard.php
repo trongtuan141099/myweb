@@ -3,11 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
 
-// Kiểm tra authentication
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập hệ thống']);
-    exit;
-}
+requireApiPermission(['five_s.view', 'api.five_s.dashboard']);
 
 $month = isset($_GET['month']) ? trim($_GET['month']) : date('Y-m');
 

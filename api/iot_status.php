@@ -70,7 +70,14 @@ if ($type === 'HEARTBEAT') {
 
 // --- B. AJAX TRUY VẤN LẤY DỮ LIỆU GIÁM SÁT (GET) ---
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+    require_once __DIR__ . '/../core/check_permission.php';
     $action = $_GET['action'] ?? '';
+
+    if ($action === 'save_config') {
+        requireApiPermission(['device.edit', 'api.device.iot_status']);
+    } else {
+        requireApiPermission(['device.view', 'device.history', 'api.device.iot_status']);
+    }
 
     // ÉP CẬP NHẬT TRỰC TIẾP CẢ STATUS LẪN NOTE THÀNH OFFLINE KHI QUÁ 10 GIÂY KHÔNG CÓ HEARTBEAT
     $conn->query("UPDATE devices 

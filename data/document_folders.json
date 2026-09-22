@@ -1,0 +1,71 @@
+[
+    {
+        "id": "HDCV",
+        "name": "Hướng dẫn công việc (HDCV)",
+        "children": [
+            {
+                "id": "hdcv-dun",
+                "name": "HDCV Đùn nhựa TU",
+                "children": []
+            },
+            {
+                "id": "hdcv-cuon",
+                "name": "HDCV Cuộn nhựa TU",
+                "children": []
+            },
+            {
+                "id": "hdcv-nghien",
+                "name": "HDCV Nghiền nhựa",
+                "children": []
+            },
+            {
+                "id": "hdcv-dun-nylon",
+                "name": "HDCV Đùn Nylon T",
+                "children": []
+            },
+            {
+                "id": "m-y-n_2ed9",
+                "name": "Máy đùn",
+                "children": [
+                    {
+                        "id": "m-y-s-y_8517",
+                        "name": "Máy sấy",
+                        "children": []
+                    }
+                ]
+            }
+        ]
+    },
+    {
+        "id": "TCKT",
+        "name": "Tiêu chuẩn kiểm tra (TCKT)",
+        "children": [
+            {
+                "id": "tc-ong-tu",
+                "name": "Tiêu chuẩn kiểm tra - Ống TU",
+                "children": []
+            },
+            {
+                "id": "tc-ong-t",
+                "name": "Tiêu chuẩn kiểm tra - Ống T",
+                "children": []
+            }
+        ]
+    },
+    {
+        "id": "ATLD-5S",
+        "name": "An toàn lao động & 5S",
+        "children": [
+            {
+                "id": "atld-antoan",
+                "name": "Quy định An toàn lao động",
+                "children": []
+            },
+            {
+                "id": "atld-5s",
+                "name": "Tiêu chuẩn 5S Nhà máy",
+                "children": []
+            }
+        ]
+    }
+]

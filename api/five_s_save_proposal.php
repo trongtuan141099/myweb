@@ -3,10 +3,7 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
 
-if (!isset($_SESSION['user_id'])) {
-    echo json_encode(['success' => false, 'message' => 'Chưa đăng nhập']);
-    exit;
-}
+requireApiPermission(['five_s.proposals', 'api.five_s.save_proposal']);
 
 $action = trim($_POST['action'] ?? 'create');
 

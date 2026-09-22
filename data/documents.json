@@ -1,1 +1,92 @@
-[]
+[
+  {
+    "id": "doc_101",
+    "doc_code": "PMW-00243-B",
+    "title": "HDCV Vận hành máy in đùn nhựa",
+    "folder_id": "hdcv-dun",
+    "file_path": "documents/1788513647_36. PMW-00243-B HDCV V?n hnh my in dn nh?a.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_102",
+    "doc_code": "PMW-00264-9.4-B",
+    "title": "HDCV Quy trình dừng máy đùn",
+    "folder_id": "hdcv-dun",
+    "file_path": "documents/1788536709_43. PMW-00264-9.4-B  HDCV Qui trnh d?ng my dn.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_103",
+    "doc_code": "PMW-00295-B",
+    "title": "HDCV Chú ý lắp khuôn máy đùn",
+    "folder_id": "hdcv-dun",
+    "file_path": "documents/45. PMW-00295-B HDCV  Ch y l?p khun.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_104",
+    "doc_code": "PMW-05703-A",
+    "title": "Hướng dẫn thao tác lấy bobin sau đùn",
+    "folder_id": "hdcv-cuon",
+    "file_path": "documents/129. PMW-05703-A Hu?ng d?n thao tc l?y bobin sau dn.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_105",
+    "doc_code": "PD-PM-T-ER-0817",
+    "title": "Đào tạo vận hành máy nghiền, lọc, 5S",
+    "folder_id": "hdcv-nghien",
+    "file_path": "documents/PD-PM-T-ER-0817 Do t?o v?n hnh my nghi?n, l?c, 5S, KYT .pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_106",
+    "doc_code": "PD-PM-T-EV-2210",
+    "title": "HDCV Cắt đầu ống cho mã vật liệu Nylon",
+    "folder_id": "hdcv-dun-nylon",
+    "file_path": "documents/PD-PM-T-EV-2210 Do t?o hu?ng d?n cng vi?c c?t d?u ?ng cho ma v?t li?u Nylon.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_107",
+    "doc_code": "PMW-04304-A",
+    "title": "HDCV kiểm tra sản phẩm đùn theo check sheet",
+    "folder_id": "tc-ong-tu",
+    "file_path": "documents/128. PMW-04304 -A HDCV ki?m tra s?n ph?m dn theo check sheet.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_108",
+    "doc_code": "FEWPM-00244-A",
+    "title": "HDCV sử dụng máy laser đo đường kính ống",
+    "folder_id": "tc-ong-t",
+    "file_path": "documents/37. FEWPM-00244-A HDCV s? d?ng my laser do du?ng knh ?ng.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_109",
+    "doc_code": "PD-PM-T-EQ-0755",
+    "title": "Quy định quản lý an toàn vận hành xe nâng",
+    "folder_id": "atld-antoan",
+    "file_path": "documents/PD-PM-T-EQ-0755 Quy d?nh qu?n ly an ton v?n hnh xe nng.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  },
+  {
+    "id": "doc_110",
+    "doc_code": "PE-PM-T-EQ-0654",
+    "title": "Tiêu chuẩn 5S cho trang phục nhà máy",
+    "folder_id": "atld-5s",
+    "file_path": "documents/PE-PM-T-EQ-0654 Tiu chu?n 5S cho trang ph?c.pdf",
+    "status": "Active",
+    "updated_at": "2026-08-27"
+  }
+]

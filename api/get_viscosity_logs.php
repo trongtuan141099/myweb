@@ -6,6 +6,8 @@ ini_set('display_errors', 0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['materials.view', 'api.materials.get_viscosity']);
 
     $page      = (int)($_GET['page'] ?? 1);
     $limit     = (int)($_GET['limit'] ?? 50);

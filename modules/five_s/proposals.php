@@ -31,12 +31,12 @@ $current_month = date('Y-m');
 <div class="app-page-wrapper">
     <!-- Header -->
     <div class="app-page-header">
-        <div class="app-page-title">
-            <span class="material-icons text-primary">lightbulb</span>
-            <div>
-                <h1 style="font-size: 18px; margin: 0;">Ý KIẾN & ĐỀ XUẤT CẢI TIẾN 5S</h1>
-                <p class="text-muted small mb-0">Ghi nhận sáng kiến nhân viên, phê duyệt và giám sát tiến độ thực hiện</p>
-            </div>
+        <div>
+            <h1 class="app-page-title">
+                <span class="material-icons">lightbulb</span>
+                Ý Kiến & Đề Xuất Cải Tiến 5S
+            </h1>
+            <p class="app-page-subtitle">Ghi nhận sáng kiến nhân viên, phê duyệt và giám sát tiến độ thực hiện</p>
         </div>
         <div class="app-page-actions">
             <div class="d-flex align-items-center gap-2">
@@ -112,6 +112,9 @@ $current_month = date('Y-m');
                     <!-- Dynamic Data -->
                 </tbody>
             </table>
+        </div>
+        <div class="app-card-footer">
+            <div id="fiveSProposalsPagination" class="w-100"></div>
         </div>
     </div>
 </div>
@@ -197,11 +200,16 @@ $current_month = date('Y-m');
 
 <script>
 let globalProposalsData = [];
+let proposalsPagination = null;
 
 document.addEventListener("DOMContentLoaded", loadProposalsData);
 
 function loadProposalsData() {
-    const month = document.getElementById('filter_month').value;
+    let month = document.getElementById('filter_month').value;
+    if (!month) {
+        month = new Date().toISOString().slice(0, 7);
+        document.getElementById('filter_month').value = month;
+    }
     fetch(`api/five_s_get_proposals.php?month=${month}`)
         .then(res => res.json())
         .then(data => {
@@ -223,15 +231,7 @@ function loadProposalsData() {
 
 function renderTable() {
     const status = document.getElementById('filter_status').value;
-    const tbody = document.getElementById('table-proposal-body');
-    tbody.innerHTML = '';
-
-    const filtered = globalProposalsData.filter(item => status === 'all' || item.status === status);
-
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">Không có đề xuất 5S nào trong tháng này.</td></tr>`;
-        return;
-    }
+    const filterFn = (item) => status === 'all' || item.status === status;
 
     const statusBadges = {
         'pending': '<span class="app-badge badge-warning">Chờ thực hiện</span>',
@@ -241,26 +241,40 @@ function renderTable() {
         'canceled': '<span class="app-badge badge-danger">Hủy đề xuất</span>'
     };
 
-    filtered.forEach((item, index) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td>#${index + 1}</td>
-            <td class="text-muted small">${item.created_at}</td>
-            <td><strong>${item.employee_name}</strong></td>
-            <td>${item.current_status_desc}</td>
-            <td class="text-center"><a href="${item.current_image}" target="_blank"><img src="${item.current_image}" class="proposal-img-thumb" alt="Before"></a></td>
-            <td>${item.proposal_desc}</td>
-            <td>${item.manager_comment || '<span class="text-muted small">Chưa có nhận xét</span>'}</td>
-            <td class="text-center">${statusBadges[item.status] || item.status}</td>
-            <td class="text-center">${item.after_image ? `<a href="${item.after_image}" target="_blank"><img src="${item.after_image}" class="proposal-img-thumb" alt="After"></a>` : '<span class="text-muted small">-</span>'}</td>
-            <td class="text-center">
-                <button class="app-btn app-btn-secondary py-1 px-2" onclick="openReviewModal(${item.id})">
-                    <span class="material-icons fs-6">edit</span> Duyệt
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
+    if (!proposalsPagination) {
+        proposalsPagination = createClientTablePagination({
+            tbodyId: 'table-proposal-body',
+            paginationId: 'fiveSProposalsPagination',
+            data: globalProposalsData,
+            colSpan: 10,
+            defaultPageSize: 10,
+            pageSizeOptions: [10, 25, 50, 100],
+            emptyMessage: 'Không có đề xuất 5S nào trong tháng này.',
+            filterFn: filterFn,
+            renderRow: (item, index) => {
+                return `
+                <tr>
+                    <td>#${index}</td>
+                    <td class="text-muted small">${item.created_at}</td>
+                    <td><strong>${item.employee_name}</strong></td>
+                    <td>${item.current_status_desc}</td>
+                    <td class="text-center"><a href="${item.current_image}" target="_blank"><img src="${item.current_image}" class="proposal-img-thumb" alt="Before"></a></td>
+                    <td>${item.proposal_desc}</td>
+                    <td>${item.manager_comment || '<span class="text-muted small">Chưa có nhận xét</span>'}</td>
+                    <td class="text-center">${statusBadges[item.status] || item.status}</td>
+                    <td class="text-center">${item.after_image ? `<a href="${item.after_image}" target="_blank"><img src="${item.after_image}" class="proposal-img-thumb" alt="After"></a>` : '<span class="text-muted small">-</span>'}</td>
+                    <td class="text-center">
+                        <button class="app-btn app-btn-secondary py-1 px-2" onclick="openReviewModal(${item.id})">
+                            <span class="material-icons fs-6">edit</span> Duyệt
+                        </button>
+                    </td>
+                </tr>`;
+            }
+        });
+    } else {
+        proposalsPagination.setData(globalProposalsData);
+        proposalsPagination.setFilter(filterFn);
+    }
 }
 
 function submitNewProposal(event) {

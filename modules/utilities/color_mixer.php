@@ -62,12 +62,14 @@
       <button class="app-btn app-btn-secondary" onclick="exportDataCsv()">
         <span class="material-icons">file_download</span> Xuất CSV Dữ Liệu
       </button>
+      <?php if (hasPermission('mixer.edit')): ?>
       <button class="app-btn app-btn-success" onclick="openImportCsvModal()">
         <span class="material-icons">file_upload</span> Import Dữ Liệu
       </button>
       <button class="app-btn app-btn-primary" onclick="openAddFormModal()">
         <span class="material-icons">add_circle</span> Thêm Mới Form
       </button>
+      <?php endif; ?>
     </div>
   </div>
 
@@ -180,12 +182,9 @@
       </table>
     </div>
 
-    <!-- PHÂN TRANG -->
+    <!-- PHÂN TRANG CHUẨN HÓA -->
     <div class="app-card-footer">
-      <div class="text-muted small" id="pagination-info">Hiển thị 0 dòng</div>
-      <nav>
-        <ul class="pagination pagination-sm mb-0" id="pagination-list"></ul>
-      </nav>
+      <div id="colorMixerPagination" class="w-100"></div>
     </div>
   </div>
 </div>
@@ -445,19 +444,18 @@ function deleteMultipleSettings() {
 }
 
 function renderPagination(total, page, totalPages) {
-  const info = document.getElementById('pagination-info');
-  const list = document.getElementById('pagination-list');
-  info.textContent = `Tổng cộng ${total} dòng (Trang ${page}/${totalPages || 1})`;
-  list.innerHTML = '';
-  if (totalPages <= 1) return;
-
-  list.innerHTML += `<li class="page-item ${page === 1 ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="applyFilterAndFetch(${page - 1})">Trước</a></li>`;
-  for (let i = 1; i <= totalPages; i++) {
-    if (i === 1 || i === totalPages || (i >= page - 1 && i <= page + 1)) {
-      list.innerHTML += `<li class="page-item ${i === page ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="applyFilterAndFetch(${i})">${i}</a></li>`;
+  renderStandardPagination("colorMixerPagination", {
+    currentPage: page,
+    totalPages: totalPages,
+    totalRecords: total,
+    pageSize: limit,
+    pageSizeOptions: [10, 25, 50, 100],
+    onPageChange: (newPage) => applyFilterAndFetch(newPage),
+    onPageSizeChange: (newLimit) => {
+      limit = newLimit;
+      applyFilterAndFetch(1);
     }
-  }
-  list.innerHTML += `<li class="page-item ${page === totalPages ? 'disabled' : ''}"><a class="page-link" href="javascript:void(0)" onclick="applyFilterAndFetch(${page + 1})">Sau</a></li>`;
+  });
 }
 
 function resetFilters() {

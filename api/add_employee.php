@@ -1,34 +1,29 @@
 <?php
-    $servername = "localhost";
-    $username = "root";
-    $password = "";
-    $dbname = "myweb";
+require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../core/check_permission.php';
 
-    // Create connection
-    $conn = new mysqli($servername, $username, $password, $dbname);
+requireApiPermission(['hrm.manage', 'api.hrm.add_employee']);
 
-    // Check connection
-    if ($conn->connect_error) {
-    die("Connection failed: " . $conn->connect_error);
-    }
-    // echo "Connected successfully";
+$employee_code = trim($_POST["employee_code"] ?? '');
+$full_name     = trim($_POST['full_name'] ?? '');
+$hire_date     = trim($_POST['hire_date'] ?? date('Y-m-d'));
 
-    $employee_code=$_POST["employee_code"] ?? '';
-    $full_name = $_POST['full_name'] ??'';
-    $hire_date = $_POST['hire_date'] ??'';
+if (empty($employee_code) || empty($full_name)) {
+    header("Location: ../index.php?mainpage=hrm&subpage=add_employee&status=error&message=Thiếu+thông+tin+bắt+buộc");
+    exit;
+}
 
-    $sql = "INSERT INTO employees (employee_code, full_name, hire_date)
-    VALUES ('$employee_code', '$full_name', '$hire_date')";
-
-    if ($conn->query($sql) === TRUE) {
-    // echo "New record created successfully";
-    header("Location: ../index.php?status=success");
+$stmt = $conn->prepare("INSERT INTO employees (employee_code, full_name, hire_date) VALUES (?, ?, ?)");
+if ($stmt) {
+    $stmt->bind_param("sss", $employee_code, $full_name, $hire_date);
+    if ($stmt->execute()) {
+        header("Location: ../index.php?mainpage=hrm&subpage=list&status=success");
+        exit;
     } else {
-    echo "Error: " . $sql . "<br>" . $conn->error;
+        header("Location: ../index.php?mainpage=hrm&subpage=add_employee&status=error&message=" . urlencode($stmt->error));
+        exit;
     }
-
-
-    // echo "Mã số nhân viên: $employee_code <br>";
-    // echo "Tên: $full_name <br>";  
-    // echo "Ngày vào công ty: $hire_date <br>";
-?>
+} else {
+    header("Location: ../index.php?mainpage=hrm&subpage=add_employee&status=error&message=" . urlencode($conn->error));
+    exit;
+}

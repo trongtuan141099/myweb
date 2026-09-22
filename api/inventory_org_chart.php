@@ -7,13 +7,14 @@ header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
 
-// Kiểm tra phiên đăng nhập (cho phép nếu session hợp lệ)
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.']);
-    exit;
-}
-
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
+
+$writeActions = ['save_node', 'delete_node', 'save_campaign', 'reorder_nodes'];
+if (in_array($action, $writeActions, true)) {
+    requireApiPermission(['hrm.manage', 'api.hrm.inventory_org_chart']);
+} else {
+    requireApiPermission(['hrm.view', 'hrm.manage', 'api.hrm.inventory_org_chart']);
+}
 
 try {
     switch ($action) {
@@ -92,9 +93,18 @@ try {
                 $row['level_name'] = $lvlInfo['level_name'];
                 $row['badge_color'] = $lvlInfo['badge_color'] ?? 'primary';
 
+                $areasList = [];
                 if (!empty($row['area_assigned'])) {
-                    $areasMap[$row['area_assigned']] = true;
+                    $rawAreas = explode(',', $row['area_assigned']);
+                    foreach ($rawAreas as $ra) {
+                        $cleanArea = trim($ra);
+                        if ($cleanArea !== '') {
+                            $areasList[] = $cleanArea;
+                            $areasMap[$cleanArea] = true;
+                        }
+                    }
                 }
+                $row['areas_list'] = $areasList;
 
                 $parentId = ($row['parent_id'] !== null && $row['parent_id'] !== '') ? intval($row['parent_id']) : null;
                 $row['parent_id'] = $parentId;
@@ -198,7 +208,15 @@ try {
             $full_name = trim($_POST['full_name'] ?? '');
             $department = trim($_POST['department'] ?? '');
             $job_level = trim($_POST['job_level'] ?? '');
-            $area_assigned = trim($_POST['area_assigned'] ?? '');
+            $rawArea = $_POST['area_assigned'] ?? '';
+            if (is_array($rawArea)) {
+                $cleanList = array_filter(array_map('trim', $rawArea));
+                $area_assigned = implode(', ', $cleanList);
+            } else {
+                $parts = explode(',', strval($rawArea));
+                $cleanList = array_filter(array_map('trim', $parts));
+                $area_assigned = implode(', ', $cleanList);
+            }
             $duties = trim($_POST['duties'] ?? '');
             $phone = trim($_POST['phone'] ?? '');
             $sort_order = intval($_POST['sort_order'] ?? 0);

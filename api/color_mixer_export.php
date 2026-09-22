@@ -1,5 +1,7 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['mixer.view', 'api.mixer.export']);
 
 $where = ["1=1"];
 $params = [];

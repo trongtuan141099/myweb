@@ -52,16 +52,24 @@ $current_month = date('Y-m');
                 </tbody>
             </table>
         </div>
+        <div class="app-card-footer">
+            <div id="fiveSListPagination" class="w-100"></div>
+        </div>
     </div>
 </div>
 
 <script>
 let listIssuesData = [];
+let fiveSPagination = null;
 
 document.addEventListener("DOMContentLoaded", loadListData);
 
 function loadListData() {
-    const month = document.getElementById('filter_month').value;
+    let month = document.getElementById('filter_month').value;
+    if (!month) {
+        month = new Date().toISOString().slice(0, 7);
+        document.getElementById('filter_month').value = month;
+    }
     fetch(`api/five_s_get_dashboard.php?month=${month}`)
         .then(res => res.json())
         .then(data => {
@@ -74,40 +82,46 @@ function loadListData() {
 
 function renderTable() {
     const status = document.getElementById('filter_status').value;
-    const tbody = document.getElementById('table-list-body');
-    tbody.innerHTML = '';
+    const filterFn = (item) => status === 'all' || item.status === status;
 
-    const filtered = listIssuesData.filter(item => status === 'all' || item.status === status);
+    if (!fiveSPagination) {
+        fiveSPagination = createClientTablePagination({
+            tbodyId: 'table-list-body',
+            paginationId: 'fiveSListPagination',
+            data: listIssuesData,
+            colSpan: 10,
+            defaultPageSize: 10,
+            pageSizeOptions: [10, 25, 50, 100],
+            emptyMessage: 'Không tìm thấy dữ liệu vi phạm 5S nào.',
+            filterFn: filterFn,
+            renderRow: (item, index) => {
+                const isResolved = item.status === 'resolved';
+                const badgeClass = isResolved ? 'badge-ok' : 'badge-ng';
+                const statusText = isResolved ? 'Đã khắc phục' : 'Chờ xử lý';
 
-    if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="10" class="text-center py-4 text-muted">Không tìm thấy dữ liệu vi phạm 5S nào.</td></tr>`;
-        return;
+                return `
+                <tr>
+                    <td><b>${index}</b></td>
+                    <td>${item.created_at}</td>
+                    <td><span class="app-badge badge-stopped">${escapeHtml(item.zone_name)}</span></td>
+                    <td><strong class="text-primary">${escapeHtml(item.s_category)}</strong></td>
+                    <td>${escapeHtml(item.description)}</td>
+                    <td><a href="${item.before_image}" target="_blank"><img src="${item.before_image}" class="rounded border" width="40" height="40" style="object-fit:cover;"></a></td>
+                    <td>${escapeHtml(item.assignee_name || 'Chưa gán')}</td>
+                    <td><span class="app-badge ${badgeClass}">${statusText}</span></td>
+                    <td>${item.after_image ? `<a href="${item.after_image}" target="_blank"><img src="${item.after_image}" class="rounded border" width="40" height="40" style="object-fit:cover;"></a>` : '<span class="text-muted small">N/A</span>'}</td>
+                    <td class="text-center">
+                        <button class="app-btn app-btn-danger app-btn-sm" title="Xóa dòng này" onclick="deleteIssue(${item.id})">
+                            <span class="material-icons" style="font-size:15px;">delete</span> Xóa
+                        </button>
+                    </td>
+                </tr>`;
+            }
+        });
+    } else {
+        fiveSPagination.setData(listIssuesData);
+        fiveSPagination.setFilter(filterFn);
     }
-
-    filtered.forEach((item, index) => {
-        const isResolved = item.status === 'resolved';
-        const badgeClass = isResolved ? 'badge-ok' : 'badge-ng';
-        const statusText = isResolved ? 'Đã khắc phục' : 'Chờ xử lý';
-
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td><b>${index + 1}</b></td>
-            <td>${item.created_at}</td>
-            <td><span class="app-badge badge-stopped">${escapeHtml(item.zone_name)}</span></td>
-            <td><strong class="text-primary">${escapeHtml(item.s_category)}</strong></td>
-            <td>${escapeHtml(item.description)}</td>
-            <td><a href="${item.before_image}" target="_blank"><img src="${item.before_image}" class="rounded border" width="40" height="40" style="object-fit:cover;"></a></td>
-            <td>${escapeHtml(item.assignee_name || 'Chưa gán')}</td>
-            <td><span class="app-badge ${badgeClass}">${statusText}</span></td>
-            <td>${item.after_image ? `<a href="${item.after_image}" target="_blank"><img src="${item.after_image}" class="rounded border" width="40" height="40" style="object-fit:cover;"></a>` : '<span class="text-muted small">N/A</span>'}</td>
-            <td class="text-center">
-                <button class="app-btn app-btn-danger app-btn-sm" title="Xóa dòng này" onclick="deleteIssue(${item.id})">
-                    <span class="material-icons" style="font-size:15px;">delete</span> Xóa
-                </button>
-            </td>
-        `;
-        tbody.appendChild(tr);
-    });
 }
 
 function escapeHtml(text) {

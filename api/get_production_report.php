@@ -10,6 +10,8 @@ try {
         throw new Exception('Không tìm thấy file config/db.php!');
     }
     require_once $configPath;
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['production.view', 'api.production.report']);
 
     if (!$conn) {
         throw new Exception('Kết nối CSDL thất bại!');

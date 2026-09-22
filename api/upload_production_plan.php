@@ -6,6 +6,8 @@ ini_set('display_errors', 0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['production.plan', 'api.production.plan_upload']);
     
     $planMonth = $_POST['plan_month'] ?? '';
     if (empty($planMonth)) {

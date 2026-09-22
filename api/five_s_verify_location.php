@@ -2,6 +2,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['five_s.audit', 'api.five_s.verify_location']);
 
 $zone_id = intval($_POST['zone_id'] ?? 0);
 $qr_code = trim($_POST['qr_code'] ?? '');

@@ -1,5 +1,7 @@
 <?php
 header('Content-Type: application/json');
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['document.upload', 'api.document.upload']);
 
 // Đường dẫn lưu file PDF thật (vào thư mục documents/ ở gốc)
 $uploadDir = __DIR__ . '/../documents/';
@@ -23,12 +25,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['file'])) {
         $currentData = file_exists($dataFile) ? json_decode(file_get_contents($dataFile), true) : [];
 
         $newDoc = [
-            'id'        => date('dmY'),
+            'id'        => 'doc_' . time() . '_' . rand(100, 999),
             'doc_code'  => $docCode,
             'title'     => $title,
             'folder_id' => $folderId,
-            'file_path' => '/myweb/documents/' . $fileName,
-            'status'    => 'Active'
+            'file_path' => 'documents/' . $fileName,
+            'status'    => 'Active',
+            'updated_at'=> date('Y-m-d')
         ];
 
         $currentData[] = $newDoc;

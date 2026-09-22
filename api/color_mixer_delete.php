@@ -9,6 +9,8 @@ try {
     require_once __DIR__ . '/../config/db.php';
     require_once __DIR__ . '/../core/check_permission.php';
 
+    requireApiPermission(['mixer.edit', 'api.mixer.delete']);
+
     // Trường hợp 1: Xóa nhiều mục được chọn (mảng JSON ids)
     if (!empty($_POST['ids'])) {
         $ids = json_decode($_POST['ids'], true);

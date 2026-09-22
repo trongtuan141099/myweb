@@ -1,5 +1,7 @@
 <?php
 header('Content-Type: application/json');
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['document.view', 'api.document.get']);
 
 $dataFile = __DIR__ . '/../data/documents.json';
 

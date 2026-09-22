@@ -33,9 +33,12 @@
 <div class="app-page-wrapper">
   <!-- Page Header -->
   <div class="app-page-header">
-    <div class="app-page-title">
-      <span class="material-icons text-primary">history</span>
-      <h1>LỊCH SỬ HOẠT ĐỘNG THIẾT BỊ IoT</h1>
+    <div>
+      <h1 class="app-page-title">
+        <span class="material-icons">history</span>
+        Lịch Sử Hoạt Động Thiết Bị IoT
+      </h1>
+      <p class="app-page-subtitle">Nhật ký sự kiện kết nối, thay đổi trạng thái và cảnh báo từ các cảm biến dây chuyền</p>
     </div>
     <div class="app-page-actions">
       <a href="index.php?mainpage=iot&subpage=device_status" class="app-btn app-btn-secondary">
@@ -91,10 +94,16 @@
         </tbody>
       </table>
     </div>
+    <div class="app-card-footer">
+      <div id="iotHistoryPagination" class="w-100"></div>
+    </div>
   </div>
 </div>
 
 <script>
+let iotPagination = null;
+let lastDataJson = '';
+
 function loadHistory() {
     const search = encodeURIComponent(document.getElementById('searchInput').value);
     const status = encodeURIComponent(document.getElementById('statusFilter').value);
@@ -102,36 +111,47 @@ function loadHistory() {
     fetch(`api/iot_status.php?action=get_history&search=${search}&status=${status}`)
         .then(res => res.json())
         .then(data => {
-            let html = '';
-            if (data.length > 0) {
-                data.forEach(row => {
-                    let statusText = row.status;
-                    if (row.status === 'ON') statusText = 'ON (Đang chạy)';
-                    else if (row.status === 'OFF') statusText = 'OFF (Tạm dừng)';
-                    else if (row.status === 'ERROR') statusText = 'ERROR (Sự cố)';
-                    else if (row.status === 'OFFLINE') statusText = 'OFFLINE (Mất kết nối)';
+            const currentJson = JSON.stringify(data);
+            if (currentJson === lastDataJson && iotPagination) return;
+            lastDataJson = currentJson;
 
-                    html += `
-                    <tr>
-                        <td class="id-col">#${row.id}</td>
-                        <td class="dev-name-col">${row.device_name}</td>
-                        <td><span class="code-badge">${row.device_code}</span></td>
-                        <td><span class="status-badge badge-${row.status}">${statusText}</span></td>
-                        <td>${row.note || ''}</td>
-                        <td class="time-col">${row.timestamp}</td>
-                    </tr>`;
+            if (!iotPagination) {
+                iotPagination = createClientTablePagination({
+                    tbodyId: 'historyTbody',
+                    paginationId: 'iotHistoryPagination',
+                    data: data,
+                    colSpan: 6,
+                    defaultPageSize: 15,
+                    pageSizeOptions: [10, 15, 25, 50, 100],
+                    emptyMessage: 'Không tìm thấy lịch sử phù hợp',
+                    renderRow: (row) => {
+                        let statusText = row.status;
+                        if (row.status === 'ON') statusText = 'ON (Đang chạy)';
+                        else if (row.status === 'OFF') statusText = 'OFF (Tạm dừng)';
+                        else if (row.status === 'ERROR') statusText = 'ERROR (Sự cố)';
+                        else if (row.status === 'OFFLINE') statusText = 'OFFLINE (Mất kết nối)';
+
+                        return `
+                        <tr>
+                            <td class="id-col">#${row.id}</td>
+                            <td class="dev-name-col">${row.device_name}</td>
+                            <td><span class="code-badge">${row.device_code}</span></td>
+                            <td><span class="status-badge badge-${row.status}">${statusText}</span></td>
+                            <td>${row.note || ''}</td>
+                            <td class="time-col">${row.timestamp}</td>
+                        </tr>`;
+                    }
                 });
             } else {
-                html = `<tr><td colspan="6" class="text-center text-muted p-4">Không tìm thấy lịch sử phù hợp</td></tr>`;
+                iotPagination.setData(data);
             }
-            document.getElementById('historyTbody').innerHTML = html;
         })
         .catch(err => {
             console.error('Error fetching history:', err);
         });
 }
 
-// Cập nhật tự động mỗi 3 giây
-setInterval(loadHistory, 3000);
+// Cập nhật tự động mỗi 5 giây
+setInterval(loadHistory, 5000);
 loadHistory();
 </script>

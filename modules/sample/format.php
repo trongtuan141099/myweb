@@ -17,12 +17,12 @@ require_once __DIR__ . '/../../core/check_permission.php';
 <div class="app-page-wrapper">
     <!-- Standard Page Header -->
     <div class="app-page-header">
-        <div class="app-page-title">
-            <span class="material-icons text-primary">extension</span>
-            <div>
-                <h1 style="font-size: 18px; margin: 0;">MODULE TIÊU CHUẨN MẪU</h1>
-                <p class="text-muted small mb-0">Mẫu định dạng chuẩn dành cho việc phát triển các tính năng mới</p>
-            </div>
+        <div>
+            <h1 class="app-page-title">
+                <span class="material-icons">extension</span>
+                Module Tiêu Chuẩn Mẫu
+            </h1>
+            <p class="app-page-subtitle">Mẫu định dạng chuẩn dành cho việc phát triển các tính năng mới</p>
         </div>
         <div class="app-page-actions">
             <button type="button" class="app-btn app-btn-secondary">

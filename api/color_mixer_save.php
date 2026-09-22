@@ -9,6 +9,8 @@ try {
     require_once __DIR__ . '/../config/db.php';
     require_once __DIR__ . '/../core/check_permission.php';
 
+    requireApiPermission(['mixer.edit', 'api.mixer.save']);
+
     $edit_id = intval($_POST['edit_id'] ?? 0);
     $color_type = trim($_POST['color_type'] ?? '');
     $pipe_type = trim($_POST['pipe_type'] ?? '');

@@ -5,6 +5,8 @@ error_reporting(0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['production.data', 'api.production.extrusion_delete']);
 
     $input = json_decode(file_get_contents('php://input'), true);
     $ids = $input['ids'] ?? [];

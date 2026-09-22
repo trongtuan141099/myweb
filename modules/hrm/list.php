@@ -92,14 +92,19 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && !empty($_GET['id']
 <div class="app-page-wrapper">
     <!-- Header -->
     <div class="app-page-header">
-        <div class="app-page-title">
-            <span class="material-icons text-primary">people</span>
-            <h1>DANH SÁCH NHÂN VIÊN</h1>
+        <div>
+            <h1 class="app-page-title">
+                <span class="material-icons">people</span>
+                Danh Sách Nhân Viên
+            </h1>
+            <p class="app-page-subtitle">Quản lý hồ sơ lao động, vị trí làm việc và phân bổ nhân sự các xưởng</p>
         </div>
         <div class="app-page-actions">
+            <?php if (hasPermission('hrm.manage')): ?>
             <a href="index.php?mainpage=hrm&subpage=add_employee" class="app-btn app-btn-primary">
                 <span class="material-icons">person_add</span> Thêm Mới Nhân Viên
             </a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -139,7 +144,7 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && !empty($_GET['id']
 
     <!-- Card chứa Bảng -->
     <div class="app-card">
-        <div class="app-table-responsive" style="max-height: calc(100vh - 280px); overflow-y: auto;">
+        <div class="app-table-responsive" style="max-height: calc(100vh - 300px); overflow-y: auto;">
             <table class="app-table table-sticky-header">
                 <thead>
                     <tr>
@@ -155,88 +160,113 @@ if (isset($_GET['action']) && $_GET['action'] === 'delete' && !empty($_GET['id']
                     </tr>
                 </thead>
                 <tbody id="employeeTable">
-                    <?php
-                    $sql = "SELECT * FROM employees ORDER BY hire_date DESC";
-                    $result = $conn->query($sql);
-                    if ($result && $result->num_rows > 0) {
-                        $stt = 1;
-                        while($row = $result->fetch_assoc()) {
-                            $genderClass = ($row["gender"] == 'Nam') ? 'gender-nam' : (($row["gender"] == 'Nữ') ? 'gender-nu' : '');
-                            $resignation = (!empty($row["resignation_date"]) && $row["resignation_date"] != '0000-00-00') ? htmlspecialchars($row["resignation_date"]) : '-';
-                    ?>
-                    <tr>
-                        <td class="badge-stt">#<?= $stt++; ?></td>
-                        <td><span class="emp-code"><?= htmlspecialchars($row["employee_code"]); ?></span></td>
-                        <td><strong><?= htmlspecialchars($row["full_name"]); ?></strong></td>
-                        <td>
-                            <?php if(!empty($row["gender"])): ?>
-                                <span class="gender-badge <?= $genderClass; ?>"><?= htmlspecialchars($row["gender"]); ?></span>
-                            <?php else: ?>
-                                -
-                            <?php endif; ?>
-                        </td>
-                        <td><?= htmlspecialchars($row["job_level"] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($row["cost_center"] ?? '-'); ?></td>
-                        <td><?= htmlspecialchars($row["hire_date"] ?? '-'); ?></td>
-                        <td><?= $resignation; ?></td>
-                        <td>
-                            <div class="action-btns">
-                                <a href="index.php?mainpage=hrm&subpage=add_employee&id=<?= urlencode($row["employee_code"]); ?>" class="btn-act btn-act-edit" title="Chỉnh sửa">
-                                    <span class="material-icons" style="font-size: 14px;">edit</span> Sửa
-                                </a>
-                                <a href="index.php?mainpage=hrm&subpage=list&action=delete&id=<?= urlencode($row["employee_code"]); ?>" class="btn-act btn-act-delete" onclick="return confirm('Xác nhận xóa nhân viên này?');" title="Xóa">
-                                    <span class="material-icons" style="font-size: 14px;">delete</span> Xóa
-                                </a>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php
-                        }
-                    } else {
-                        echo '<tr><td colspan="9" class="text-center text-muted p-4">Chưa có dữ liệu nhân viên.</td></tr>';
-                    }
-                    ?>
+                    <!-- Dynamic client-side paginated rows -->
                 </tbody>
             </table>
+        </div>
+        <!-- Card Footer Chứa Phân Trang Chuẩn -->
+        <div class="app-card-footer">
+            <div id="hrmPagination" class="w-100"></div>
         </div>
     </div>
 </div>
 
-<!-- Script Tìm kiếm & Lọc Động -->
+<?php
+$sql = "SELECT * FROM employees ORDER BY hire_date DESC";
+$result = $conn->query($sql);
+$employeesList = [];
+if ($result && $result->num_rows > 0) {
+    while($row = $result->fetch_assoc()) {
+        $employeesList[] = [
+            'employee_code' => $row['employee_code'],
+            'full_name' => $row['full_name'],
+            'gender' => $row['gender'] ?? '',
+            'job_level' => $row['job_level'] ?? '-',
+            'cost_center' => $row['cost_center'] ?? '-',
+            'hire_date' => $row['hire_date'] ?? '-',
+            'resignation_date' => (!empty($row['resignation_date']) && $row['resignation_date'] != '0000-00-00') ? $row['resignation_date'] : '-'
+        ];
+    }
+}
+?>
+
+<!-- Script Tìm kiếm, Lọc & Phân Trang Chuẩn -->
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    const rawEmployees = <?= json_encode($employeesList, JSON_UNESCAPED_UNICODE) ?>;
+    const canManage = <?= hasPermission('hrm.manage') ? 'true' : 'false' ?>;
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    const pagination = createClientTablePagination({
+        tbodyId: 'employeeTable',
+        paginationId: 'hrmPagination',
+        data: rawEmployees,
+        colSpan: 9,
+        defaultPageSize: 25,
+        pageSizeOptions: [10, 25, 50, 100],
+        emptyMessage: 'Chưa có dữ liệu nhân viên.',
+        renderRow: (row, stt) => {
+            const genderClass = (row.gender === 'Nam') ? 'gender-nam' : ((row.gender === 'Nữ') ? 'gender-nu' : '');
+            const genderBadge = row.gender ? `<span class="gender-badge ${genderClass}">${escapeHtml(row.gender)}</span>` : '-';
+            const editAction = canManage ? `
+                <a href="index.php?mainpage=hrm&subpage=add_employee&id=${encodeURIComponent(row.employee_code)}" class="btn-act btn-act-edit" title="Chỉnh sửa">
+                    <span class="material-icons" style="font-size: 14px;">edit</span> Sửa
+                </a>
+                <a href="index.php?mainpage=hrm&subpage=list&action=delete&id=${encodeURIComponent(row.employee_code)}" class="btn-act btn-act-delete" onclick="return confirm('Xác nhận xóa nhân viên này?');" title="Xóa">
+                    <span class="material-icons" style="font-size: 14px;">delete</span> Xóa
+                </a>
+            ` : `<span class="text-muted small">Chỉ xem</span>`;
+
+            return `
+            <tr>
+                <td class="badge-stt">#${stt}</td>
+                <td><span class="emp-code">${escapeHtml(row.employee_code)}</span></td>
+                <td><strong>${escapeHtml(row.full_name)}</strong></td>
+                <td>${genderBadge}</td>
+                <td>${escapeHtml(row.job_level)}</td>
+                <td>${escapeHtml(row.cost_center)}</td>
+                <td>${escapeHtml(row.hire_date)}</td>
+                <td>${escapeHtml(row.resignation_date)}</td>
+                <td>
+                    <div class="action-btns">
+                        ${editAction}
+                    </div>
+                </td>
+            </tr>`;
+        }
+    });
+
     const searchInput = document.getElementById("searchInput");
     const departmentFilter = document.getElementById("departmentFilter");
     const genderFilter = document.getElementById("genderFilter");
-    const tableRows = document.querySelectorAll("#employeeTable tr");
 
-    function filterEmployeeTable() {
-        const searchTerm = searchInput.value.toLowerCase().trim();
-        const departmentTerm = departmentFilter.value.toLowerCase().trim();
-        const genderTerm = genderFilter.value.toLowerCase().trim();
+    function applyFilters() {
+        const searchTerm = (searchInput.value || '').toLowerCase().trim();
+        const deptTerm = (departmentFilter.value || '').toLowerCase().trim();
+        const genderTerm = (genderFilter.value || '').toLowerCase().trim();
 
-        tableRows.forEach(row => {
-            if (row.cells.length < 9) return;
+        pagination.setFilter(row => {
+            const empCode = (row.employee_code || '').toLowerCase();
+            const fullName = (row.full_name || '').toLowerCase();
+            const costCenter = (row.cost_center || '').toLowerCase();
+            const gender = (row.gender || '').toLowerCase();
 
-            const empCode = row.cells[1].textContent.toLowerCase().trim();
-            const fullName = row.cells[2].textContent.toLowerCase().trim();
-            const gender = row.cells[3].textContent.toLowerCase().trim();
-            const costCenter = row.cells[5].textContent.toLowerCase().trim();
+            const matchSearch = (!searchTerm) || empCode.includes(searchTerm) || fullName.includes(searchTerm);
+            const matchDept = (!deptTerm) || costCenter === deptTerm || costCenter.includes(deptTerm);
+            const matchGender = (!genderTerm) || gender === genderTerm;
 
-            const matchSearch = (searchTerm === "") || empCode.includes(searchTerm) || fullName.includes(searchTerm);
-            const matchDept = (departmentTerm === "") || costCenter === departmentTerm || costCenter.includes(departmentTerm);
-            const matchGender = (genderTerm === "") || gender.includes(genderTerm);
-
-            if (matchSearch && matchDept && matchGender) {
-                row.style.display = "";
-            } else {
-                row.style.display = "none";
-            }
+            return matchSearch && matchDept && matchGender;
         });
     }
 
-    searchInput.addEventListener("input", filterEmployeeTable);
-    departmentFilter.addEventListener("change", filterEmployeeTable);
-    genderFilter.addEventListener("change", filterEmployeeTable);
+    searchInput.addEventListener("input", applyFilters);
+    departmentFilter.addEventListener("change", applyFilters);
+    genderFilter.addEventListener("change", applyFilters);
 });
 </script>

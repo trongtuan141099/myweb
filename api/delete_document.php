@@ -1,5 +1,7 @@
 <?php
 header('Content-Type: application/json');
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['document.delete', 'api.document.delete']);
 
 $uploadDir = __DIR__ . '/../documents/';
 $dataFile = __DIR__ . '/../data/documents.json';
@@ -26,8 +28,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // Xóa file vật lý trên Server
     if ($fileToDelete) {
-        $realPath = __DIR__ . '/..' . str_replace('/myweb', '', $fileToDelete);
-        if (file_exists($realPath)) {
+        $cleanRel = ltrim(str_replace(['/myweb/', 'myweb/'], '', $fileToDelete), '/');
+        $realPath = __DIR__ . '/../' . $cleanRel;
+        if (file_exists($realPath) && is_file($realPath)) {
             unlink($realPath);
         }
     }

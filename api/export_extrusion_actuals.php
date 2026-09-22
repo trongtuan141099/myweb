@@ -1,6 +1,8 @@
 <?php
 ob_start();
 require_once __DIR__ . '/../config/db.php';
+require_once __DIR__ . '/../core/check_permission.php';
+requireApiPermission(['production.view', 'production.data', 'api.production.extrusion_export']);
 
 $mode     = $_GET['mode'] ?? 'month';
 $pipeSize = $_GET['pipe_size'] ?? 'ALL';

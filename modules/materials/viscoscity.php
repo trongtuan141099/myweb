@@ -13,9 +13,11 @@
       <button onclick="downloadTemplate()" class="app-btn app-btn-secondary">
         <span class="material-icons">description</span> Tải File Mẫu (.csv)
       </button>
+      <?php if (hasPermission('materials.edit')): ?>
       <button onclick="openImportModal()" class="app-btn app-btn-success">
         <span class="material-icons">file_upload</span> Import Dữ Liệu
       </button>
+      <?php endif; ?>
       <button onclick="exportData()" class="app-btn app-btn-primary">
         <span class="material-icons">file_download</span> Xuất Báo Cáo
       </button>
@@ -62,12 +64,9 @@
       </table>
     </div>
 
-    <!-- PHÂN TRANG -->
+    <!-- PHÂN TRANG CHUẨN HÓA -->
     <div class="app-card-footer">
-      <div class="text-muted small">
-        Hiển thị <strong id="recordRange">0-0</strong> trên tổng số <strong id="totalRecords">0</strong> bản ghi
-      </div>
-      <div id="paginationControls" class="d-flex gap-1"></div>
+      <div id="viscosityPagination" class="w-100"></div>
     </div>
   </div>
 
@@ -180,20 +179,22 @@ function delaySearch() {
   searchTimer = setTimeout(() => { loadViscosityData(1); }, 400);
 }
 
+let currentViscosityLimit = 50;
+
 async function loadViscosityData(page = 1) {
   currentPage = page;
   const startDate = document.getElementById("startDate").value;
   const endDate   = document.getElementById("endDate").value;
   const search    = document.getElementById("searchInput").value.trim();
 
-  const url = `api/get_viscosity_logs.php?page=${page}&limit=50&start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(search)}`;
+  const url = `api/get_viscosity_logs.php?page=${page}&limit=${currentViscosityLimit}&start_date=${startDate}&end_date=${endDate}&search=${encodeURIComponent(search)}`;
 
   try {
     const res = await fetch(url);
     const data = await res.json();
 
     if (data.success) {
-      renderTable(data.data, (page - 1) * 50);
+      renderTable(data.data, (page - 1) * currentViscosityLimit);
       renderPagination(data.pagination);
     } else {
       alert("Lỗi: " + data.message);
@@ -231,23 +232,19 @@ function renderTable(rows, startIdx) {
 }
 
 function renderPagination(p) {
-  document.getElementById("totalRecords").innerText = p.total_records.toLocaleString();
-  const startRecord = (p.current_page - 1) * p.limit + (p.total_records > 0 ? 1 : 0);
-  const endRecord   = Math.min(p.current_page * p.limit, p.total_records);
-  document.getElementById("recordRange").innerText = `${startRecord}-${endRecord}`;
-
-  const container = document.getElementById("paginationControls");
-  container.innerHTML = "";
-
-  if (p.total_pages <= 1) return;
-
-  for (let i = 1; i <= p.total_pages; i++) {
-    if (i === 1 || i === p.total_pages || (i >= p.current_page - 2 && i <= p.current_page + 2)) {
-      const isCurrent = (i === p.current_page);
-      const btnClass = isCurrent ? 'app-btn-primary' : 'app-btn-secondary';
-      container.innerHTML += `<button onclick="loadViscosityData(${i})" class="app-btn app-btn-sm ${btnClass}">${i}</button>`;
+  if (!p) return;
+  renderStandardPagination("viscosityPagination", {
+    currentPage: p.current_page,
+    totalPages: p.total_pages,
+    totalRecords: p.total_records,
+    pageSize: p.limit || currentViscosityLimit,
+    pageSizeOptions: [10, 25, 50, 100],
+    onPageChange: (newPage) => loadViscosityData(newPage),
+    onPageSizeChange: (newLimit) => {
+      currentViscosityLimit = newLimit;
+      loadViscosityData(1);
     }
-  }
+  });
 }
 
 function escapeHtml(str) {

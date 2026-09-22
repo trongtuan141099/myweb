@@ -124,9 +124,11 @@
         </div>
 
         <div class="app-page-actions">
+            <?php if (hasPermission('production.data')): ?>
             <button onclick="openUploadModal()" class="app-btn app-btn-success">
                 <span class="material-icons">file_upload</span> Upload Excel Thực Tích
             </button>
+            <?php endif; ?>
             <button onclick="exportExcel()" class="app-btn app-btn-primary">
                 <span class="material-icons">file_download</span> Download Excel
             </button>
@@ -142,7 +144,7 @@
             </select>
 
             <div id="monthFilterContainer">
-                <input type="month" id="filterMonth" value="2026-08" class="app-form-control" onchange="loadActualData(1)">
+                <input type="month" id="filterMonth" value="<?= date('Y-m') ?>" class="app-form-control" onchange="loadActualData(1)">
             </div>
 
             <div id="rangeFilterContainer" style="display:none;" class="d-flex align-items-center gap-1">
@@ -206,12 +208,9 @@
             </table>
         </div>
 
-        <!-- PHÂN TRANG -->
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-            <div style="font-size: 13px; color: #64748b;">
-                Hiển thị <span id="recordRange">0-0</span> trên tổng số <span id="totalRecords">0</span> bản ghi
-            </div>
-            <div id="paginationControls" style="display: flex; gap: 4px;"></div>
+        <!-- PHÂN TRANG CHUẨN HÓA -->
+        <div class="app-card-footer mt-2" style="background: transparent; border-top: 1px solid var(--dx-border); padding: 10px 4px 4px 4px;">
+            <div id="productionDataPagination" class="w-100"></div>
         </div>
     </div>
 
@@ -324,17 +323,23 @@ function delaySearch() {
     searchTimer = setTimeout(() => { loadActualData(1); }, 400);
 }
 
+let currentActualLimit = 50;
+
 // 1. Tải danh sách thực tích có Lọc & Phân trang
 async function loadActualData(page = 1) {
     currentPage = page;
     const mode = document.getElementById("filterMode").value;
-    const month = document.getElementById("filterMonth").value;
+    let month = document.getElementById("filterMonth").value;
+    if (!month) {
+        month = new Date().toISOString().slice(0, 7);
+        document.getElementById("filterMonth").value = month;
+    }
     const startDate = document.getElementById("filterStartDate").value;
     const endDate = document.getElementById("filterEndDate").value;
     const pipeSize = document.getElementById("filterPipeSize").value;
     const search = document.getElementById("filterSearch").value.trim();
 
-    let url = `api/get_extrusion_actuals.php?page=${page}&limit=50&mode=${mode}&pipe_size=${pipeSize}&search=${encodeURIComponent(search)}`;
+    let url = `api/get_extrusion_actuals.php?page=${page}&limit=${currentActualLimit}&mode=${mode}&pipe_size=${pipeSize}&search=${encodeURIComponent(search)}`;
     if (mode === 'month') url += `&month=${month}`;
     else url += `&start_date=${startDate}&end_date=${endDate}`;
 
@@ -397,34 +402,21 @@ function renderTableRows(rows) {
     });
 }
 
-// 3. Phân trang
+// 3. Phân trang Chuẩn Hóa Toàn Hệ Thống
 function renderPagination(p) {
-    document.getElementById("totalRecords").innerText = p.total_records.toLocaleString();
-    const startRecord = (p.current_page - 1) * p.limit + (p.total_records > 0 ? 1 : 0);
-    const endRecord = Math.min(p.current_page * p.limit, p.total_records);
-    document.getElementById("recordRange").innerText = `${startRecord}-${endRecord}`;
-
-    const container = document.getElementById("paginationControls");
-    container.innerHTML = "";
-
-    if (p.total_pages <= 1) return;
-
-    if (p.current_page > 1) {
-        container.innerHTML += `<button onclick="loadActualData(${p.current_page - 1})" class="act-btn act-btn-secondary" style="padding:4px 8px;">&laquo;</button>`;
-    }
-
-    for (let i = 1; i <= p.total_pages; i++) {
-        if (i === 1 || i === p.total_pages || (i >= p.current_page - 2 && i <= p.current_page + 2)) {
-            const activeStyle = (i === p.current_page) ? 'background:#2563eb; color:#fff;' : '';
-            container.innerHTML += `<button onclick="loadActualData(${i})" class="act-btn act-btn-secondary" style="padding:4px 8px; ${activeStyle}">${i}</button>`;
-        } else if (i === p.current_page - 3 || i === p.current_page + 3) {
-            container.innerHTML += `<span style="padding:4px;">...</span>`;
+    if (!p) return;
+    renderStandardPagination("productionDataPagination", {
+        currentPage: p.current_page,
+        totalPages: p.total_pages,
+        totalRecords: p.total_records,
+        pageSize: p.limit || currentActualLimit,
+        pageSizeOptions: [10, 25, 50, 100],
+        onPageChange: (newPage) => loadActualData(newPage),
+        onPageSizeChange: (newLimit) => {
+            currentActualLimit = newLimit;
+            loadActualData(1);
         }
-    }
-
-    if (p.current_page < p.total_pages) {
-        container.innerHTML += `<button onclick="loadActualData(${p.current_page + 1})" class="act-btn act-btn-secondary" style="padding:4px 8px;">&raquo;</button>`;
-    }
+    });
 }
 
 // 4. Chọn nhiều dòng & Xóa hàng loạt

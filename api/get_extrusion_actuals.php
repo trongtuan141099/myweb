@@ -5,6 +5,8 @@ error_reporting(0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
+    require_once __DIR__ . '/../core/check_permission.php';
+    requireApiPermission(['production.view', 'production.data', 'api.production.extrusion_get']);
 
     $page     = max(1, (int)($_GET['page'] ?? 1));
     $limit    = max(10, min(200, (int)($_GET['limit'] ?? 50)));
