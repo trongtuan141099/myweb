@@ -64,6 +64,10 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
           <span class="material-icons">person_add</span>
           <span class="label">Thêm nhân viên</span>
         </a>
+        <a href="index.php?mainpage=hrm&subpage=inventory_org_chart" class="submenu-item <?= ($current_main === 'hrm' && $current_sub === 'inventory_org_chart') ? 'active' : '' ?>">
+          <span class="material-icons">account_tree</span>
+          <span class="label">Sơ đồ nhân sự kiểm kê</span>
+        </a>
       </div>
     </div>
 
