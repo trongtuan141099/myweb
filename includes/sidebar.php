@@ -95,6 +95,45 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
     </div>
     <?php endif; ?>
 
+    <!-- 3.1. Quản lý tăng ca -->
+    <div class="has-submenu <?= ($current_main === 'overtime') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'overtime') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">more_time</span>
+        <span class="label">Quản lý tăng ca</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=overtime&subpage=dashboard" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'dashboard') ? 'active' : '' ?>">
+          <span class="material-icons">dashboard</span>
+          <span class="label">Tổng quan tăng ca</span>
+        </a>
+        <a href="index.php?mainpage=overtime&subpage=import" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'import') ? 'active' : '' ?>">
+          <span class="material-icons">upload_file</span>
+          <span class="label">Import dữ liệu Excel</span>
+        </a>
+        <a href="index.php?mainpage=overtime&subpage=reconciliation" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'reconciliation') ? 'active' : '' ?>">
+          <span class="material-icons">fact_check</span>
+          <span class="label">Đối soát tăng ca</span>
+        </a>
+        <a href="index.php?mainpage=overtime&subpage=explanations" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'explanations') ? 'active' : '' ?>">
+          <span class="material-icons">rate_review</span>
+          <span class="label">Quản lý giải trình</span>
+        </a>
+        <a href="index.php?mainpage=overtime&subpage=yearly_control" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'yearly_control') ? 'active' : '' ?>">
+          <span class="material-icons">alarm_on</span>
+          <span class="label">Kiểm soát giới hạn 200h</span>
+        </a>
+        <a href="index.php?mainpage=overtime&subpage=records" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'records') ? 'active' : '' ?>">
+          <span class="material-icons">list_alt</span>
+          <span class="label">Tra cứu chi tiết OT</span>
+        </a>
+        <a href="index.php?mainpage=overtime&subpage=export" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'export') ? 'active' : '' ?>">
+          <span class="material-icons">file_download</span>
+          <span class="label">Xuất báo cáo Excel</span>
+        </a>
+      </div>
+    </div>
+
     <!-- 4. Quản lý tài liệu -->
     <?php if (hasPermission('document.view')): ?>
     <div class="has-submenu <?= ($current_main === 'document') ? 'open' : '' ?>">
