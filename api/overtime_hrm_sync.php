@@ -1,9 +1,12 @@
 <?php
 /**
- * API Tự Động Kết Nối & Đồng Bộ Dữ Liệu Tăng Ca Từ HRM
+ * API Tự Động Kết Nối & Đồng Bộ Dữ Liệu Tăng Ca Từ Đa Tài Khoản HRM
  * DX Plastic Group - Overtime Management System
  */
 header('Content-Type: application/json; charset=utf-8');
+
+// Thiết lập múi giờ Việt Nam GMT+7
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 $isCli = (php_sapi_name() === 'cli') || (isset($argv) && count($argv) > 1);
 
@@ -30,12 +33,12 @@ if (!$isCli) {
 }
 
 $configFile = __DIR__ . '/../config/hrm_sync_config.json';
-$cookieFile = __DIR__ . '/../data/hrm_cookie.txt';
-$planFile = __DIR__ . '/../data/hrm_sync_plan.xlsx';
-$actualFile = __DIR__ . '/../data/hrm_sync_actual.xlsx';
-
 $action = $_GET['action'] ?? ($_POST['action'] ?? ($isCli ? 'cron' : ''));
 
+/**
+ * Format ngày theo chuẩn yyyy-mm-dd
+ */
+if (!function_exists('formatHrmDate')) {
 function formatHrmDate($d, $default) {
     if (empty($d)) return $default;
     $d = trim($d);
@@ -47,8 +50,25 @@ function formatHrmDate($d, $default) {
     }
     return $default;
 }
+}
 
-function loadHrmConfig($configFile) {
+/**
+ * Format hiển thị ngày giờ Việt Nam DD/MM/YYYY HH:mm:ss
+ */
+if (!function_exists('formatVnDateTime')) {
+function formatVnDateTime($dtStr) {
+    if (empty($dtStr)) return '-';
+    $ts = strtotime($dtStr);
+    if (!$ts) return $dtStr;
+    return date('d/m/Y H:i:s', $ts);
+}
+}
+
+/**
+ * Nạp cấu hình toàn cục từ file JSON
+ */
+if (!function_exists('loadGlobalHrmConfig')) {
+function loadGlobalHrmConfig($configFile) {
     $default = [
         'hrm_url' => 'https://hrm.smcmfg.com.vn',
         'login_endpoint' => 'https://hrm.smcmfg.com.vn/login',
@@ -56,8 +76,6 @@ function loadHrmConfig($configFile) {
         'plan_export_endpoint' => 'https://hrm.smcmfg.com.vn/Portal/TangCa/ExportDuyetTangCaKeHoach',
         'actual_export_endpoint' => 'https://hrm.smcmfg.com.vn/Portal/TangCa/ExportDuyetTangCaThucTe',
         'download_endpoint' => 'https://hrm.smcmfg.com.vn/Download/ExcelDownload',
-        'username' => '',
-        'password' => '',
         'sync_interval_hours' => 3,
         'auto_sync_enabled' => true,
         'sync_date_from' => '',
@@ -78,15 +96,44 @@ function loadHrmConfig($configFile) {
 
     $data = json_decode(file_get_contents($configFile), true);
     if (!is_array($data)) return $default;
-    unset($data['plan_url'], $data['actual_url']);
     return array_merge($default, $data);
 }
-
-function saveHrmConfig($configFile, $config) {
-    unset($config['plan_url'], $config['actual_url']);
-    return file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
 }
 
+/**
+ * Lưu cấu hình toàn cục vào file JSON
+ */
+if (!function_exists('saveGlobalHrmConfig')) {
+function saveGlobalHrmConfig($configFile, $config) {
+    return file_put_contents($configFile, json_encode($config, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE), LOCK_EX);
+}
+}
+
+/**
+ * Lấy danh sách các tài khoản HRM từ database ot_hrm_accounts
+ */
+if (!function_exists('getHrmAccounts')) {
+function getHrmAccounts($conn, $activeOnly = false) {
+    $sql = "SELECT * FROM ot_hrm_accounts";
+    if ($activeOnly) {
+        $sql .= " WHERE is_active = 1";
+    }
+    $sql .= " ORDER BY id ASC";
+    $res = $conn->query($sql);
+    $accounts = [];
+    if ($res) {
+        while ($row = $res->fetch_assoc()) {
+            $accounts[] = $row;
+        }
+    }
+    return $accounts;
+}
+}
+
+/**
+ * Gửi yêu cầu HTTP POST với cURL
+ */
+if (!function_exists('postHrmRequest')) {
 function postHrmRequest($url, $postFields, $cookieFile, $referer) {
     $ch = curl_init($url);
     curl_setopt_array($ch, [
@@ -117,7 +164,12 @@ function postHrmRequest($url, $postFields, $cookieFile, $referer) {
         'json'      => json_decode($raw, true)
     ];
 }
+}
 
+/**
+ * Tải file streaming từ HRM về máy chủ
+ */
+if (!function_exists('downloadHrmFileStream')) {
 function downloadHrmFileStream($url, $destinationFile, $cookieFile) {
     $fp = fopen($destinationFile, 'w+');
     if (!$fp) return false;
@@ -134,18 +186,34 @@ function downloadHrmFileStream($url, $destinationFile, $cookieFile) {
     ]);
     curl_exec($ch);
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $err = curl_error($ch);
     curl_close($ch);
     fclose($fp);
 
     return ($httpCode === 200 && file_exists($destinationFile) && filesize($destinationFile) > 100);
 }
+}
 
-function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $currentUser = 'HRM_AUTO_SYNC') {
+/**
+ * Thực hiện đồng bộ 01 tài khoản HRM cụ thể
+ */
+if (!function_exists('syncSingleHrmAccount')) {
+function syncSingleHrmAccount($conn, $account, $dateFrom, $dateTo, $currentUser = 'HRM_AUTO_SYNC') {
+    $accId = intval($account['id']);
+    $username = trim($account['username']);
+    $password = trim($account['password']);
+    $accName = $account['account_name'] ?? "Tài khoản {$username}";
+
+    $cookieFile = __DIR__ . "/../data/hrm_cookie_{$accId}.txt";
+    $planFile = __DIR__ . "/../data/hrm_sync_plan_{$accId}.xlsx";
+    $actualFile = __DIR__ . "/../data/hrm_sync_actual_{$accId}.xlsx";
+
     $steps = [];
     $urlsCalled = [];
 
-    $addStep = function($num, $title, $method, $url, $status, $detail, $httpCode = null) use (&$steps, &$urlsCalled) {
+    $addStep = function($num, $title, $method, $url, $status, $detail, $httpCode = null) use (&$steps, &$urlsCalled, $accName) {
         $steps[] = [
+            'account'   => $accName,
             'step'      => $num,
             'title'     => $title,
             'method'    => $method,
@@ -163,42 +231,25 @@ function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $cu
         }
     };
 
-    if (empty($config['username']) || empty($config['password'])) {
-        $addStep(0, 'Kiểm tra thông tin tài khoản', 'LOCAL', '', 'error', 'Chưa cấu hình tài khoản hoặc mật khẩu HRM.');
+    if (empty($username) || empty($password)) {
+        $addStep(0, "Kiểm tra thông tin tài khoản [{$accName}]", 'LOCAL', '', 'error', 'Chưa cấu hình tài khoản hoặc mật khẩu.');
         return [
             'success'     => false,
-            'message'     => 'Chưa cấu hình tài khoản hoặc mật khẩu đăng nhập hệ thống HRM. Vui lòng thiết lập trước.',
-            'steps'       => $steps,
-            'urls_called' => $urlsCalled
-        ];
-    }
-
-    if (!function_exists('curl_init')) {
-        $addStep(0, 'Kiểm tra module cURL', 'LOCAL', '', 'error', 'Máy chủ PHP chưa bật extension cURL.');
-        return [
-            'success'     => false,
-            'message'     => 'Máy chủ PHP chưa bật thư viện cURL để kết nối HTTP.',
-            'steps'       => $steps,
-            'urls_called' => $urlsCalled
+            'account_id'  => $accId,
+            'account_name'=> $accName,
+            'message'     => "Tài khoản [{$accName}] chưa có username hoặc password.",
+            'steps'       => $steps
         ];
     }
 
     $cookieDir = dirname($cookieFile);
-    if (!file_exists($cookieDir)) {
-        @mkdir($cookieDir, 0777, true);
-    }
-    $dataDir = dirname($planFile);
-    if (!file_exists($dataDir)) {
-        @mkdir($dataDir, 0777, true);
-    }
-
-    // Luôn dọn dẹp cookie và file cũ trước khi bắt đầu phiên làm việc mới
+    if (!file_exists($cookieDir)) @mkdir($cookieDir, 0777, true);
     if (file_exists($cookieFile)) @unlink($cookieFile);
     if (file_exists($planFile)) @unlink($planFile);
     if (file_exists($actualFile)) @unlink($actualFile);
 
     // 1. Bước 1: Khởi tạo phiên, lấy Cookie và Verification Token từ trang /login
-    $loginUrl = !empty($config['login_endpoint']) ? $config['login_endpoint'] : 'https://hrm.smcmfg.com.vn/login';
+    $loginUrl = !empty($account['login_endpoint']) ? $account['login_endpoint'] : 'https://hrm.smcmfg.com.vn/login';
     $ch = curl_init($loginUrl);
     curl_setopt_array($ch, [
         CURLOPT_RETURNTRANSFER => true,
@@ -216,31 +267,30 @@ function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $cu
     curl_close($ch);
 
     if ($httpCode !== 200 || empty($loginHtml)) {
-        $errMsg = 'Không thể kết nối đến máy chủ HRM (HTTP Code: ' . $httpCode . '). ' . ($curlErr ? 'Chi tiết: ' . $curlErr : 'Vui lòng kiểm tra kết nối mạng.');
-        $addStep(1, 'Khởi tạo phiên & Truy cập trang đăng nhập', 'GET', $loginUrl, 'error', $errMsg, $httpCode);
+        $errMsg = "Không thể kết nối đến máy chủ HRM (HTTP: {$httpCode}). " . ($curlErr ? 'Chi tiết: ' . $curlErr : '');
+        $addStep(1, "Khởi tạo phiên [{$accName}]", 'GET', $loginUrl, 'error', $errMsg, $httpCode);
         return [
             'success'     => false,
+            'account_id'  => $accId,
+            'account_name'=> $accName,
             'message'     => $errMsg,
-            'steps'       => $steps,
-            'urls_called' => $urlsCalled
+            'steps'       => $steps
         ];
     }
 
-    // Trích xuất __RequestVerificationToken từ trang đăng nhập
     $loginToken = '';
     if (preg_match('/<input\b[^>]*name=["\']__RequestVerificationToken["\'][^>]*value=["\']([^"\']*)["\']/i', $loginHtml, $match)) {
         $loginToken = $match[1];
     }
-    $addStep(1, 'Khởi tạo phiên & Truy cập trang đăng nhập', 'GET', $loginUrl, 'success', 'Kết nối thành công. Nhận Session Cookie & Login Token (' . substr($loginToken, 0, 10) . '...).', $httpCode);
+    $addStep(1, "Khởi tạo phiên [{$accName}]", 'GET', $loginUrl, 'success', 'Kết nối thành công. Nhận Login Token (' . substr($loginToken, 0, 10) . '...).', $httpCode);
 
-    // 2. Bước 2: Thực hiện đăng nhập qua POST /Account/GetLogin_KiemTraLoginLanDau
+    // 2. Bước 2: Đăng nhập
     $authUrl = 'https://hrm.smcmfg.com.vn/Account/GetLogin_KiemTraLoginLanDau';
-    // Mô phỏng hàm Base64.encode2 từ HRM client bundle
     $salt = substr(base64_encode(date('D M d Y H:i:s') . ' GMT+0700 (Indochina Time)'), 0, 5);
-    $encodedPassword = $salt . base64_encode($config['password']);
+    $encodedPassword = $salt . base64_encode($password);
 
     $postFields = [
-        'Username'                  => $config['username'],
+        'Username'                  => $username,
         'Token'                     => $encodedPassword,
         'returnUrl'                 => '/login',
         'gRecaptchaResponse'        => '',
@@ -252,7 +302,7 @@ function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $cu
     $ch = curl_init($authUrl);
     curl_setopt_array($ch, [
         CURLOPT_POST           => true,
-        CURLOPT_POSTFIELDS     => $postFields, // Mảng array để cURL tự động đóng gói multipart/form-data
+        CURLOPT_POSTFIELDS     => $postFields,
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_HEADER         => true,
         CURLOPT_TIMEOUT        => 25,
@@ -275,7 +325,6 @@ function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $cu
     $loginRespHeaders = substr($fullLoginResp, 0, $headerSize);
     $loginRespRaw = substr($fullLoginResp, $headerSize);
 
-    // Trích xuất toàn bộ Set-Cookie (đặc biệt là .bscsoft_core_h & session_login) và ghi đè vào file cookie để đảm bảo xác thực
     if (preg_match_all('/^set-cookie:\s*([^=;]+)=([^;]+)/im', $loginRespHeaders, $cookieMatches, PREG_SET_ORDER)) {
         $extraCookies = "";
         foreach ($cookieMatches as $cm) {
@@ -289,19 +338,19 @@ function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $cu
     $loginResp = json_decode($loginRespRaw, true);
     if (!is_array($loginResp) || ($loginResp['StatusCode'] ?? 0) != 1) {
         $errMsg = $loginResp['StatusText'] ?? ($curlErr ?: 'Sai tên tài khoản hoặc mật khẩu HRM.');
-        $addStep(2, 'Xác thực tài khoản HRM', 'POST', $authUrl, 'error', 'Đăng nhập không thành công: ' . $errMsg, $loginHttpCode);
+        $addStep(2, "Xác thực [{$accName}]", 'POST', $authUrl, 'error', 'Đăng nhập không thành công: ' . $errMsg, $loginHttpCode);
         return [
             'success'     => false,
-            'message'     => 'Đăng nhập vào HRM không thành công: ' . $errMsg,
-            'steps'       => $steps,
-            'urls_called' => $urlsCalled
+            'account_id'  => $accId,
+            'account_name'=> $accName,
+            'message'     => "Đăng nhập [{$accName}] không thành công: " . $errMsg,
+            'steps'       => $steps
         ];
     }
+    $addStep(2, "Xác thực [{$accName}]", 'POST', $authUrl, 'success', "Đăng nhập thành công với tài khoản [{$username}].", $loginHttpCode);
 
-    $addStep(2, 'Xác thực tài khoản HRM', 'POST', $authUrl, 'success', "Đăng nhập thành công với tài khoản [{$config['username']}]. Đã lưu cookie xác thực.", $loginHttpCode);
-
-    // 3. Bước 3: Lấy __RequestVerificationToken từ thẻ hidden sau khi đăng nhập (/TangCa/DuyetTangCaKeHoach)
-    $portalUrl = !empty($config['portal_endpoint']) ? $config['portal_endpoint'] : 'https://hrm.smcmfg.com.vn/TangCa/DuyetTangCaKeHoach';
+    // 3. Bước 3: Lấy Portal Token
+    $portalUrl = !empty($account['portal_endpoint']) ? $account['portal_endpoint'] : 'https://hrm.smcmfg.com.vn/TangCa/DuyetTangCaKeHoach';
     $chPortal = curl_init($portalUrl);
     curl_setopt_array($chPortal, [
         CURLOPT_RETURNTRANSFER => true,
@@ -315,255 +364,458 @@ function executeHrmSync($conn, $config, $cookieFile, $planFile, $actualFile, $cu
     ]);
     $portalHtml = curl_exec($chPortal);
     $portalHttpCode = curl_getinfo($chPortal, CURLINFO_HTTP_CODE);
-    $portalEffUrl = curl_getinfo($chPortal, CURLINFO_EFFECTIVE_URL);
     curl_close($chPortal);
 
     $portalToken = '';
     if (!empty($portalHtml) && preg_match('/<input\b[^>]*name=["\']__RequestVerificationToken["\'][^>]*value=["\']([^"\']*)["\']/i', $portalHtml, $matchPortal)) {
         $portalToken = $matchPortal[1];
     }
-    if (empty($portalToken)) {
-        $portalToken = $loginToken;
-        $addStep(3, 'Truy cập Portal & Trích xuất Verification Token', 'GET', $portalUrl, 'warning', "Sử dụng Token từ phiên đăng nhập. EffURL: {$portalEffUrl}.", $portalHttpCode);
-    } else {
-        $addStep(3, 'Truy cập Portal & Trích xuất Verification Token', 'GET', $portalUrl, 'success', 'Trích xuất __RequestVerificationToken thành công (' . substr($portalToken, 0, 12) . "...). EffURL: {$portalEffUrl}.", $portalHttpCode);
-    }
+    if (empty($portalToken)) $portalToken = $loginToken;
+    $addStep(3, "Trích xuất Portal Token [{$accName}]", 'GET', $portalUrl, 'success', 'Token sẵn sàng cho lệnh xuất.', $portalHttpCode);
 
-    // 4. Bước 4: Chuẩn bị tham số Từ Ngày - Đến Ngày (chuẩn yyyy-MM-dd theo mẫu Ref)
-    $tuNgay = formatHrmDate($config['sync_date_from'] ?? '', date('Y-01-01'));
-    $denNgay = formatHrmDate($config['sync_date_to'] ?? '', date('Y-12-31'));
+    // 4. Bước 4: Xuất & Tải Kế hoạch
+    $tuNgay = formatHrmDate($dateFrom, date('Y-01-01'));
+    $denNgay = formatHrmDate($dateTo, date('Y-12-31'));
 
-    // 5. Bước 5: Gọi Endpoint POST Tăng Ca Kế Hoạch (/Portal/TangCa/ExportDuyetTangCaKeHoach)
-    $planExportUrl = !empty($config['plan_export_endpoint']) ? $config['plan_export_endpoint'] : 'https://hrm.smcmfg.com.vn/Portal/TangCa/ExportDuyetTangCaKeHoach';
-    $planPostData = [
-        'TuNgay' => $tuNgay,
-        'DenNgay' => $denNgay,
-        '__RequestVerificationToken' => $portalToken
-    ];
+    $planExportUrl = !empty($account['plan_export_endpoint']) ? $account['plan_export_endpoint'] : 'https://hrm.smcmfg.com.vn/Portal/TangCa/ExportDuyetTangCaKeHoach';
+    $planPostData = ['TuNgay' => $tuNgay, 'DenNgay' => $denNgay, '__RequestVerificationToken' => $portalToken];
+    $planExportRes = postHrmRequest($planExportUrl, $planPostData, $cookieFile, $portalUrl);
 
     $planDownloadSuccess = false;
-    $planDownloadUrl = '';
-    $planExportRes = postHrmRequest($planExportUrl, $planPostData, $cookieFile, $portalUrl);
     if (!empty($planExportRes['json']) && ($planExportRes['json']['StatusCode'] ?? 0) > 0) {
         $downloadId = $planExportRes['json']['StatusText'];
         $planDownloadUrl = 'https://hrm.smcmfg.com.vn/Download/ExcelDownload?id=' . urlencode($downloadId) . '&name=' . urlencode('Danh sách Duyệt tăng ca kế hoạch');
-        $addStep(4, 'Gửi yêu cầu xuất file Kế Hoạch', 'POST', $planExportUrl, 'success', "HRM tạo file Kế hoạch thành công (ID: {$downloadId}). Kỳ: {$tuNgay} -> {$denNgay}.", $planExportRes['http_code']);
-        
         $planDownloadSuccess = downloadHrmFileStream($planDownloadUrl, $planFile, $cookieFile);
         if ($planDownloadSuccess) {
-            $addStep(5, 'Tải file Excel Kế Hoạch', 'GET', $planDownloadUrl, 'success', 'Tải file Kế hoạch thành công (' . round(filesize($planFile)/1024, 1) . ' KB).', 200);
+            $addStep(4, "Tải file Kế Hoạch [{$accName}]", 'GET', $planDownloadUrl, 'success', 'Tải file Kế hoạch thành công (' . round(filesize($planFile)/1024, 1) . ' KB).', 200);
         } else {
-            $addStep(5, 'Tải file Excel Kế Hoạch', 'GET', $planDownloadUrl, 'error', 'Không thể tải file từ liên kết tải động HRM.', 0);
+            $addStep(4, "Tải file Kế Hoạch [{$accName}]", 'GET', $planDownloadUrl, 'warning', 'Không tải được file Kế hoạch.');
         }
     } else {
-        $errDetail = $planExportRes['json']['StatusText'] ?? ($planExportRes['error'] ?: 'Máy chủ HRM phản hồi mã lỗi: ' . ($planExportRes['json']['StatusCode'] ?? -1));
-        $addStep(4, 'Gửi yêu cầu xuất file Kế Hoạch', 'POST', $planExportUrl, 'error', 'Yêu cầu xuất Kế hoạch thất bại: ' . $errDetail, $planExportRes['http_code']);
+        $addStep(4, "Yêu cầu Kế Hoạch [{$accName}]", 'POST', $planExportUrl, 'warning', 'HRM phản hồi: ' . ($planExportRes['json']['StatusText'] ?? 'Không có dữ liệu kế hoạch'));
     }
 
-    // 6. Bước 6: Gọi Endpoint POST Tăng Ca Thực Tế (/Portal/TangCa/ExportDuyetTangCaThucTe)
-    $actExportUrl = !empty($config['actual_export_endpoint']) ? $config['actual_export_endpoint'] : 'https://hrm.smcmfg.com.vn/Portal/TangCa/ExportDuyetTangCaThucTe';
-    $actPostData = [
-        'TuNgay' => $tuNgay,
-        'DenNgay' => $denNgay,
-        '__RequestVerificationToken' => $portalToken
-    ];
+    // 5. Bước 5: Xuất & Tải Thực tế
+    $actExportUrl = !empty($account['actual_export_endpoint']) ? $account['actual_export_endpoint'] : 'https://hrm.smcmfg.com.vn/Portal/TangCa/ExportDuyetTangCaThucTe';
+    $actPostData = ['TuNgay' => $tuNgay, 'DenNgay' => $denNgay, '__RequestVerificationToken' => $portalToken];
+    $actExportRes = postHrmRequest($actExportUrl, $actPostData, $cookieFile, 'https://hrm.smcmfg.com.vn/TangCa/DuyetTangCaThucTe');
 
     $actDownloadSuccess = false;
-    $actExportReferer = 'https://hrm.smcmfg.com.vn/TangCa/DuyetTangCaThucTe';
-    $actExportRes = postHrmRequest($actExportUrl, $actPostData, $cookieFile, $actExportReferer);
     if (!empty($actExportRes['json']) && ($actExportRes['json']['StatusCode'] ?? 0) > 0) {
         $downloadId = $actExportRes['json']['StatusText'];
         $actDownloadUrl = 'https://hrm.smcmfg.com.vn/Download/ExcelDownload?id=' . urlencode($downloadId) . '&name=' . urlencode('Danh sách duyệt tăng ca thực tế');
-        $addStep(6, 'Gửi yêu cầu xuất file Thực Tế', 'POST', $actExportUrl, 'success', "HRM tạo file Thực tế thành công (ID: {$downloadId}). Kỳ: {$tuNgay} -> {$denNgay}.", $actExportRes['http_code']);
-
         $actDownloadSuccess = downloadHrmFileStream($actDownloadUrl, $actualFile, $cookieFile);
         if ($actDownloadSuccess) {
-            $addStep(7, 'Tải file Excel Thực Tế', 'GET', $actDownloadUrl, 'success', 'Tải file Thực tế thành công (' . round(filesize($actualFile)/1024, 1) . ' KB).', 200);
+            $addStep(5, "Tải file Thực Tế [{$accName}]", 'GET', $actDownloadUrl, 'success', 'Tải file Thực tế thành công (' . round(filesize($actualFile)/1024, 1) . ' KB).', 200);
         } else {
-            $addStep(7, 'Tải file Excel Thực Tế', 'GET', $actDownloadUrl, 'error', 'Không thể tải file từ liên kết tải động HRM.', 0);
+            $addStep(5, "Tải file Thực Tế [{$accName}]", 'GET', $actDownloadUrl, 'warning', 'Không tải được file Thực tế.');
         }
     } else {
-        $errDetail = $actExportRes['json']['StatusText'] ?? ($actExportRes['error'] ?: 'Máy chủ HRM phản hồi mã lỗi: ' . ($actExportRes['json']['StatusCode'] ?? -1));
-        $addStep(6, 'Gửi yêu cầu xuất file Thực Tế', 'POST', $actExportUrl, 'error', 'Yêu cầu xuất Thực tế thất bại: ' . $errDetail, $actExportRes['http_code']);
+        $addStep(5, "Yêu cầu Thực Tế [{$accName}]", 'POST', $actExportUrl, 'warning', 'HRM phản hồi: ' . ($actExportRes['json']['StatusText'] ?? 'Không có dữ liệu thực tế'));
     }
 
-    // 7. Bước 7: Kiểm tra tính hợp lệ của file Excel tải về (kiểm tra header PK zip)
     $planValid = file_exists($planFile) && filesize($planFile) > 100 && (substr(file_get_contents($planFile, false, null, 0, 2), 0, 2) === 'PK');
     $actValid = file_exists($actualFile) && filesize($actualFile) > 100 && (substr(file_get_contents($actualFile, false, null, 0, 2), 0, 2) === 'PK');
 
     if (!$planValid && !$actValid) {
-        $planErr = !empty($planExportRes['json']['StatusText']) ? $planExportRes['json']['StatusText'] : ($planExportRes['error'] ?: 'Không có file Kế hoạch');
-        $actErr = !empty($actExportRes['json']['StatusText']) ? $actExportRes['json']['StatusText'] : ($actExportRes['error'] ?: 'Không có file Thực tế');
-        $errMsg = 'Không thể tải file Excel từ máy chủ HRM. Phản hồi HRM: KH [' . $planErr . '], TT [' . $actErr . '].';
-        $addStep(8, 'Kiểm tra tính toàn vẹn file Excel', 'LOCAL', '', 'error', $errMsg);
+        $errMsg = "Không thể lấy file Excel hợp lệ từ tài khoản [{$accName}].";
+        $addStep(6, "Kiểm tra file Excel [{$accName}]", 'LOCAL', '', 'error', $errMsg);
         return [
             'success'     => false,
+            'account_id'  => $accId,
+            'account_name'=> $accName,
             'message'     => $errMsg,
-            'steps'       => $steps,
-            'urls_called' => $urlsCalled
+            'steps'       => $steps
         ];
     }
-    $addStep(8, 'Kiểm tra tính toàn vẹn file Excel', 'LOCAL', '', 'success', 'Xác thực cấu trúc định dạng Excel (PK header) thành công. Kế hoạch: ' . ($planValid ? 'OK' : 'Không có') . ' | Thực tế: ' . ($actValid ? 'OK' : 'Không có') . '.');
 
+    // 6. Bước 6: UPSERT vào CSDL
     $planResult = ['inserted_rows' => 0, 'updated_rows' => 0, 'error_rows' => 0];
     $actResult = ['inserted_rows' => 0, 'updated_rows' => 0, 'error_rows' => 0];
 
-    // 8. Bước 8: Xử lý UPSERT Kế hoạch
     if ($planValid) {
-        $planResult = processExcelImport($conn, $planFile, 'DanhSachDuyetTangCaKeHoach_HRM.xlsx', 'plan', $currentUser);
-        $addStep(9, 'Nạp dữ liệu Kế hoạch (UPSERT)', 'LOCAL', '', 'success', "+{$planResult['inserted_rows']} bản ghi mới, cập nhật {$planResult['updated_rows']} bản ghi, {$planResult['error_rows']} lỗi.");
+        $planResult = processExcelImport($conn, $planFile, "DanhSachDuyetTangCaKeHoach_HRM_{$username}.xlsx", 'plan', $currentUser);
+        $addStep(6, "UPSERT Kế hoạch [{$accName}]", 'LOCAL', '', 'success', "+{$planResult['inserted_rows']} mới, sửa {$planResult['updated_rows']} dòng, {$planResult['error_rows']} lỗi.");
     }
 
-    // 9. Bước 9: Xử lý UPSERT Thực tế
     if ($actValid) {
-        $actResult = processExcelImport($conn, $actualFile, 'DanhSachDuyetTangCaThucTe_HRM.xlsx', 'actual', $currentUser);
-        $addStep(10, 'Nạp dữ liệu Thực tế (UPSERT)', 'LOCAL', '', 'success', "+{$actResult['inserted_rows']} bản ghi mới, cập nhật {$actResult['updated_rows']} bản ghi, {$actResult['error_rows']} lỗi.");
+        $actResult = processExcelImport($conn, $actualFile, "DanhSachDuyetTangCaThucTe_HRM_{$username}.xlsx", 'actual', $currentUser);
+        $addStep(7, "UPSERT Thực tế [{$accName}]", 'LOCAL', '', 'success', "+{$actResult['inserted_rows']} mới, sửa {$actResult['updated_rows']} dòng, {$actResult['error_rows']} lỗi.");
     }
 
-    // 10. Bước 10: Tự động chạy đối soát cập nhật trạng thái
-    $recSummary = runReconciliationInternal($conn);
-    $addStep(11, 'Đối soát tự động 2 bước', 'LOCAL', '', 'success', "Đối soát hoàn tất {$recSummary['total']} ca. Khớp: {$recSummary['matched']}, Chờ xong Bước 2: {$recSummary['plan_only']}, Cần giải trình: {$recSummary['needs_explanation']}.");
+    // Cập nhật trạng thái và thời gian đồng bộ cho tài khoản này (Giờ Việt Nam GMT+7)
+    $nowVn = date('Y-m-d H:i:s');
+    $accStats = [
+        'plan_inserted'   => $planResult['inserted_rows'] ?? 0,
+        'plan_updated'    => $planResult['updated_rows'] ?? 0,
+        'plan_errors'     => $planResult['error_rows'] ?? 0,
+        'actual_inserted' => $actResult['inserted_rows'] ?? 0,
+        'actual_updated'  => $actResult['updated_rows'] ?? 0,
+        'actual_errors'   => $actResult['error_rows'] ?? 0,
+    ];
+    $statsJson = json_encode($accStats);
+    $accMsg = "Đồng bộ thành công: KH (+{$accStats['plan_inserted']}/{$accStats['plan_updated']}), TT (+{$accStats['actual_inserted']}/{$accStats['actual_updated']})";
+
+    $stmtUp = $conn->prepare("UPDATE ot_hrm_accounts SET last_sync_time = ?, last_sync_status = 'success', last_sync_message = ?, last_sync_stats = ? WHERE id = ?");
+    $stmtUp->bind_param("sssi", $nowVn, $accMsg, $statsJson, $accId);
+    $stmtUp->execute();
+    $stmtUp->close();
 
     return [
         'success'         => true,
-        'message'         => "Đồng bộ HRM thành công! Kế hoạch: +{$planResult['inserted_rows']} / sửa {$planResult['updated_rows']}. Thực tế: +{$actResult['inserted_rows']} / sửa {$actResult['updated_rows']}.",
+        'account_id'      => $accId,
+        'account_name'    => $accName,
+        'last_sync_time'  => $nowVn,
+        'last_sync_time_formatted' => formatVnDateTime($nowVn),
+        'message'         => $accMsg,
         'steps'           => $steps,
-        'urls_called'     => $urlsCalled,
         'plan_result'     => $planResult,
-        'actual_result'   => $actResult,
-        'reconciliation'  => $recSummary
+        'actual_result'   => $actResult
     ];
+}
 }
 
 try {
     switch ($action) {
         // =====================================================================
-        // 1. LẤY CẤU HÌNH ĐỒNG BỘ HRM
+        // 1. LẤY CẤU HÌNH & DANH SÁCH TÀI KHOẢN HRM
         // =====================================================================
         case 'get_config':
-            $cfg = loadHrmConfig($configFile);
-            $safeCfg = $cfg;
-            $safeCfg['has_password'] = !empty($cfg['password']);
-            $safeCfg['password'] = !empty($cfg['password']) ? '••••••••' : '';
-            echo json_encode(['success' => true, 'config' => $safeCfg], JSON_UNESCAPED_UNICODE);
+            $globalCfg = loadGlobalHrmConfig($configFile);
+            $accounts = getHrmAccounts($conn, false);
+
+            $safeAccounts = [];
+            foreach ($accounts as $acc) {
+                $hasPwd = !empty($acc['password']);
+                $stats = !empty($acc['last_sync_stats']) ? json_decode($acc['last_sync_stats'], true) : null;
+                $safeAccounts[] = [
+                    'id'                     => intval($acc['id']),
+                    'account_name'           => $acc['account_name'],
+                    'username'               => $acc['username'],
+                    'has_password'           => $hasPwd,
+                    'is_active'              => intval($acc['is_active']) === 1,
+                    'last_sync_time'         => $acc['last_sync_time'],
+                    'last_sync_time_formatted' => formatVnDateTime($acc['last_sync_time']),
+                    'last_sync_status'       => $acc['last_sync_status'] ?? 'never_run',
+                    'last_sync_message'      => $acc['last_sync_message'] ?? '',
+                    'last_sync_stats'        => $stats,
+                    'portal_endpoint'        => $acc['portal_endpoint'],
+                    'plan_export_endpoint'   => $acc['plan_export_endpoint'],
+                    'actual_export_endpoint' => $acc['actual_export_endpoint'],
+                ];
+            }
+
+            echo json_encode([
+                'success'       => true,
+                'accounts'      => $safeAccounts,
+                'global_config' => [
+                    'auto_sync_enabled'        => $globalCfg['auto_sync_enabled'] ?? true,
+                    'sync_interval_hours'      => $globalCfg['sync_interval_hours'] ?? 3,
+                    'sync_date_from'           => $globalCfg['sync_date_from'] ?? '',
+                    'sync_date_to'             => $globalCfg['sync_date_to'] ?? '',
+                    'last_sync_time'           => $globalCfg['last_sync_time'] ?? null,
+                    'last_sync_time_formatted' => formatVnDateTime($globalCfg['last_sync_time'] ?? null),
+                    'last_sync_status'         => $globalCfg['last_sync_status'] ?? 'never_run',
+                    'last_sync_message'        => $globalCfg['last_sync_message'] ?? ''
+                ]
+            ], JSON_UNESCAPED_UNICODE);
             break;
 
         // =====================================================================
-        // 2. LƯU CẤU HÌNH ĐỒNG BỘ HRM
+        // 2. LƯU THÔNG TIN TÀI KHOẢN (THÊM MỚI HOẶC CẬP NHẬT)
         // =====================================================================
-        case 'save_config':
+        case 'save_account':
             $input = json_decode(file_get_contents('php://input'), true);
             if (!$input) $input = $_POST;
 
-            $cfg = loadHrmConfig($configFile);
+            $id = !empty($input['id']) ? intval($input['id']) : 0;
+            $accountName = trim($input['account_name'] ?? '');
+            $username = trim($input['username'] ?? '');
+            $password = trim($input['password'] ?? '');
+            $isActive = isset($input['is_active']) ? (filter_var($input['is_active'], FILTER_VALIDATE_BOOLEAN) ? 1 : 0) : 1;
 
-            if (isset($input['username'])) $cfg['username'] = trim($input['username']);
-            if (isset($input['password']) && trim($input['password']) !== '' && trim($input['password']) !== '••••••••') {
-                $cfg['password'] = trim($input['password']);
+            if (empty($accountName) || empty($username)) {
+                echo json_encode(['success' => false, 'message' => 'Vui lòng nhập Tên tài khoản và Tên đăng nhập HRM.']);
+                exit;
             }
+
+            if ($id > 0) {
+                // Kiểm tra tài khoản tồn tại
+                $stmtChk = $conn->prepare("SELECT password FROM ot_hrm_accounts WHERE id = ?");
+                $stmtChk->bind_param("i", $id);
+                $stmtChk->execute();
+                $existing = $stmtChk->get_result()->fetch_assoc();
+                $stmtChk->close();
+
+                if (!$existing) {
+                    echo json_encode(['success' => false, 'message' => 'Tài khoản không tồn tại.']);
+                    exit;
+                }
+
+                // Nếu không nhập pass mới hoặc pass là masked -> giữ pass cũ
+                if (empty($password) || $password === '••••••••') {
+                    $password = $existing['password'];
+                }
+
+                $stmtUp = $conn->prepare("UPDATE ot_hrm_accounts SET account_name = ?, username = ?, password = ?, is_active = ? WHERE id = ?");
+                $stmtUp->bind_param("sssii", $accountName, $username, $password, $isActive, $id);
+                $stmtUp->execute();
+                $stmtUp->close();
+
+                echo json_encode(['success' => true, 'message' => "Đã cập nhật thông tin tài khoản [{$accountName}] thành công!"]);
+            } else {
+                // Thêm mới tài khoản
+                if (empty($password)) {
+                    echo json_encode(['success' => false, 'message' => 'Vui lòng nhập mật khẩu cho tài khoản mới.']);
+                    exit;
+                }
+
+                // Kiểm tra trùng username
+                $stmtDup = $conn->prepare("SELECT id FROM ot_hrm_accounts WHERE username = ?");
+                $stmtDup->bind_param("s", $username);
+                $stmtDup->execute();
+                if ($stmtDup->get_result()->fetch_assoc()) {
+                    $stmtDup->close();
+                    echo json_encode(['success' => false, 'message' => "Tài khoản HRM với mã [{$username}] đã tồn tại trong hệ thống."]);
+                    exit;
+                }
+                $stmtDup->close();
+
+                $stmtIns = $conn->prepare("INSERT INTO ot_hrm_accounts (account_name, username, password, is_active) VALUES (?, ?, ?, ?)");
+                $stmtIns->bind_param("sssi", $accountName, $username, $password, $isActive);
+                $stmtIns->execute();
+                $newId = $stmtIns->insert_id;
+                $stmtIns->close();
+
+                echo json_encode(['success' => true, 'id' => $newId, 'message' => "Đã thêm mới tài khoản [{$accountName}] thành công!"]);
+            }
+            break;
+
+        // =====================================================================
+        // 3. XÓA TÀI KHOẢN HRM
+        // =====================================================================
+        case 'delete_account':
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (!$input) $input = $_POST;
+            $id = intval($input['id'] ?? ($_GET['id'] ?? 0));
+
+            // Kiểm tra số lượng tài khoản tối thiểu
+            $totalAcc = intval($conn->query("SELECT COUNT(*) FROM ot_hrm_accounts")->fetch_row()[0]);
+            if ($totalAcc <= 1) {
+                echo json_encode(['success' => false, 'message' => 'Hệ thống cần duy trì tối thiểu 01 tài khoản HRM, không thể xóa tài khoản cuối cùng.']);
+                exit;
+            }
+
+            $stmtDel = $conn->prepare("DELETE FROM ot_hrm_accounts WHERE id = ?");
+            $stmtDel->bind_param("i", $id);
+            $stmtDel->execute();
+            $stmtDel->close();
+
+            echo json_encode(['success' => true, 'message' => 'Đã xóa tài khoản HRM thành công!']);
+            break;
+
+        // =====================================================================
+        // 4. BẬT / TẮT TRẠNG THÁI HOẠT ĐỘNG
+        // =====================================================================
+        case 'toggle_account_status':
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (!$input) $input = $_POST;
+            $id = intval($input['id'] ?? 0);
+            $isActive = !empty($input['is_active']) ? 1 : 0;
+
+            $stmtTog = $conn->prepare("UPDATE ot_hrm_accounts SET is_active = ? WHERE id = ?");
+            $stmtTog->bind_param("ii", $isActive, $id);
+            $stmtTog->execute();
+            $stmtTog->close();
+
+            echo json_encode(['success' => true, 'message' => 'Đã cập nhật trạng thái tài khoản.']);
+            break;
+
+        // =====================================================================
+        // 5. LƯU CẤU HÌNH TOÀN CỤC (CHU KỲ & THỜI GIAN ĐỒNG BỘ)
+        // =====================================================================
+        case 'save_config':
+        case 'save_global_config':
+            $input = json_decode(file_get_contents('php://input'), true);
+            if (!$input) $input = $_POST;
+
+            $cfg = loadGlobalHrmConfig($configFile);
             if (isset($input['sync_interval_hours'])) {
-                $hrs = max(1, min(24, intval($input['sync_interval_hours'])));
-                $cfg['sync_interval_hours'] = $hrs;
+                $cfg['sync_interval_hours'] = max(1, min(24, intval($input['sync_interval_hours'])));
             }
             if (isset($input['auto_sync_enabled'])) {
                 $cfg['auto_sync_enabled'] = filter_var($input['auto_sync_enabled'], FILTER_VALIDATE_BOOLEAN);
             }
             if (isset($input['sync_date_from'])) $cfg['sync_date_from'] = trim($input['sync_date_from']);
             if (isset($input['sync_date_to'])) $cfg['sync_date_to'] = trim($input['sync_date_to']);
-            if (!empty($input['portal_endpoint'])) $cfg['portal_endpoint'] = trim($input['portal_endpoint']);
-            if (!empty($input['plan_export_endpoint'])) $cfg['plan_export_endpoint'] = trim($input['plan_export_endpoint']);
-            if (!empty($input['actual_export_endpoint'])) $cfg['actual_export_endpoint'] = trim($input['actual_export_endpoint']);
-            unset($cfg['plan_url'], $cfg['actual_url']);
 
-            saveHrmConfig($configFile, $cfg);
+            saveGlobalHrmConfig($configFile, $cfg);
 
             echo json_encode([
                 'success' => true,
-                'message' => 'Đã lưu cấu hình kết nối & chu kỳ tự động đồng bộ HRM thành công!',
+                'message' => 'Đã lưu cấu hình chu kỳ và thời gian tự động đồng bộ HRM thành công!',
                 'sync_interval_hours' => $cfg['sync_interval_hours'],
-                'auto_sync_enabled' => $cfg['auto_sync_enabled']
+                'auto_sync_enabled'   => $cfg['auto_sync_enabled']
             ], JSON_UNESCAPED_UNICODE);
             break;
 
         // =====================================================================
-        // 3. KÍCH HOẠT ĐỒNG BỘ TỨC THÌ (TRIGGER SYNC NOW)
+        // 6. KÍCH HOẠT ĐỒNG BỘ (ĐA TÀI KHOẢN HOẶC 1 TÀI KHOẢN)
         // =====================================================================
         case 'trigger_sync':
-            $cfg = loadHrmConfig($configFile);
             $currentUser = $_SESSION['user']['username'] ?? ($_SESSION['username'] ?? 'USER_TRIGGER');
+            $globalCfg = loadGlobalHrmConfig($configFile);
 
-            if (!empty($_POST['TuNgay'])) $cfg['sync_date_from'] = trim($_POST['TuNgay']);
-            if (!empty($_POST['DenNgay'])) $cfg['sync_date_to'] = trim($_POST['DenNgay']);
-            if (!empty($_GET['TuNgay'])) $cfg['sync_date_from'] = trim($_GET['TuNgay']);
-            if (!empty($_GET['DenNgay'])) $cfg['sync_date_to'] = trim($_GET['DenNgay']);
+            $dateFrom = !empty($_POST['TuNgay']) ? trim($_POST['TuNgay']) : (!empty($_GET['TuNgay']) ? trim($_GET['TuNgay']) : ($globalCfg['sync_date_from'] ?? ''));
+            $dateTo = !empty($_POST['DenNgay']) ? trim($_POST['DenNgay']) : (!empty($_GET['DenNgay']) ? trim($_GET['DenNgay']) : ($globalCfg['sync_date_to'] ?? ''));
 
-            $syncRes = executeHrmSync($conn, $cfg, $cookieFile, $planFile, $actualFile, $currentUser);
+            $targetAccountId = intval($_POST['account_id'] ?? ($_GET['account_id'] ?? 0));
 
-            // Cập nhật kết quả vào file config
-            $cfg['last_sync_time'] = date('Y-m-d H:i:s');
-            $cfg['last_sync_status'] = $syncRes['success'] ? 'success' : 'failed';
-            $cfg['last_sync_message'] = $syncRes['message'];
-            if ($syncRes['success']) {
-                $cfg['last_sync_stats'] = [
-                    'plan_inserted' => $syncRes['plan_result']['inserted_rows'] ?? 0,
-                    'plan_updated'  => $syncRes['plan_result']['updated_rows'] ?? 0,
-                    'plan_errors'   => $syncRes['plan_result']['error_rows'] ?? 0,
-                    'actual_inserted' => $syncRes['actual_result']['inserted_rows'] ?? 0,
-                    'actual_updated'  => $syncRes['actual_result']['updated_rows'] ?? 0,
-                    'actual_errors'   => $syncRes['actual_result']['error_rows'] ?? 0,
-                ];
+            // Xác định danh sách tài khoản cần đồng bộ
+            $accountsToSync = [];
+            if ($targetAccountId > 0) {
+                $stmtAcc = $conn->prepare("SELECT * FROM ot_hrm_accounts WHERE id = ?");
+                $stmtAcc->bind_param("i", $targetAccountId);
+                $stmtAcc->execute();
+                $acc = $stmtAcc->get_result()->fetch_assoc();
+                $stmtAcc->close();
+                if ($acc) $accountsToSync[] = $acc;
+            } else {
+                $accountsToSync = getHrmAccounts($conn, true); // Lấy tất cả tài khoản is_active = 1
             }
-            saveHrmConfig($configFile, $cfg);
 
-            echo json_encode($syncRes, JSON_UNESCAPED_UNICODE);
+            if (empty($accountsToSync)) {
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy tài khoản HRM nào đang ở trạng thái Hoạt động để đồng bộ.']);
+                exit;
+            }
+
+            $allSteps = [];
+            $allUrls = [];
+            $accountResults = [];
+            $totPlanIns = 0; $totPlanUp = 0; $totPlanErr = 0;
+            $totActIns = 0; $totActUp = 0; $totActErr = 0;
+            $successCount = 0;
+
+            foreach ($accountsToSync as $acc) {
+                $res = syncSingleHrmAccount($conn, $acc, $dateFrom, $dateTo, $currentUser);
+                $accountResults[] = $res;
+                if (!empty($res['steps'])) {
+                    $allSteps = array_merge($allSteps, $res['steps']);
+                }
+
+                if (!empty($res['success'])) {
+                    $successCount++;
+                    $totPlanIns += $res['plan_result']['inserted_rows'] ?? 0;
+                    $totPlanUp  += $res['plan_result']['updated_rows'] ?? 0;
+                    $totPlanErr += $res['plan_result']['error_rows'] ?? 0;
+                    $totActIns  += $res['actual_result']['inserted_rows'] ?? 0;
+                    $totActUp   += $res['actual_result']['updated_rows'] ?? 0;
+                    $totActErr  += $res['actual_result']['error_rows'] ?? 0;
+                }
+            }
+
+            // Tự động kích hoạt đối soát tổng hợp sau khi gộp toàn bộ dữ liệu từ các tài khoản
+            $recSummary = runReconciliationInternal($conn);
+
+            $nowVn = date('Y-m-d H:i:s');
+            $nowVnFormatted = formatVnDateTime($nowVn);
+
+            // Cập nhật cấu hình toàn cục
+            $overallSuccess = ($successCount > 0);
+            $globalCfg['last_sync_time'] = $nowVn;
+            $globalCfg['last_sync_status'] = $overallSuccess ? 'success' : 'failed';
+            $globalCfg['last_sync_message'] = "Đồng bộ {$successCount}/" . count($accountsToSync) . " tài khoản thành công. Gộp KH: +{$totPlanIns}/sửa {$totPlanUp}. TT: +{$totActIns}/sửa {$totActUp}.";
+            $globalCfg['last_sync_stats'] = [
+                'plan_inserted'   => $totPlanIns,
+                'plan_updated'    => $totPlanUp,
+                'plan_errors'     => $totPlanErr,
+                'actual_inserted' => $totActIns,
+                'actual_updated'  => $totActUp,
+                'actual_errors'   => $totActErr
+            ];
+            saveGlobalHrmConfig($configFile, $globalCfg);
+
+            echo json_encode([
+                'success'                  => $overallSuccess,
+                'message'                  => $globalCfg['last_sync_message'],
+                'last_sync_time'           => $nowVn,
+                'last_sync_time_formatted' => $nowVnFormatted,
+                'accounts_count'           => count($accountsToSync),
+                'success_accounts_count'   => $successCount,
+                'account_results'          => $accountResults,
+                'steps'                    => $allSteps,
+                'totals'                   => [
+                    'plan_inserted'   => $totPlanIns,
+                    'plan_updated'    => $totPlanUp,
+                    'plan_errors'     => $totPlanErr,
+                    'actual_inserted' => $totActIns,
+                    'actual_updated'  => $totActUp,
+                    'actual_errors'   => $totActErr
+                ],
+                'reconciliation'           => $recSummary
+            ], JSON_UNESCAPED_UNICODE);
             break;
 
         // =====================================================================
-        // 4. CHẠY THEO LỊCH TRÌNH (CRON / BACKGROUND AUTO TRIGGER)
+        // 7. CHẠY THEO LỊCH TRÌNH TỰ ĐỘNG (CRON / AUTO SCHEDULER)
         // =====================================================================
         case 'cron':
         case 'check_schedule':
-            $cfg = loadHrmConfig($configFile);
-            if (!$cfg['auto_sync_enabled']) {
+            $globalCfg = loadGlobalHrmConfig($configFile);
+            if (empty($globalCfg['auto_sync_enabled'])) {
                 echo json_encode(['success' => true, 'ran_sync' => false, 'message' => 'Tính năng tự động đồng bộ đang tắt.']);
                 exit;
             }
 
-            $intervalSec = intval($cfg['sync_interval_hours'] ?? 3) * 3600;
-            $lastTime = !empty($cfg['last_sync_time']) ? strtotime($cfg['last_sync_time']) : 0;
+            $intervalSec = intval($globalCfg['sync_interval_hours'] ?? 3) * 3600;
+            $lastTime = !empty($globalCfg['last_sync_time']) ? strtotime($globalCfg['last_sync_time']) : 0;
             $timeSince = time() - $lastTime;
 
             if ($timeSince < $intervalSec) {
                 $nextInMin = ceil(($intervalSec - $timeSince) / 60);
                 echo json_encode([
-                    'success' => true,
-                    'ran_sync' => false,
-                    'message' => "Chưa đến lịch đồng bộ tiếp theo (còn khoảng {$nextInMin} phút).",
-                    'last_sync_time' => $cfg['last_sync_time'],
-                    'interval_hours' => $cfg['sync_interval_hours']
+                    'success'                  => true,
+                    'ran_sync'                 => false,
+                    'message'                  => "Chưa đến lịch đồng bộ tiếp theo (còn khoảng {$nextInMin} phút).",
+                    'last_sync_time'           => $globalCfg['last_sync_time'],
+                    'last_sync_time_formatted' => formatVnDateTime($globalCfg['last_sync_time']),
+                    'interval_hours'           => $globalCfg['sync_interval_hours']
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
-            // Đã đến hạn chạy -> Thực hiện đồng bộ
-            $syncRes = executeHrmSync($conn, $cfg, $cookieFile, $planFile, $actualFile, 'HRM_CRON_AUTO');
-            $cfg['last_sync_time'] = date('Y-m-d H:i:s');
-            $cfg['last_sync_status'] = $syncRes['success'] ? 'success' : 'failed';
-            $cfg['last_sync_message'] = $syncRes['message'];
-            if ($syncRes['success']) {
-                $cfg['last_sync_stats'] = [
-                    'plan_inserted' => $syncRes['plan_result']['inserted_rows'] ?? 0,
-                    'plan_updated'  => $syncRes['plan_result']['updated_rows'] ?? 0,
-                    'plan_errors'   => $syncRes['plan_result']['error_rows'] ?? 0,
-                    'actual_inserted' => $syncRes['actual_result']['inserted_rows'] ?? 0,
-                    'actual_updated'  => $syncRes['actual_result']['updated_rows'] ?? 0,
-                    'actual_errors'   => $syncRes['actual_result']['error_rows'] ?? 0,
-                ];
-            }
-            saveHrmConfig($configFile, $cfg);
+            // Kích hoạt đồng bộ tất cả tài khoản active
+            $accountsToSync = getHrmAccounts($conn, true);
+            $successCount = 0;
+            $totPlanIns = 0; $totPlanUp = 0; $totActIns = 0; $totActUp = 0;
 
-            $syncRes['ran_sync'] = true;
-            echo json_encode($syncRes, JSON_UNESCAPED_UNICODE);
+            foreach ($accountsToSync as $acc) {
+                $res = syncSingleHrmAccount($conn, $acc, $globalCfg['sync_date_from'] ?? '', $globalCfg['sync_date_to'] ?? '', 'HRM_CRON_AUTO');
+                if (!empty($res['success'])) {
+                    $successCount++;
+                    $totPlanIns += $res['plan_result']['inserted_rows'] ?? 0;
+                    $totPlanUp  += $res['plan_result']['updated_rows'] ?? 0;
+                    $totActIns  += $res['actual_result']['inserted_rows'] ?? 0;
+                    $totActUp   += $res['actual_result']['updated_rows'] ?? 0;
+                }
+            }
+
+            $recSummary = runReconciliationInternal($conn);
+            $nowVn = date('Y-m-d H:i:s');
+
+            $globalCfg['last_sync_time'] = $nowVn;
+            $globalCfg['last_sync_status'] = ($successCount > 0) ? 'success' : 'failed';
+            $globalCfg['last_sync_message'] = "CRON: Đồng bộ {$successCount}/" . count($accountsToSync) . " tài khoản. KH (+{$totPlanIns}/{$totPlanUp}), TT (+{$totActIns}/{$totActUp}).";
+            saveGlobalHrmConfig($configFile, $globalCfg);
+
+            echo json_encode([
+                'success'                  => true,
+                'ran_sync'                 => true,
+                'message'                  => $globalCfg['last_sync_message'],
+                'last_sync_time'           => $nowVn,
+                'last_sync_time_formatted' => formatVnDateTime($nowVn),
+                'reconciliation'           => $recSummary
+            ], JSON_UNESCAPED_UNICODE);
             break;
 
         default:
@@ -573,4 +825,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Lỗi xử lý đồng bộ: ' . $e->getMessage()]);
 }
-

@@ -4,6 +4,7 @@
  * DX Plastic Group - Overtime Management System
  */
 header('Content-Type: application/json; charset=utf-8');
+date_default_timezone_set('Asia/Ho_Chi_Minh');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
 require_once __DIR__ . '/../core/overtime_service.php';
@@ -67,10 +68,11 @@ try {
             $limit = max(10, min(100, intval($_GET['limit'] ?? 25)));
             $offset = ($page - 1) * $limit;
 
-            // Đọc thông tin đồng bộ HRM gần nhất từ cấu hình
+            // Đọc thông tin đồng bộ HRM gần nhất từ cấu hình & CSDL ot_hrm_accounts
             $hrmConfigFile = __DIR__ . '/../config/hrm_sync_config.json';
             $hrmSyncInfo = [
                 'last_sync_time' => null,
+                'last_sync_time_formatted' => '-',
                 'last_sync_status' => 'never_run',
                 'last_sync_message' => 'Chưa có thông tin đồng bộ.'
             ];
@@ -81,6 +83,17 @@ try {
                     $hrmSyncInfo['last_sync_status'] = $cfgData['last_sync_status'] ?? 'never_run';
                     $hrmSyncInfo['last_sync_message'] = $cfgData['last_sync_message'] ?? '';
                 }
+            }
+
+            // Kiểm tra thêm từ ot_hrm_accounts để lấy thời gian mới nhất nếu có
+            $resAccMax = $conn->query("SELECT MAX(last_sync_time) as max_time FROM ot_hrm_accounts WHERE last_sync_time IS NOT NULL");
+            if ($resAccMax && $rM = $resAccMax->fetch_assoc()) {
+                if (!empty($rM['max_time']) && (empty($hrmSyncInfo['last_sync_time']) || strtotime($rM['max_time']) > strtotime($hrmSyncInfo['last_sync_time']))) {
+                    $hrmSyncInfo['last_sync_time'] = $rM['max_time'];
+                }
+            }
+            if (!empty($hrmSyncInfo['last_sync_time'])) {
+                $hrmSyncInfo['last_sync_time_formatted'] = date('d/m/Y H:i:s', strtotime($hrmSyncInfo['last_sync_time']));
             }
 
             $where = "WHERE 1=1";
@@ -549,6 +562,103 @@ try {
             $detail['step2_done'] = !empty($detail['actual_id']);
 
             echo json_encode(['success' => true, 'detail' => $detail], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 5. SO KHỚP LẠI RIÊNG 01 LỆNH (RECONCILE SINGLE ROW)
+        // =====================================================================
+        case 'reconcile_single':
+            $recId = intval($_POST['id'] ?? ($_GET['id'] ?? 0));
+            $stmt = $conn->prepare("SELECT id, employee_code, ot_date, plan_id, actual_id FROM ot_reconciliations WHERE id = ?");
+            $stmt->bind_param("i", $recId);
+            $stmt->execute();
+            $recRow = $stmt->get_result()->fetch_assoc();
+            $stmt->close();
+
+            if (!$recRow) {
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy bản ghi đối soát']);
+                exit;
+            }
+
+            $empCode = $recRow['employee_code'];
+            $otDate = $recRow['ot_date'];
+
+            // Lấy kế hoạch và thực tế mới nhất của nhân viên trong ngày đó
+            $planRes = $conn->query("SELECT * FROM ot_plans WHERE employee_code = '{$empCode}' AND ot_date = '{$otDate}' LIMIT 1");
+            $plan = $planRes ? $planRes->fetch_assoc() : null;
+
+            $actRes = $conn->query("SELECT * FROM ot_actuals WHERE employee_code = '{$empCode}' AND ot_date = '{$otDate}' LIMIT 1");
+            $act = $actRes ? $actRes->fetch_assoc() : null;
+
+            $planId = $plan ? intval($plan['id']) : null;
+            $actId = $act ? intval($act['id']) : null;
+            $planMin = $plan ? intval($plan['total_minutes']) : 0;
+            $actMin = $act ? intval($act['total_minutes_actual']) : 0;
+            $diffMin = $actMin - $planMin;
+
+            // Xác định trạng thái mới
+            $newStatus = 'matched';
+            if ($plan && !$act) {
+                $newStatus = 'plan_only';
+            } else if (!$plan && $act) {
+                $newStatus = 'actual_only';
+            } else if ($plan && $act) {
+                if ($diffMin !== 0 || $plan['start_time'] !== $act['start_time_actual'] || $plan['end_time'] !== $act['end_time_actual']) {
+                    $newStatus = 'time_diff';
+                } else {
+                    $newStatus = 'matched';
+                }
+            }
+
+            $isOverdue = 0;
+            $daysDiff = (time() - strtotime($otDate)) / 86400;
+            if ($daysDiff > 3 && (!$plan || !$act)) {
+                $isOverdue = 1;
+            }
+
+            $stmtUp = $conn->prepare("
+                UPDATE ot_reconciliations 
+                SET plan_id = ?, actual_id = ?, reconcile_status = ?, plan_minutes = ?, actual_minutes = ?, diff_minutes = ?, is_overdue = ?, last_reconciled_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ");
+            $stmtUp->bind_param("iisiiiii", $planId, $actId, $newStatus, $planMin, $actMin, $diffMin, $isOverdue, $recId);
+            $stmtUp->execute();
+            $stmtUp->close();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã so khớp lại lệnh đối soát thành công!',
+                'reconcile_status' => $newStatus,
+                'diff_minutes' => $diffMin,
+                'is_overdue' => $isOverdue
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 6. XÓA BẢN GHI ĐỐI SOÁT
+        // =====================================================================
+        case 'delete_reconciliation':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền xóa bản ghi đối soát!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $recId = intval($_POST['id'] ?? ($_GET['id'] ?? 0));
+            if ($recId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Mã bản ghi không hợp lệ.']);
+                exit;
+            }
+
+            $conn->query("DELETE FROM ot_explanations WHERE reconciliation_id = {$recId}");
+            $delRes = $conn->query("DELETE FROM ot_reconciliations WHERE id = {$recId}");
+
+            if ($delRes) {
+                echo json_encode(['success' => true, 'message' => "Đã xóa bản ghi đối soát #OT-" . str_pad($recId, 6, '0', STR_PAD_LEFT) . " thành công!"]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Lỗi khi xóa bản ghi: ' . $conn->error]);
+            }
             break;
 
         default:

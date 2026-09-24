@@ -252,7 +252,7 @@ $canSyncHrm = ($userRole !== 'viewer') && hasPermission('api.overtime.hrm_sync')
             <!-- Độ lệch & Trạng thái -->
             <th style="width: 95px; text-align: right;">Chênh Lệch</th>
             <th style="width: 165px; text-align: center;">Trạng Thái Đối Soát</th>
-            <th style="width: 185px; text-align: center;">Thao Tác</th>
+            <th style="width: 140px; text-align: center;">Thao Tác</th>
           </tr>
         </thead>
         <tbody id="recTableBody">
@@ -412,6 +412,45 @@ $canSyncHrm = ($userRole !== 'viewer') && hasPermission('api.overtime.hrm_sync')
   </div>
 </div>
 
+<!-- Modal 5: Chi Tiết Lịch Sử Tăng Ca Nhân Viên -->
+<div class="modal fade" id="empHistoryModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header bg-primary text-white py-2 px-3">
+        <h5 class="modal-title fs-6 fw-bold d-flex align-items-center gap-2">
+          <span class="material-icons fs-5">history</span>
+          Chi Tiết Lịch Sử Tăng Ca: <span id="modalEmpTitle" class="font-monospace">...</span>
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3">
+        <div id="modalEmpSummaryCard" class="p-3 mb-3 rounded bg-light border"></div>
+        <div class="app-table-responsive" style="max-height: 420px; overflow-y: auto;">
+          <table class="app-table table-sm" style="font-size: 13px;">
+            <thead class="table-light">
+              <tr>
+                <th style="width: 45px; text-align: center;">STT</th>
+                <th>Ngày OT</th>
+                <th>Bắt Đầu TT</th>
+                <th>Kết Thúc TT</th>
+                <th style="text-align: right;">Số Phút TT</th>
+                <th style="text-align: right;">Số Giờ TT</th>
+                <th>Lý Do Tăng Ca</th>
+                <th>Quản Lý Duyệt</th>
+                <th style="text-align: center;">Trạng Thái</th>
+              </tr>
+            </thead>
+            <tbody id="modalEmpHistoryBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer py-2 px-3">
+        <button type="button" class="app-btn app-btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 const CAN_MANAGE_REC = <?= json_encode($canManageRec) ?>;
 const CAN_SYNC_HRM   = <?= json_encode($canSyncHrm) ?>;
@@ -466,6 +505,15 @@ function handleRecSearch(val) {
   }, 300);
 }
 
+function formatVnDateTimeClient(dtStr) {
+  if (!dtStr) return '-';
+  if (/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/.test(dtStr)) return dtStr;
+  const d = new Date(dtStr.replace(' ', 'T'));
+  if (isNaN(d.getTime())) return dtStr;
+  const pad = n => String(n).padStart(2, '0');
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
 // Cập nhật thanh hiển thị trạng thái HRM Sync
 function updateHrmSyncDisplay(info) {
   const timeBadge = document.getElementById('hrmSyncLastTimeBadge');
@@ -474,7 +522,7 @@ function updateHrmSyncDisplay(info) {
   if (!timeBadge || !info) return;
 
   if (info.last_sync_time) {
-    timeBadge.textContent = info.last_sync_time;
+    timeBadge.textContent = info.last_sync_time_formatted || formatVnDateTimeClient(info.last_sync_time);
   } else {
     timeBadge.textContent = 'Chưa có dữ liệu';
   }
@@ -798,36 +846,77 @@ async function loadReconciliations(page = 1) {
         `;
       }
 
-      // Thao tác Admin / Viewer
+      // Cụm Icon Buttons chức năng chuẩn UI/UX kèm Bootstrap Tooltip
+      // 1. Xem chi tiết (Eye icon)
       let actionsHtml = `
-        <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openRecDetail(${r.id})" title="Xem đối chiếu chi tiết">
-          Chi tiết
+        <button class="btn btn-sm btn-outline-primary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+          onclick="openRecDetail(${r.id})" 
+          data-bs-toggle="tooltip" data-bs-placement="top" title="Xem chi tiết đối chiếu" style="width: 28px; height: 28px;">
+          <span class="material-icons" style="font-size: 15px;">visibility</span>
+        </button>
+      `;
+
+      // 2. Xem lịch sử tăng ca (History icon)
+      actionsHtml += `
+        <button class="btn btn-sm btn-outline-secondary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+          onclick="openEmpHistoryModal('${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}')" 
+          data-bs-toggle="tooltip" data-bs-placement="top" title="Xem lịch sử tăng ca" style="width: 28px; height: 28px;">
+          <span class="material-icons" style="font-size: 15px;">history</span>
         </button>
       `;
 
       if (CAN_MANAGE_REC) {
+        // 3. Đồng bộ lại / So khớp lại lệnh này (Refresh icon)
+        actionsHtml += `
+          <button class="btn btn-sm btn-outline-info p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+            onclick="reconcileSingleRow(${r.id})" 
+            data-bs-toggle="tooltip" data-bs-placement="top" title="So khớp lại ca này" style="width: 28px; height: 28px;">
+            <span class="material-icons" style="font-size: 15px;">refresh</span>
+          </button>
+        `;
+
         if (isDismissed) {
+          // Khôi phục lại (Undo / Restore icon)
           actionsHtml += `
-            <button class="btn btn-sm btn-outline-secondary py-0 px-2 text-nowrap" onclick="handleRestoreRequest(${r.id})" title="Khôi phục lại lệnh">
-              <span class="material-icons align-middle" style="font-size: 12px;">undo</span> Khôi phục
+            <button class="btn btn-sm btn-outline-success p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+              onclick="handleRestoreRequest(${r.id})" 
+              data-bs-toggle="tooltip" data-bs-placement="top" title="Khôi phục lại lệnh" style="width: 28px; height: 28px;">
+              <span class="material-icons" style="font-size: 15px;">undo</span>
             </button>
           `;
         } else if (isExpRequested) {
+          // Tạm hủy yêu cầu (Block / Cancel icon)
           actionsHtml += `
-            <button class="btn btn-sm btn-outline-secondary py-0 px-2 text-nowrap" onclick="openDismissModal(${r.id}, '${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}', '${r.ot_date}')" title="Tạm hủy yêu cầu giải trình">
-              <span class="material-icons align-middle" style="font-size: 12px;">block</span> Tạm hủy
+            <button class="btn btn-sm btn-outline-secondary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+              onclick="openDismissModal(${r.id}, '${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}', '${r.ot_date}')" 
+              data-bs-toggle="tooltip" data-bs-placement="top" title="Tạm hủy yêu cầu giải trình" style="width: 28px; height: 28px;">
+              <span class="material-icons" style="font-size: 15px;">block</span>
             </button>
           `;
         } else if (!isFullyCompleted || r.diff_minutes !== 0 || r.is_overdue) {
+          // Yêu cầu giải trình (Edit/Pencil icon)
           actionsHtml += `
-            <button class="btn btn-sm btn-outline-danger py-0 px-2 text-nowrap" onclick='openRequestExplanationModal(${JSON.stringify(r)})' title="Gửi yêu cầu giải trình cho nhân viên">
-              <span class="material-icons align-middle" style="font-size: 13px;">campaign</span> Yêu cầu GT
+            <button class="btn btn-sm btn-outline-warning p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+              onclick='openRequestExplanationModal(${JSON.stringify(r)})' 
+              data-bs-toggle="tooltip" data-bs-placement="top" title="Yêu cầu giải trình" style="width: 28px; height: 28px;">
+              <span class="material-icons" style="font-size: 15px;">edit_note</span>
             </button>
-            <button class="btn btn-sm btn-outline-secondary py-0 px-2 text-nowrap" onclick="openDismissModal(${r.id}, '${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}', '${r.ot_date}')" title="Bỏ qua yêu cầu giải trình">
-              <span class="material-icons align-middle" style="font-size: 13px;">block</span> Tạm hủy
+            <button class="btn btn-sm btn-outline-secondary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+              onclick="openDismissModal(${r.id}, '${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}', '${r.ot_date}')" 
+              data-bs-toggle="tooltip" data-bs-placement="top" title="Bỏ qua yêu cầu giải trình" style="width: 28px; height: 28px;">
+              <span class="material-icons" style="font-size: 15px;">block</span>
             </button>
           `;
         }
+
+        // Xóa lệnh (Trash icon)
+        actionsHtml += `
+          <button class="btn btn-sm btn-outline-danger p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+            onclick="deleteRecRow(${r.id}, '${escapeHtml(r.order_code)}')" 
+            data-bs-toggle="tooltip" data-bs-placement="top" title="Xóa bản ghi đối soát" style="width: 28px; height: 28px;">
+            <span class="material-icons" style="font-size: 15px;">delete_outline</span>
+          </button>
+        `;
       }
 
       html += `
@@ -889,6 +978,10 @@ async function loadReconciliations(page = 1) {
       `;
     });
     tbody.innerHTML = html;
+
+    // Kích hoạt Bootstrap tooltips cho tất cả icon buttons trong bảng
+    const recTooltips = [].slice.call(document.querySelectorAll('#recTableBody [data-bs-toggle="tooltip"]'));
+    recTooltips.map(el => new bootstrap.Tooltip(el));
 
     // Phân trang
     renderRecPagination(data.total, page, 25);
@@ -1167,6 +1260,137 @@ async function openRecDetail(recId) {
     new bootstrap.Modal(document.getElementById('recDetailModal')).show();
   } catch (err) {
     console.error('Lỗi openRecDetail:', err);
+  }
+}
+
+// 5. So khớp lại đơn lẻ một dòng
+async function reconcileSingleRow(recId) {
+  if (!confirm(`Bạn có chắc chắn muốn so khớp lại lệnh đối soát #OT-${String(recId).padStart(6, '0')}?`)) return;
+  try {
+    const res = await fetch(`api/overtime_reconciliation.php?action=reconcile_single&id=${recId}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message || 'Đã so khớp lại thành công!');
+      loadReconciliations(currentRecPage);
+    } else {
+      alert('Lỗi: ' + data.message);
+    }
+  } catch (err) {
+    console.error('Lỗi reconcileSingleRow:', err);
+    alert('Lỗi kết nối máy chủ');
+  }
+}
+
+// 6. Xóa bản ghi đối soát
+async function deleteRecRow(recId, orderCode) {
+  if (!confirm(`CẢNH BÁO: Bạn có chắc chắn muốn xóa bản ghi đối soát ${orderCode}? Thao tác này không thể hoàn tác!`)) return;
+  try {
+    const res = await fetch(`api/overtime_reconciliation.php?action=delete_reconciliation&id=${recId}`, { method: 'POST' });
+    const data = await res.json();
+    if (data.success) {
+      alert(data.message || 'Đã xóa bản ghi thành công!');
+      loadReconciliations(currentRecPage);
+    } else {
+      alert('Lỗi: ' + data.message);
+    }
+  } catch (err) {
+    console.error('Lỗi deleteRecRow:', err);
+    alert('Lỗi kết nối máy chủ');
+  }
+}
+
+// 7. Mở popup Lịch sử tăng ca của nhân viên
+async function openEmpHistoryModal(empCode, empName) {
+  const modalEl = document.getElementById('empHistoryModal');
+  const titleEl = document.getElementById('modalEmpTitle');
+  const summaryEl = document.getElementById('modalEmpSummaryCard');
+  const bodyEl = document.getElementById('modalEmpHistoryBody');
+
+  titleEl.textContent = `${empName} (${empCode})`;
+  summaryEl.innerHTML = '<div class="text-center text-muted p-2"><div class="spinner-border spinner-border-sm me-2"></div>Đang tải dữ liệu...</div>';
+  bodyEl.innerHTML = '<tr><td colspan="9" class="text-center text-muted p-3">Đang tải lịch sử...</td></tr>';
+
+  const modalInstance = new bootstrap.Modal(modalEl);
+  modalInstance.show();
+
+  try {
+    const year = document.getElementById('recYear').value || new Date().getFullYear();
+    const res = await fetch(`api/overtime_yearly.php?action=get_employee_history&employee_code=${encodeURIComponent(empCode)}&year=${year}`);
+    const data = await res.json();
+
+    if (!data.success) {
+      summaryEl.innerHTML = `<div class="text-danger">Lỗi: ${data.message}</div>`;
+      bodyEl.innerHTML = `<tr><td colspan="9" class="text-center text-danger">Không tải được dữ liệu</td></tr>`;
+      return;
+    }
+
+    const emp = data.employee || {};
+    const acc = data.accumulation || {};
+    const totalHours = acc.total_hours_year || 0;
+    const remainHours = acc.remaining_hours !== undefined ? acc.remaining_hours : Math.max(0, 200 - totalHours);
+    const usagePct = acc.usage_percent !== undefined ? acc.usage_percent : (totalHours / 200 * 100).toFixed(1);
+    const warnBadge = acc.warning_level === 'red' ? '<span class="badge bg-danger">Vượt giới hạn 200h</span>' : (acc.warning_level === 'yellow' ? '<span class="badge bg-warning text-dark">Cảnh báo (160h-200h)</span>' : '<span class="badge bg-success">An toàn (&lt;160h)</span>');
+
+    summaryEl.innerHTML = `
+      <div class="row g-2 align-items-center">
+        <div class="col-md-4">
+          <div class="fw-bold fs-6 text-primary">${escapeHtml(emp.full_name || empCode)}</div>
+          <div class="small text-muted">Mã NV: <strong>${escapeHtml(emp.employee_code || empCode)}</strong> | Bộ phận: <strong>${escapeHtml(emp.cost_center || '-')}</strong></div>
+        </div>
+        <div class="col-md-5">
+          <div class="d-flex justify-content-between small mb-1">
+            <span>Tiến độ lũy kế năm ${year}: <strong>${totalHours}h / 200h</strong></span>
+            <span><strong>${usagePct}%</strong></span>
+          </div>
+          <div class="progress" style="height: 10px;">
+            <div class="progress-bar ${acc.warning_level === 'red' ? 'bg-danger' : (acc.warning_level === 'yellow' ? 'bg-warning text-dark' : 'bg-success')}" style="width: ${Math.min(100, usagePct)}%"></div>
+          </div>
+        </div>
+        <div class="col-md-3 text-md-end">
+          <div>${warnBadge}</div>
+          <div class="small text-muted mt-1">Còn lại: <strong class="text-success">${remainHours}h</strong></div>
+        </div>
+      </div>
+    `;
+
+    if (!data.history || data.history.length === 0) {
+      bodyEl.innerHTML = `<tr><td colspan="9" class="text-center text-muted p-4"><span class="material-icons d-block fs-3 mb-1">event_busy</span>Không có bản ghi tăng ca thực tế nào trong năm ${year}.</td></tr>`;
+      return;
+    }
+
+    let rowsHtml = '';
+    data.history.forEach((h, idx) => {
+      const startTime = h.start_time_actual ? h.start_time_actual.substr(11, 5) : '-';
+      const endTime = h.end_time_actual ? h.end_time_actual.substr(11, 5) : '-';
+      const hours = (parseFloat(h.duration_hours_actual) || (h.duration_minutes_actual / 60)).toFixed(2);
+      
+      let stBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle">Hợp lệ</span>';
+      if (h.needs_explanation == 1) {
+        stBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Cần GT</span>';
+      }
+      if (h.explanation_status === 'approved') {
+        stBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle">Đã duyệt GT</span>';
+      }
+
+      rowsHtml += `
+        <tr>
+          <td style="text-align: center;">${idx + 1}</td>
+          <td><strong>${h.ot_date}</strong></td>
+          <td class="font-monospace text-primary">${startTime}</td>
+          <td class="font-monospace text-primary">${endTime}</td>
+          <td style="text-align: right;">${h.duration_minutes_actual || 0} p</td>
+          <td style="text-align: right;" class="fw-bold text-success">${hours} h</td>
+          <td><small class="text-muted">${escapeHtml(h.reason || '-')}</small></td>
+          <td><small>${escapeHtml(h.direct_manager_name || h.indirect_manager_name || '-')}</small></td>
+          <td style="text-align: center;">${stBadge}</td>
+        </tr>
+      `;
+    });
+    bodyEl.innerHTML = rowsHtml;
+  } catch (err) {
+    console.error('Lỗi openEmpHistoryModal:', err);
+    summaryEl.innerHTML = '<div class="text-danger">Lỗi kết nối máy chủ</div>';
+    bodyEl.innerHTML = '<tr><td colspan="9" class="text-center text-danger">Lỗi kết nối máy chủ</td></tr>';
   }
 }
 
