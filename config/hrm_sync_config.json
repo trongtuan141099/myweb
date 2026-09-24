@@ -1,0 +1,25 @@
+{
+    "hrm_url": "https:\/\/hrm.smcmfg.com.vn",
+    "login_endpoint": "https:\/\/hrm.smcmfg.com.vn\/login",
+    "portal_endpoint": "https:\/\/hrm.smcmfg.com.vn\/TangCa\/DuyetTangCaKeHoach",
+    "plan_export_endpoint": "https:\/\/hrm.smcmfg.com.vn\/Portal\/TangCa\/ExportDuyetTangCaKeHoach",
+    "actual_export_endpoint": "https:\/\/hrm.smcmfg.com.vn\/Portal\/TangCa\/ExportDuyetTangCaThucTe",
+    "download_endpoint": "https:\/\/hrm.smcmfg.com.vn\/Download\/ExcelDownload",
+    "username": "02114273",
+    "password": "Trinh123@",
+    "sync_interval_hours": 1,
+    "auto_sync_enabled": true,
+    "sync_date_from": "2026-09-01",
+    "sync_date_to": "2026-09-30",
+    "last_sync_time": "2026-09-24 02:17:49",
+    "last_sync_status": "success",
+    "last_sync_message": "Đồng bộ HRM thành công! Kế hoạch: +0 \/ sửa 118. Thực tế: +0 \/ sửa 155.",
+    "last_sync_stats": {
+        "plan_inserted": 0,
+        "plan_updated": 118,
+        "plan_errors": 0,
+        "actual_inserted": 0,
+        "actual_updated": 155,
+        "actual_errors": 0
+    }
+}

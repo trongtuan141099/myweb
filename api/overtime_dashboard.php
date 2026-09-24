@@ -17,10 +17,10 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     }
 }
 
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.']);
-    exit;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
+requireApiPermission('api.overtime.dashboard');
 
 try {
     $month = !empty($_GET['month']) ? intval($_GET['month']) : intval(date('m'));
@@ -39,8 +39,8 @@ try {
     $resHoursYear = $conn->query("SELECT COALESCE(SUM(total_hours_actual), 0) FROM ot_actuals WHERE YEAR(ot_date) = {$year}");
     $hoursYear = $resHoursYear ? floatval($resHoursYear->fetch_row()[0]) : 0;
 
-    // d) Số ca cần giải trình (toàn bộ hoặc theo tháng)
-    $resExpCount = $conn->query("SELECT COUNT(*) FROM ot_explanations WHERE approval_status IN ('pending', 'submitted')");
+    // d) Số ca cần giải trình (chưa giải trình)
+    $resExpCount = $conn->query("SELECT COUNT(*) FROM ot_reconciliations r WHERE r.needs_explanation = 1 AND (r.is_explained = 0 OR r.is_explained IS NULL)");
     $pendingExpCount = $resExpCount ? intval($resExpCount->fetch_row()[0]) : 0;
 
     // e) Số nhân sự Mức Vàng (160 - 199.9h) và Mức Đỏ (>= 200h)

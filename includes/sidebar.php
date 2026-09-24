@@ -96,6 +96,7 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
     <?php endif; ?>
 
     <!-- 3.1. Quản lý tăng ca -->
+    <?php if (hasPermission(['overtime.view', 'overtime.import', 'overtime.reconcile', 'overtime.explain', 'overtime.yearly', 'overtime.export'])): ?>
     <div class="has-submenu <?= ($current_main === 'overtime') ? 'open' : '' ?>">
       <div class="menu-item menu-parent <?= ($current_main === 'overtime') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
         <span class="material-icons">more_time</span>
@@ -103,36 +104,51 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
         <span class="material-icons arrow-icon">expand_more</span>
       </div>
       <div class="submenu">
+        <?php if (hasPermission('overtime.view')): ?>
         <a href="index.php?mainpage=overtime&subpage=dashboard" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'dashboard') ? 'active' : '' ?>">
           <span class="material-icons">dashboard</span>
           <span class="label">Tổng quan tăng ca</span>
         </a>
+        <?php endif; ?>
+        <?php if (hasPermission('overtime.import')): ?>
         <a href="index.php?mainpage=overtime&subpage=import" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'import') ? 'active' : '' ?>">
           <span class="material-icons">upload_file</span>
           <span class="label">Import dữ liệu Excel</span>
         </a>
+        <?php endif; ?>
+        <?php if (hasPermission('overtime.reconcile')): ?>
         <a href="index.php?mainpage=overtime&subpage=reconciliation" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'reconciliation') ? 'active' : '' ?>">
           <span class="material-icons">fact_check</span>
           <span class="label">Đối soát tăng ca</span>
         </a>
+        <?php endif; ?>
+        <?php if (hasPermission('overtime.explain')): ?>
         <a href="index.php?mainpage=overtime&subpage=explanations" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'explanations') ? 'active' : '' ?>">
           <span class="material-icons">rate_review</span>
           <span class="label">Quản lý giải trình</span>
         </a>
+        <?php endif; ?>
+        <?php if (hasPermission('overtime.yearly')): ?>
         <a href="index.php?mainpage=overtime&subpage=yearly_control" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'yearly_control') ? 'active' : '' ?>">
           <span class="material-icons">alarm_on</span>
           <span class="label">Kiểm soát giới hạn 200h</span>
         </a>
+        <?php endif; ?>
+        <?php if (hasPermission('overtime.view')): ?>
         <a href="index.php?mainpage=overtime&subpage=records" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'records') ? 'active' : '' ?>">
           <span class="material-icons">list_alt</span>
           <span class="label">Tra cứu chi tiết OT</span>
         </a>
+        <?php endif; ?>
+        <?php if (hasPermission('overtime.export')): ?>
         <a href="index.php?mainpage=overtime&subpage=export" class="submenu-item <?= ($current_main === 'overtime' && $current_sub === 'export') ? 'active' : '' ?>">
           <span class="material-icons">file_download</span>
           <span class="label">Xuất báo cáo Excel</span>
         </a>
+        <?php endif; ?>
       </div>
     </div>
+    <?php endif; ?>
 
     <!-- 4. Quản lý tài liệu -->
     <?php if (hasPermission('document.view')): ?>

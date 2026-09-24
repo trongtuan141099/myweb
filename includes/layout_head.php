@@ -25,6 +25,9 @@
   <!-- Local Script Dependencies -->
   <script src="resources/apexcharts.js"></script>
   <script src="resources/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Global Permission System for Frontend JS -->
+  <?php renderPermissionScript(); ?>
 </head>
 <body>
   <div class="app-container">

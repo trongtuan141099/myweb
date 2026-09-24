@@ -16,9 +16,10 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     }
 }
 
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
-    die("Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.");
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
+requireApiPermission('api.overtime.export');
 
 $type = $_GET['type'] ?? 'plan';
 $year = !empty($_GET['year']) ? intval($_GET['year']) : intval(date('Y'));

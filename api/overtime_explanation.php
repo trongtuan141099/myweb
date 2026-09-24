@@ -17,10 +17,10 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     }
 }
 
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.']);
-    exit;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
+requireApiPermission('api.overtime.explain');
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 $current_user = $_SESSION['user']['username'] ?? ($_SESSION['username'] ?? 'admin');
@@ -39,7 +39,7 @@ try {
             $limit = max(10, min(100, intval($_GET['limit'] ?? 25)));
             $offset = ($page - 1) * $limit;
 
-            $where = "WHERE 1=1";
+            $where = "WHERE (r.id IS NULL OR r.explanation_requested = 1 OR exp.approval_status != 'pending' OR (exp.explanation_content IS NOT NULL AND exp.explanation_content != ''))";
             if (!empty($status)) {
                 $where .= " AND exp.approval_status = '" . $conn->real_escape_string($status) . "'";
             }
@@ -54,16 +54,21 @@ try {
                 $where .= " AND (exp.employee_code LIKE '%{$s}%' OR COALESCE(p.full_name, a.full_name, e.full_name) LIKE '%{$s}%')";
             }
 
-            // Thống kê Badge theo trạng thái
+            // Thống kê Badge theo trạng thái (chỉ tính các ticket hợp lệ)
+            $badgeWhere = "WHERE (r.id IS NULL OR r.explanation_requested = 1 OR exp.approval_status != 'pending' OR (exp.explanation_content IS NOT NULL AND exp.explanation_content != ''))";
+            if ($year > 0) {
+                $badgeWhere .= " AND YEAR(exp.ot_date) = {$year}";
+            }
             $sqlBadges = "
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN approval_status = 'pending' THEN 1 ELSE 0 END) as pending,
-                    SUM(CASE WHEN approval_status = 'submitted' THEN 1 ELSE 0 END) as submitted,
-                    SUM(CASE WHEN approval_status = 'approved' THEN 1 ELSE 0 END) as approved,
-                    SUM(CASE WHEN approval_status = 'rejected' THEN 1 ELSE 0 END) as rejected
+                    SUM(CASE WHEN exp.approval_status = 'pending' THEN 1 ELSE 0 END) as pending,
+                    SUM(CASE WHEN exp.approval_status = 'submitted' THEN 1 ELSE 0 END) as submitted,
+                    SUM(CASE WHEN exp.approval_status = 'approved' THEN 1 ELSE 0 END) as approved,
+                    SUM(CASE WHEN exp.approval_status = 'rejected' THEN 1 ELSE 0 END) as rejected
                 FROM ot_explanations exp
-                " . ($year > 0 ? "WHERE YEAR(exp.ot_date) = {$year}" : "") . "
+                LEFT JOIN ot_reconciliations r ON exp.reconciliation_id = r.id
+                {$badgeWhere}
             ";
             $resBadges = $conn->query($sqlBadges);
             $badges = $resBadges ? $resBadges->fetch_assoc() : [];
@@ -150,6 +155,13 @@ try {
         // 3. QUẢN LÝ PHÊ DUYỆT HOẶC TỪ CHỐI GIẢI TRÌNH
         // =====================================================================
         case 'review_explanation':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền thẩm định giải trình!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 echo json_encode(['success' => false, 'message' => 'Yêu cầu không hợp lệ']);
                 exit;

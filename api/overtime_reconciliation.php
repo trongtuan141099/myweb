@@ -6,6 +6,7 @@
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
+require_once __DIR__ . '/../core/overtime_service.php';
 
 global $conn;
 if (!isset($conn) || !($conn instanceof mysqli)) {
@@ -17,12 +18,15 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     }
 }
 
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.']);
-    exit;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
 
+// Bắt buộc quyền api.overtime.reconcile
+requireApiPermission('api.overtime.reconcile');
+
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
+$currentUser = $_SESSION['user']['username'] ?? ($_SESSION['username'] ?? 'admin');
 
 try {
     switch ($action) {
@@ -30,193 +34,22 @@ try {
         // 1. CHẠY ENGINE ĐỐI SOÁT TỰ ĐỘNG
         // =====================================================================
         case 'run_reconcile':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền chạy đối soát tự động!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
             $filterMonth = !empty($_POST['month']) ? intval($_POST['month']) : null;
             $filterYear = !empty($_POST['year']) ? intval($_POST['year']) : null;
 
-            // Xây dựng điều kiện lọc theo tháng/năm nếu có
-            $wherePlan = "WHERE 1=1";
-            $whereActual = "WHERE 1=1";
-            if ($filterYear) {
-                $wherePlan .= " AND YEAR(ot_date) = {$filterYear}";
-                $whereActual .= " AND YEAR(ot_date) = {$filterYear}";
-            }
-            if ($filterMonth) {
-                $wherePlan .= " AND MONTH(ot_date) = {$filterMonth}";
-                $whereActual .= " AND MONTH(ot_date) = {$filterMonth}";
-            }
-
-            // Lấy toàn bộ Plans
-            $resPlans = $conn->query("SELECT * FROM ot_plans {$wherePlan} ORDER BY ot_date ASC, employee_code ASC");
-            $plansByEmpDate = [];
-            while ($p = $resPlans->fetch_assoc()) {
-                $key = $p['employee_code'] . '_' . $p['ot_date'];
-                $plansByEmpDate[$key][] = $p;
-            }
-
-            // Lấy toàn bộ Actuals
-            $resActuals = $conn->query("SELECT * FROM ot_actuals {$whereActual} ORDER BY ot_date ASC, employee_code ASC");
-            $actualsByEmpDate = [];
-            while ($a = $resActuals->fetch_assoc()) {
-                $key = $a['employee_code'] . '_' . $a['ot_date'];
-                $actualsByEmpDate[$key][] = $a;
-            }
-
-            // Tập hợp tất cả các cặp (employee_code, ot_date)
-            $allKeys = array_unique(array_merge(array_keys($plansByEmpDate), array_keys($actualsByEmpDate)));
-
-            $reconciledCount = 0;
-            $matchedCount = 0;
-            $planOnlyCount = 0;
-            $actualOnlyCount = 0;
-            $diffCount = 0;
-            $overdueCount = 0;
-
-            $conn->begin_transaction();
-
-            foreach ($allKeys as $key) {
-                $plans = $plansByEmpDate[$key] ?? [];
-                $actuals = $actualsByEmpDate[$key] ?? [];
-
-                list($empCode, $otDate) = explode('_', $key);
-
-                // TH1: Có Kế hoạch nhưng KHÔNG CÓ Thực tế
-                if (!empty($plans) && empty($actuals)) {
-                    foreach ($plans as $p) {
-                        $reconcileStatus = 'plan_only';
-                        $planMinutes = intval($p['total_minutes']);
-                        $actualMinutes = 0;
-                        $diffMinutes = -$planMinutes;
-                        $needsExplanation = 1;
-                        $violationType = 'Có kế hoạch nhưng không có thực tế';
-
-                        saveReconciliationRecord(
-                            $conn, $empCode, $otDate, $p['id'], null, $reconcileStatus,
-                            $planMinutes, $actualMinutes, $diffMinutes, 0, 0, $needsExplanation, $violationType
-                        );
-                        $planOnlyCount++;
-                        $reconciledCount++;
-                    }
-                }
-                // TH2: Có Thực tế nhưng KHÔNG CÓ Kế hoạch
-                else if (empty($plans) && !empty($actuals)) {
-                    foreach ($actuals as $a) {
-                        $reconcileStatus = 'actual_only';
-                        $planMinutes = 0;
-                        $actualMinutes = intval($a['total_minutes_actual']);
-                        $diffMinutes = $actualMinutes;
-                        $needsExplanation = 1;
-                        $violationType = 'Có thực tế nhưng không có kế hoạch';
-
-                        saveReconciliationRecord(
-                            $conn, $empCode, $otDate, null, $a['id'], $reconcileStatus,
-                            $planMinutes, $actualMinutes, $diffMinutes, 0, 0, $needsExplanation, $violationType
-                        );
-                        $actualOnlyCount++;
-                        $reconciledCount++;
-                    }
-                }
-                // TH3: CÓ CẢ HAI
-                else {
-                    // Ghép cặp từng plan với actual gần nhau nhất
-                    $usedActualIds = [];
-
-                    foreach ($plans as $p) {
-                        $bestActual = null;
-                        $minDiffTime = PHP_INT_MAX;
-
-                        foreach ($actuals as $a) {
-                            if (in_array($a['id'], $usedActualIds)) continue;
-                            $diffT = abs(strtotime($p['start_time']) - strtotime($a['start_time_actual']));
-                            if ($diffT < $minDiffTime) {
-                                $minDiffTime = $diffT;
-                                $bestActual = $a;
-                            }
-                        }
-
-                        if ($bestActual) {
-                            $usedActualIds[] = $bestActual['id'];
-                            $planMin = intval($p['total_minutes']);
-                            $actMin = intval($bestActual['total_minutes_actual']);
-                            $diffMin = $actMin - $planMin;
-
-                            // Kiểm tra thời gian bắt đầu và kết thúc
-                            $isTimeMatch = ($p['start_time'] === $bestActual['start_time_actual']) && ($p['end_time'] === $bestActual['end_time_actual']) && ($diffMin === 0);
-
-                            // Kiểm tra hạn duyệt 3 ngày (tính từ ngày tăng ca đến ngày duyệt nếu có)
-                            $approvalDaysDiff = 0;
-                            $isOverdue = 0;
-                            if (!empty($bestActual['approval_date'])) {
-                                $otTimestamp = strtotime($otDate);
-                                $appTimestamp = strtotime($bestActual['approval_date']);
-                                $approvalDaysDiff = floor(($appTimestamp - $otTimestamp) / 86400);
-                                if ($approvalDaysDiff > 3) {
-                                    $isOverdue = 1;
-                                }
-                            }
-
-                            if ($isTimeMatch && !$isOverdue) {
-                                $reconcileStatus = 'matched';
-                                $needsExplanation = 0;
-                                $violationType = '';
-                                $matchedCount++;
-                            } else if (!$isTimeMatch) {
-                                $reconcileStatus = 'time_diff';
-                                $needsExplanation = 1;
-                                $violationType = $diffMin > 0 ? "Thực tế lớn hơn kế hoạch ({$diffMin} phút)" : "Thực tế nhỏ hơn kế hoạch (" . abs($diffMin) . " phút)";
-                                $diffCount++;
-                            } else {
-                                $reconcileStatus = 'overdue';
-                                $needsExplanation = 1;
-                                $violationType = "Phê duyệt quá thời hạn 03 ngày ({$approvalDaysDiff} ngày)";
-                                $overdueCount++;
-                            }
-
-                            saveReconciliationRecord(
-                                $conn, $empCode, $otDate, $p['id'], $bestActual['id'], $reconcileStatus,
-                                $planMin, $actMin, $diffMin, $approvalDaysDiff, $isOverdue, $needsExplanation, $violationType
-                            );
-                            $reconciledCount++;
-                        } else {
-                            // Không tìm thấy actual ghép cặp
-                            $planMin = intval($p['total_minutes']);
-                            saveReconciliationRecord(
-                                $conn, $empCode, $otDate, $p['id'], null, 'plan_only',
-                                $planMin, 0, -$planMin, 0, 0, 1, 'Có kế hoạch nhưng không có thực tế'
-                            );
-                            $planOnlyCount++;
-                            $reconciledCount++;
-                        }
-                    }
-
-                    // Các actual còn sót lại chưa ghép cặp với plan nào
-                    foreach ($actuals as $a) {
-                        if (!in_array($a['id'], $usedActualIds)) {
-                            $actMin = intval($a['total_minutes_actual']);
-                            saveReconciliationRecord(
-                                $conn, $empCode, $otDate, null, $a['id'], 'actual_only',
-                                0, $actMin, $actMin, 0, 0, 1, 'Có thực tế nhưng không có kế hoạch'
-                            );
-                            $actualOnlyCount++;
-                            $reconciledCount++;
-                        }
-                    }
-                }
-            }
-
-            $conn->commit();
+            $summary = runReconciliationInternal($conn, $filterMonth, $filterYear);
 
             echo json_encode([
                 'success' => true,
-                'message' => "Đã đối soát xong {$reconciledCount} ca tăng ca!",
-                'summary' => [
-                    'total' => $reconciledCount,
-                    'matched' => $matchedCount,
-                    'plan_only' => $planOnlyCount,
-                    'actual_only' => $actualOnlyCount,
-                    'time_diff' => $diffCount,
-                    'overdue' => $overdueCount,
-                    'needs_explanation' => ($planOnlyCount + $actualOnlyCount + $diffCount + $overdueCount)
-                ]
+                'message' => "Đã đối soát xong {$summary['total']} ca tăng ca!",
+                'summary' => $summary
             ], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -224,31 +57,77 @@ try {
         // 2. LẤY DANH SÁCH ĐỐI SOÁT & BỘ LỌC
         // =====================================================================
         case 'get_reconciliations':
-            $status = $_GET['status'] ?? '';
+            $status = trim($_GET['status'] ?? '');
+            $hideCompleted = (!empty($_GET['hide_completed']) && $_GET['hide_completed'] === '1');
             $month = !empty($_GET['month']) ? intval($_GET['month']) : 0;
             $year = !empty($_GET['year']) ? intval($_GET['year']) : 0;
+            $otDate = trim($_GET['ot_date'] ?? '');
             $search = trim($_GET['search'] ?? '');
             $page = max(1, intval($_GET['page'] ?? 1));
             $limit = max(10, min(100, intval($_GET['limit'] ?? 25)));
             $offset = ($page - 1) * $limit;
 
+            // Đọc thông tin đồng bộ HRM gần nhất từ cấu hình
+            $hrmConfigFile = __DIR__ . '/../config/hrm_sync_config.json';
+            $hrmSyncInfo = [
+                'last_sync_time' => null,
+                'last_sync_status' => 'never_run',
+                'last_sync_message' => 'Chưa có thông tin đồng bộ.'
+            ];
+            if (file_exists($hrmConfigFile)) {
+                $cfgData = json_decode(file_get_contents($hrmConfigFile), true);
+                if (is_array($cfgData)) {
+                    $hrmSyncInfo['last_sync_time'] = $cfgData['last_sync_time'] ?? null;
+                    $hrmSyncInfo['last_sync_status'] = $cfgData['last_sync_status'] ?? 'never_run';
+                    $hrmSyncInfo['last_sync_message'] = $cfgData['last_sync_message'] ?? '';
+                }
+            }
+
             $where = "WHERE 1=1";
+
+            // Lọc theo ngày tăng ca cụ thể (ot_date)
+            if (!empty($otDate)) {
+                $d = $conn->real_escape_string($otDate);
+                $where .= " AND r.ot_date = '{$d}'";
+            } else {
+                if ($month > 0) {
+                    $where .= " AND MONTH(r.ot_date) = {$month}";
+                }
+                if ($year > 0) {
+                    $where .= " AND YEAR(r.ot_date) = {$year}";
+                }
+            }
+
+            // Lọc theo trạng thái đối soát
             if (!empty($status)) {
-                if ($status === 'needs_explanation') {
-                    $where .= " AND r.needs_explanation = 1";
+                if ($status === 'completed') {
+                    // Đã hoàn thành đủ 2 bước
+                    $where .= " AND r.plan_id IS NOT NULL AND r.actual_id IS NOT NULL";
+                } else if ($status === 'uncompleted_actual') {
+                    // Ca chưa hoàn thành Bước 2 (Thực tế)
+                    $where .= " AND (r.actual_id IS NULL OR r.reconcile_status = 'plan_only')";
+                } else if ($status === 'overdue_3days') {
+                    // Thiếu 1 trong 2 bước và quá 3 ngày
+                    $where .= " AND (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3";
+                } else if ($status === 'needs_explanation') {
+                    $where .= " AND (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL)";
+                } else if ($status === 'dismissed') {
+                    $where .= " AND r.is_dismissed = 1";
+                } else if ($status === 'explained') {
+                    // Đã chuyển giải trình
+                    $where .= " AND r.is_explained = 1";
                 } else {
                     $where .= " AND r.reconcile_status = '" . $conn->real_escape_string($status) . "'";
                 }
+            } else if ($hideCompleted) {
+                // Tùy chọn tự động tạm ẩn các dòng hoàn thành khi đang ở tab Tất cả
+                $where .= " AND (r.actual_id IS NULL OR r.plan_id IS NULL OR r.is_dismissed = 1 OR r.is_explained = 1)";
             }
-            if ($month > 0) {
-                $where .= " AND MONTH(r.ot_date) = {$month}";
-            }
-            if ($year > 0) {
-                $where .= " AND YEAR(r.ot_date) = {$year}";
-            }
+
+            // Tìm kiếm theo tên hoặc mã nhân viên
             if (!empty($search)) {
                 $s = $conn->real_escape_string($search);
-                $where .= " AND (r.employee_code LIKE '%{$s}%' OR COALESCE(p.full_name, a.full_name, e.full_name) LIKE '%{$s}%')";
+                $where .= " AND (r.employee_code LIKE '%{$s}%' OR COALESCE(p.full_name, a.full_name, e.full_name) LIKE '%{$s}%' OR r.id LIKE '%{$s}%')";
             }
 
             // Đếm tổng số bản ghi
@@ -260,25 +139,32 @@ try {
                 {$where}
             ";
             $resCount = $conn->query($sqlCount);
-            $totalRows = $resCount ? $resCount->fetch_row()[0] : 0;
+            $totalRows = $resCount ? intval($resCount->fetch_row()[0]) : 0;
 
-            // Đếm theo từng trạng thái để làm thống kê badge
+            // Đếm theo từng trạng thái để làm thống kê badge (theo năm hoặc ngày)
+            $badgeWhere = "WHERE 1=1";
+            if (!empty($otDate)) {
+                $badgeWhere .= " AND r.ot_date = '" . $conn->real_escape_string($otDate) . "'";
+            } else if ($year > 0) {
+                $badgeWhere .= " AND YEAR(r.ot_date) = {$year}";
+            }
+
             $sqlBadges = "
                 SELECT 
                     COUNT(*) as total,
-                    SUM(CASE WHEN reconcile_status = 'matched' THEN 1 ELSE 0 END) as matched,
-                    SUM(CASE WHEN reconcile_status = 'plan_only' THEN 1 ELSE 0 END) as plan_only,
-                    SUM(CASE WHEN reconcile_status = 'actual_only' THEN 1 ELSE 0 END) as actual_only,
-                    SUM(CASE WHEN reconcile_status = 'time_diff' THEN 1 ELSE 0 END) as time_diff,
-                    SUM(CASE WHEN reconcile_status = 'overdue' THEN 1 ELSE 0 END) as overdue,
-                    SUM(CASE WHEN needs_explanation = 1 THEN 1 ELSE 0 END) as needs_explanation
+                    SUM(CASE WHEN r.plan_id IS NOT NULL AND r.actual_id IS NOT NULL THEN 1 ELSE 0 END) as completed,
+                    SUM(CASE WHEN r.actual_id IS NULL OR r.reconcile_status = 'plan_only' THEN 1 ELSE 0 END) as uncompleted_actual,
+                    SUM(CASE WHEN (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 1 ELSE 0 END) as overdue_3days,
+                    SUM(CASE WHEN (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) THEN 1 ELSE 0 END) as needs_explanation,
+                    SUM(CASE WHEN r.is_dismissed = 1 THEN 1 ELSE 0 END) as dismissed_count,
+                    SUM(CASE WHEN r.is_explained = 1 THEN 1 ELSE 0 END) as explained_count
                 FROM ot_reconciliations r
-                " . ($year > 0 ? "WHERE YEAR(r.ot_date) = {$year}" : "") . "
+                {$badgeWhere}
             ";
             $resBadges = $conn->query($sqlBadges);
             $badgeStats = $resBadges ? $resBadges->fetch_assoc() : [];
 
-            // Lấy danh sách phân trang
+            // Lấy danh sách phân trang: Ưu tiên lệnh chưa hoàn thành thực tế hoặc quá hạn lên trên cùng
             $sqlData = "
                 SELECT 
                     r.*,
@@ -288,27 +174,56 @@ try {
                     p.start_time AS plan_start_time,
                     p.end_time AS plan_end_time,
                     p.reason AS plan_reason,
+                    p.direct_manager AS plan_dm,
+                    p.indirect_manager AS plan_idm,
                     p.approval_status AS plan_approval_status,
                     a.start_time_actual AS actual_start_time,
                     a.end_time_actual AS actual_end_time,
                     a.reason AS actual_reason,
+                    a.direct_manager AS act_dm,
+                    a.indirect_manager AS act_idm,
                     a.approval_status AS actual_approval_status,
-                    exp.id AS explanation_id,
+                    exp.id AS exp_ticket_id,
                     exp.approval_status AS exp_approval_status,
                     exp.explanation_content,
-                    exp.violation_type
+                    exp.violation_type,
+                    exp.approver_username,
+                    exp.approver_notes
                 FROM ot_reconciliations r
                 LEFT JOIN ot_plans p ON r.plan_id = p.id
                 LEFT JOIN ot_actuals a ON r.actual_id = a.id
                 LEFT JOIN employees e ON r.employee_code = e.employee_code
                 LEFT JOIN ot_explanations exp ON r.id = exp.reconciliation_id
                 {$where}
-                ORDER BY r.ot_date DESC, r.id DESC
+                ORDER BY 
+                    (CASE 
+                        WHEN r.is_dismissed = 1 THEN 4
+                        WHEN r.is_explained = 1 THEN 3
+                        WHEN (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 0
+                        WHEN r.actual_id IS NULL OR r.reconcile_status = 'plan_only' THEN 1
+                        ELSE 2
+                    END) ASC,
+                    r.ot_date DESC,
+                    r.id DESC
                 LIMIT {$offset}, {$limit}
             ";
             $resData = $conn->query($sqlData);
             $items = [];
+            $todayTimestamp = strtotime(date('Y-m-d'));
+
             while ($r = $resData->fetch_assoc()) {
+                // Kiểm tra hoàn thành 2 bước
+                $r['step1_done'] = !empty($r['plan_id']);
+                $r['step2_done'] = !empty($r['actual_id']);
+                $r['is_fully_completed'] = ($r['step1_done'] && $r['step2_done']);
+
+                // Tính toán số ngày trôi qua so với ot_date
+                $otTimestamp = strtotime($r['ot_date']);
+                $daysDiff = max(0, floor(($todayTimestamp - $otTimestamp) / 86400));
+                $r['days_diff'] = $daysDiff;
+                $r['is_overdue_3days'] = (!$r['is_fully_completed'] && $daysDiff > 3);
+
+                $r['order_code'] = '#OT-' . str_pad($r['id'], 6, '0', STR_PAD_LEFT);
                 $items[] = $r;
             }
 
@@ -318,12 +233,288 @@ try {
                 'page' => $page,
                 'limit' => $limit,
                 'badges' => $badgeStats,
+                'hrm_sync' => $hrmSyncInfo,
                 'data' => $items
             ], JSON_UNESCAPED_UNICODE);
             break;
 
         // =====================================================================
-        // 3. CHI TIẾT ĐỐI SOÁT
+        // 3. YÊU CẦU GIẢI TRÌNH CHỦ ĐỘNG TỪ ADMIN (REQUEST EXPLANATION)
+        // Dữ liệu giải trình CHỈ được sinh ra khi Admin bấm nút này
+        // =====================================================================
+        case 'request_explanation':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền yêu cầu giải trình!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $recId = intval($_POST['rec_id'] ?? ($_GET['rec_id'] ?? 0));
+            $violationType = trim($_POST['violation_type'] ?? ($_GET['violation_type'] ?? 'Yêu cầu giải trình vi phạm tăng ca'));
+            $adminNote = trim($_POST['admin_note'] ?? ($_GET['admin_note'] ?? ''));
+
+            if ($recId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Mã ca đối soát không hợp lệ']);
+                exit;
+            }
+
+            $stmtRec = $conn->prepare("SELECT * FROM ot_reconciliations WHERE id = ?");
+            $stmtRec->bind_param("i", $recId);
+            $stmtRec->execute();
+            $recRow = $stmtRec->get_result()->fetch_assoc();
+            $stmtRec->close();
+
+            if (!$recRow) {
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy ca đối soát tương ứng']);
+                exit;
+            }
+
+            $conn->begin_transaction();
+
+            // 1. Cập nhật bảng đối soát: đánh dấu đã yêu cầu giải trình
+            $stmtUp = $conn->prepare("
+                UPDATE ot_reconciliations 
+                SET explanation_requested = 1,
+                    explanation_requested_at = CURRENT_TIMESTAMP,
+                    explanation_requested_by = ?,
+                    needs_explanation = 1,
+                    is_dismissed = 0,
+                    dismissed_at = NULL,
+                    dismissed_by = NULL,
+                    dismiss_reason = NULL
+                WHERE id = ?
+            ");
+            $stmtUp->bind_param("si", $currentUser, $recId);
+            $stmtUp->execute();
+            $stmtUp->close();
+
+            // 2. Tạo hoặc kích hoạt bản ghi trong ot_explanations để nhân viên / tổ trưởng nạp lý do
+            $stmtExpCheck = $conn->prepare("SELECT id FROM ot_explanations WHERE reconciliation_id = ?");
+            $stmtExpCheck->bind_param("i", $recId);
+            $stmtExpCheck->execute();
+            $expRow = $stmtExpCheck->get_result()->fetch_assoc();
+            $stmtExpCheck->close();
+
+            if ($expRow) {
+                $expId = intval($expRow['id']);
+                $stmtExpUp = $conn->prepare("
+                    UPDATE ot_explanations 
+                    SET violation_type = ?,
+                        approver_notes = ?,
+                        approval_status = 'pending',
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = ?
+                ");
+                $stmtExpUp->bind_param("ssi", $violationType, $adminNote, $expId);
+                $stmtExpUp->execute();
+                $stmtExpUp->close();
+            } else {
+                $stmtExpIn = $conn->prepare("
+                    INSERT INTO ot_explanations (
+                        reconciliation_id, employee_code, ot_date, violation_type, approver_notes, approval_status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, 'pending', CURRENT_TIMESTAMP)
+                ");
+                $stmtExpIn->bind_param("issss", $recId, $recRow['employee_code'], $recRow['ot_date'], $violationType, $adminNote);
+                $stmtExpIn->execute();
+                $expId = $stmtExpIn->insert_id;
+                $stmtExpIn->close();
+            }
+
+            $conn->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã gửi yêu cầu giải trình cho nhân viên thành công! Lệnh đã được lưu vào hồ sơ giải trình.',
+                'rec_id' => $recId
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 4. TẠM HỦY YÊU CẦU GIẢI TRÌNH (DISMISS REQUEST)
+        // Bỏ qua giải trình khi có sự đồng ý của Admin hoặc trường hợp ngoại lệ
+        // =====================================================================
+        case 'dismiss_request':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền tạm hủy!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $recId = intval($_POST['rec_id'] ?? ($_GET['rec_id'] ?? 0));
+            $reason = trim($_POST['reason'] ?? ($_GET['reason'] ?? 'Bỏ qua yêu cầu giải trình'));
+
+            if ($recId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Mã ca đối soát không hợp lệ']);
+                exit;
+            }
+
+            $conn->begin_transaction();
+
+            $stmtUp = $conn->prepare("
+                UPDATE ot_reconciliations 
+                SET is_dismissed = 1,
+                    dismissed_at = CURRENT_TIMESTAMP,
+                    dismissed_by = ?,
+                    dismiss_reason = ?,
+                    needs_explanation = 0
+                WHERE id = ?
+            ");
+            $stmtUp->bind_param("ssi", $currentUser, $reason, $recId);
+            $stmtUp->execute();
+            $stmtUp->close();
+
+            // Nếu có ticket giải trình chưa có nội dung, dọn dẹp để không xuất hiện bên trang giải trình
+            $stmtDelExp = $conn->prepare("
+                DELETE FROM ot_explanations 
+                WHERE reconciliation_id = ? 
+                  AND approval_status = 'pending' 
+                  AND (explanation_content IS NULL OR explanation_content = '')
+            ");
+            $stmtDelExp->bind_param("i", $recId);
+            $stmtDelExp->execute();
+            $stmtDelExp->close();
+
+            $conn->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã tạm hủy yêu cầu giải trình thành công. Lệnh đã được bỏ qua và ngừng gửi cảnh báo.',
+                'rec_id' => $recId
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 5. KHÔI PHỤC LỆNH ĐÃ TẠM HỦY (RESTORE DISMISSED)
+        // =====================================================================
+        case 'restore_request':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền khôi phục!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $recId = intval($_POST['rec_id'] ?? ($_GET['rec_id'] ?? 0));
+            if ($recId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Mã ca đối soát không hợp lệ']);
+                exit;
+            }
+
+            $stmtUp = $conn->prepare("
+                UPDATE ot_reconciliations 
+                SET is_dismissed = 0,
+                    dismissed_at = NULL,
+                    dismissed_by = NULL,
+                    dismiss_reason = NULL
+                WHERE id = ?
+            ");
+            $stmtUp->bind_param("i", $recId);
+            $stmtUp->execute();
+            $stmtUp->close();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã khôi phục lệnh tăng ca thành công!',
+                'rec_id' => $recId
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 6. CHUYỂN TRẠNG THÁI GIẢI TRÌNH TRỰC TIẾP (SWITCH EXPLANATION)
+        // =====================================================================
+        case 'switch_explanation':
+            $userRole = $_SESSION['user']['role'] ?? 'viewer';
+            if ($userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền chuyển giải trình!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $recId = intval($_POST['rec_id'] ?? ($_GET['rec_id'] ?? 0));
+            $content = trim($_POST['explanation_content'] ?? ($_GET['explanation_content'] ?? ''));
+            $violationType = trim($_POST['violation_type'] ?? ($_GET['violation_type'] ?? 'Giải trình quá hạn / chênh lệch'));
+
+            if ($recId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Mã ca đối soát không hợp lệ']);
+                exit;
+            }
+
+            // Lấy thông tin bản ghi đối soát
+            $stmtRec = $conn->prepare("SELECT * FROM ot_reconciliations WHERE id = ?");
+            $stmtRec->bind_param("i", $recId);
+            $stmtRec->execute();
+            $recRow = $stmtRec->get_result()->fetch_assoc();
+            $stmtRec->close();
+
+            if (!$recRow) {
+                echo json_encode(['success' => false, 'message' => 'Không tìm thấy ca đối soát tương ứng']);
+                exit;
+            }
+
+            $conn->begin_transaction();
+
+            // 1. Cập nhật bảng ot_reconciliations: is_explained = 1, tắt cờ nhắc nhở, lưu vết người và thời gian
+            $stmtUp = $conn->prepare("
+                UPDATE ot_reconciliations 
+                SET is_explained = 1,
+                    explanation_requested = 1,
+                    needs_explanation = 0,
+                    explained_at = CURRENT_TIMESTAMP,
+                    explained_by = ?,
+                    explanation_note = ?
+                WHERE id = ?
+            ");
+            $stmtUp->bind_param("ssi", $currentUser, $content, $recId);
+            $stmtUp->execute();
+            $stmtUp->close();
+
+            // 2. Cập nhật hoặc thêm mới vào ot_explanations
+            $stmtExp = $conn->prepare("SELECT id FROM ot_explanations WHERE reconciliation_id = ?");
+            $stmtExp->bind_param("i", $recId);
+            $stmtExp->execute();
+            $existingExp = $stmtExp->get_result()->fetch_assoc();
+            $stmtExp->close();
+
+            if ($existingExp) {
+                $expId = intval($existingExp['id']);
+                $stmtExpUp = $conn->prepare("
+                    UPDATE ot_explanations 
+                    SET explanation_content = ?,
+                        submitted_by = ?,
+                        submitted_at = CURRENT_TIMESTAMP,
+                        approval_status = 'submitted'
+                    WHERE id = ?
+                ");
+                $stmtExpUp->bind_param("ssi", $content, $currentUser, $expId);
+                $stmtExpUp->execute();
+                $stmtExpUp->close();
+            } else {
+                $stmtExpIn = $conn->prepare("
+                    INSERT INTO ot_explanations (
+                        reconciliation_id, employee_code, ot_date, violation_type,
+                        explanation_content, submitted_by, submitted_at, approval_status
+                    ) VALUES (?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, 'submitted')
+                ");
+                $stmtExpIn->bind_param("isssss", $recId, $recRow['employee_code'], $recRow['ot_date'], $violationType, $content, $currentUser);
+                $stmtExpIn->execute();
+                $expId = $stmtExpIn->insert_id;
+                $stmtExpIn->close();
+            }
+
+            $conn->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => 'Đã chuyển trạng thái giải trình thành công. Lệnh đã được lưu trữ, tạm tô xám và ngừng gửi thông báo nhắc nhở.',
+                'rec_id' => $recId,
+                'is_explained' => 1
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 4. CHI TIẾT ĐỐI SOÁT
         // =====================================================================
         case 'get_detail':
             $recId = intval($_GET['id'] ?? 0);
@@ -353,6 +544,10 @@ try {
                 exit;
             }
 
+            $detail['order_code'] = '#OT-' . str_pad($detail['id'], 6, '0', STR_PAD_LEFT);
+            $detail['step1_done'] = !empty($detail['plan_id']);
+            $detail['step2_done'] = !empty($detail['actual_id']);
+
             echo json_encode(['success' => true, 'detail' => $detail], JSON_UNESCAPED_UNICODE);
             break;
 
@@ -363,64 +558,3 @@ try {
 } catch (Exception $e) {
     echo json_encode(['success' => false, 'message' => 'Lỗi máy chủ: ' . $e->getMessage()]);
 }
-
-/**
- * Hàm lưu hoặc cập nhật bản ghi đối soát và tạo ticket giải trình
- */
-function saveReconciliationRecord(
-    $conn, $empCode, $otDate, $planId, $actualId, $status,
-    $planMin, $actMin, $diffMin, $approvalDaysDiff, $isOverdue, $needsExplanation, $violationType
-) {
-    $stmt = $conn->prepare("
-        INSERT INTO ot_reconciliations (
-            employee_code, ot_date, plan_id, actual_id, reconcile_status,
-            plan_minutes, actual_minutes, diff_minutes, approval_days_diff,
-            is_overdue, needs_explanation
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON DUPLICATE KEY UPDATE
-            reconcile_status = VALUES(reconcile_status),
-            plan_minutes = VALUES(plan_minutes),
-            actual_minutes = VALUES(actual_minutes),
-            diff_minutes = VALUES(diff_minutes),
-            approval_days_diff = VALUES(approval_days_diff),
-            is_overdue = VALUES(is_overdue),
-            needs_explanation = VALUES(needs_explanation),
-            last_reconciled_at = CURRENT_TIMESTAMP
-    ");
-
-    $stmt->bind_param(
-        "ssiisiiiiii",
-        $empCode, $otDate, $planId, $actualId, $status,
-        $planMin, $actMin, $diffMin, $approvalDaysDiff, $isOverdue, $needsExplanation
-    );
-    $stmt->execute();
-    $recId = $stmt->insert_id;
-    if ($recId === 0) {
-        // Nếu là update, lấy ID hiện có
-        $stmtGet = $conn->prepare("SELECT id FROM ot_reconciliations WHERE employee_code = ? AND ot_date = ? AND ((plan_id IS NULL AND ? IS NULL) OR plan_id = ?) AND ((actual_id IS NULL AND ? IS NULL) OR actual_id = ?)");
-        $stmtGet->bind_param("ssiiii", $empCode, $otDate, $planId, $planId, $actualId, $actualId);
-        $stmtGet->execute();
-        $row = $stmtGet->get_result()->fetch_assoc();
-        $recId = $row ? intval($row['id']) : 0;
-        $stmtGet->close();
-    }
-    $stmt->close();
-
-    // Nếu cần giải trình và chưa có trong ot_explanations -> Tự động sinh ticket
-    if ($needsExplanation && $recId > 0) {
-        $stmtExpCheck = $conn->prepare("SELECT id FROM ot_explanations WHERE reconciliation_id = ?");
-        $stmtExpCheck->bind_param("i", $recId);
-        $stmtExpCheck->execute();
-        $expExists = $stmtExpCheck->get_result()->fetch_assoc();
-        $stmtExpCheck->close();
-
-        if (!$expExists) {
-            $stmtExp = $conn->prepare("INSERT INTO ot_explanations (reconciliation_id, employee_code, ot_date, violation_type, approval_status) VALUES (?, ?, ?, ?, 'pending')");
-            $stmtExp->bind_param("isss", $recId, $empCode, $otDate, $violationType);
-            $stmtExp->execute();
-            $stmtExp->close();
-        }
-    }
-}
-?>
-

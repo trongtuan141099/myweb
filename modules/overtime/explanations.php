@@ -5,9 +5,12 @@
  */
 require_once __DIR__ . '/../../core/check_permission.php';
 checkAuth();
+requirePermission('overtime.explain');
 
 $currentMonth = intval(date('m'));
 $currentYear = intval(date('Y'));
+$userRole = $_SESSION['user']['role'] ?? 'viewer';
+$canReview = ($userRole !== 'viewer') && hasPermission('overtime.explain');
 ?>
 
 <div class="app-page-wrapper">
@@ -191,6 +194,7 @@ $currentYear = intval(date('Y'));
 </div>
 
 <script>
+const CAN_REVIEW = <?= json_encode($canReview) ?>;
 let currentExpStatus = '';
 let currentExpPage = 1;
 let expSearchTimeout = null;
@@ -279,9 +283,11 @@ async function loadExplanations(page = 1) {
               <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick='openSubmitExpModal(${JSON.stringify(r)})' title="Nhập giải trình">
                 Giải trình
               </button>
+              ${CAN_REVIEW ? `
               <button class="btn btn-sm btn-outline-dark py-0 px-2" onclick='openReviewExpModal(${JSON.stringify(r)})' title="Thẩm định duyệt/từ chối">
                 Duyệt
               </button>
+              ` : ''}
             </div>
           </td>
         </tr>

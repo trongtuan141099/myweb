@@ -66,6 +66,19 @@ return array (
       56 => 'api.hrm.inventory_org_chart',
       57 => 'api.system.save_role_permissions',
       58 => 'api.system.check_auth',
+      59 => 'overtime.view',
+      60 => 'overtime.import',
+      61 => 'overtime.reconcile',
+      62 => 'overtime.explain',
+      63 => 'overtime.yearly',
+      64 => 'overtime.export',
+      65 => 'api.overtime.dashboard',
+      66 => 'api.overtime.import',
+      67 => 'api.overtime.hrm_sync',
+      68 => 'api.overtime.reconcile',
+      69 => 'api.overtime.explain',
+      70 => 'api.overtime.yearly',
+      71 => 'api.overtime.export',
     ),
     'editor' => 
     array (
@@ -118,6 +131,19 @@ return array (
       46 => 'api.hrm.add_employee',
       47 => 'api.hrm.inventory_org_chart',
       48 => 'api.system.check_auth',
+      49 => 'overtime.view',
+      50 => 'overtime.import',
+      51 => 'overtime.reconcile',
+      52 => 'overtime.explain',
+      53 => 'overtime.yearly',
+      54 => 'overtime.export',
+      55 => 'api.overtime.dashboard',
+      56 => 'api.overtime.import',
+      57 => 'api.overtime.hrm_sync',
+      58 => 'api.overtime.reconcile',
+      59 => 'api.overtime.explain',
+      60 => 'api.overtime.yearly',
+      61 => 'api.overtime.export',
     ),
     'viewer' => 
     array (
@@ -131,21 +157,27 @@ return array (
       7 => 'five_s.view',
       8 => 'five_s.audit',
       9 => 'hrm.view',
-      10 => 'api.document.get',
-      11 => 'api.mixer.get',
-      12 => 'api.mixer.export',
-      13 => 'api.mixer.summary',
-      14 => 'api.production.report',
-      15 => 'api.production.extrusion_get',
-      16 => 'api.production.extrusion_export',
-      17 => 'api.five_s.dashboard',
-      18 => 'api.five_s.schedules',
-      19 => 'api.five_s.assignments',
-      20 => 'api.five_s.save_audit',
-      21 => 'api.five_s.get_proposals',
-      22 => 'api.materials.get_viscosity',
-      23 => 'api.hrm.inventory_org_chart',
-      24 => 'api.system.check_auth',
+      10 => 'overtime.view',
+      11 => 'overtime.reconcile',
+      12 => 'overtime.yearly',
+      13 => 'api.document.get',
+      14 => 'api.mixer.get',
+      15 => 'api.mixer.export',
+      16 => 'api.mixer.summary',
+      17 => 'api.production.report',
+      18 => 'api.production.extrusion_get',
+      19 => 'api.production.extrusion_export',
+      20 => 'api.five_s.dashboard',
+      21 => 'api.five_s.schedules',
+      22 => 'api.five_s.assignments',
+      23 => 'api.five_s.save_audit',
+      24 => 'api.five_s.get_proposals',
+      25 => 'api.materials.get_viscosity',
+      26 => 'api.hrm.inventory_org_chart',
+      27 => 'api.system.check_auth',
+      28 => 'api.overtime.dashboard',
+      29 => 'api.overtime.reconcile',
+      30 => 'api.overtime.yearly',
     ),
   ),
   'permission_catalog' => 
@@ -242,6 +274,20 @@ return array (
       'permissions' => 
       array (
         'role.manage' => 'Quản trị và cấp quyền người dùng',
+      ),
+    ),
+    'overtime' => 
+    array (
+      'name' => 'Quản lý Tăng ca (Overtime)',
+      'icon' => 'schedule',
+      'permissions' => 
+      array (
+        'overtime.view' => 'Xem bảng điều khiển & dữ liệu tăng ca',
+        'overtime.import' => 'Import & cấu hình tự động đồng bộ HRM',
+        'overtime.reconcile' => 'Thực hiện đối soát & chuyển trạng thái giải trình',
+        'overtime.explain' => 'Quản lý & xét duyệt phiếu giải trình',
+        'overtime.yearly' => 'Tra cứu & kiểm soát lũy kế 200 giờ/năm',
+        'overtime.export' => 'Xuất báo cáo dữ liệu tăng ca ra Excel',
       ),
     ),
   ),
@@ -529,6 +575,56 @@ return array (
         array (
           'name' => 'Kiểm tra trạng thái xác thực phiên làm việc',
           'endpoint' => 'api/check_auth.php',
+          'method' => 'GET',
+        ),
+      ),
+    ),
+    'overtime' => 
+    array (
+      'name' => 'Tăng ca (Overtime API)',
+      'icon' => 'schedule',
+      'apis' => 
+      array (
+        'api.overtime.dashboard' => 
+        array (
+          'name' => 'Thống kê tổng quan dữ liệu tăng ca',
+          'endpoint' => 'api/overtime_dashboard.php',
+          'method' => 'GET',
+        ),
+        'api.overtime.import' => 
+        array (
+          'name' => 'Import & xem lịch sử nạp dữ liệu tăng ca',
+          'endpoint' => 'api/overtime_import.php',
+          'method' => 'POST',
+        ),
+        'api.overtime.hrm_sync' => 
+        array (
+          'name' => 'Cấu hình & tự động đồng bộ từ hệ thống HRM',
+          'endpoint' => 'api/overtime_hrm_sync.php',
+          'method' => 'POST',
+        ),
+        'api.overtime.reconcile' => 
+        array (
+          'name' => 'Đối soát & chuyển trạng thái giải trình',
+          'endpoint' => 'api/overtime_reconciliation.php',
+          'method' => 'POST',
+        ),
+        'api.overtime.explain' => 
+        array (
+          'name' => 'Gửi & thẩm định phiếu giải trình',
+          'endpoint' => 'api/overtime_explanation.php',
+          'method' => 'POST',
+        ),
+        'api.overtime.yearly' => 
+        array (
+          'name' => 'Tra cứu lũy kế tăng ca 200 giờ/năm',
+          'endpoint' => 'api/overtime_yearly.php',
+          'method' => 'GET',
+        ),
+        'api.overtime.export' => 
+        array (
+          'name' => 'Xuất dữ liệu đối soát ra Excel',
+          'endpoint' => 'api/overtime_export.php',
           'method' => 'GET',
         ),
       ),

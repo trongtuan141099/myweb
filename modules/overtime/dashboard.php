@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../../core/check_permission.php';
 checkAuth();
+requirePermission('overtime.view');
 
 $currentMonth = intval(date('m'));
 $currentYear = intval(date('Y'));

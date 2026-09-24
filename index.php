@@ -67,13 +67,13 @@ $route_permissions = [
         'format' => 'dashboard.view'
     ],
     'overtime' => [
-        'dashboard'      => 'dashboard.view',
-        'import'         => 'hrm.manage',
-        'reconciliation' => 'hrm.view',
-        'explanations'   => 'hrm.view',
-        'yearly_control' => 'hrm.view',
-        'records'        => 'hrm.view',
-        'export'         => 'hrm.view'
+        'dashboard'      => 'overtime.view',
+        'import'         => 'overtime.import',
+        'reconciliation' => 'overtime.reconcile',
+        'explanations'   => 'overtime.explain',
+        'yearly_control' => 'overtime.yearly',
+        'records'        => 'overtime.view',
+        'export'         => 'overtime.export'
     ]
 ];
 

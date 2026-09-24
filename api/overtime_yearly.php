@@ -17,10 +17,10 @@ if (!isset($conn) || !($conn instanceof mysqli)) {
     }
 }
 
-if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
-    echo json_encode(['success' => false, 'message' => 'Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.']);
-    exit;
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
 }
+requireApiPermission('api.overtime.yearly');
 
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
