@@ -9,9 +9,9 @@
     "auto_sync_enabled": true,
     "sync_date_from": "",
     "sync_date_to": "",
-    "last_sync_time": "2026-09-25 06:55:31",
+    "last_sync_time": "2026-09-25 15:14:04",
     "last_sync_status": "success",
-    "last_sync_message": "Đồng bộ hoàn tất (2\/2 tài khoản): +0 bản ghi mới, 98 cập nhật.",
+    "last_sync_message": "Tự động đồng bộ (2\/2 tài khoản): +0 bản ghi mới, 98 cập nhật.",
     "last_sync_stats": {
         "inserted": 0,
         "updated": 98,
