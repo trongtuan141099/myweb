@@ -159,6 +159,10 @@ $canSyncHrm = ($userRole !== 'viewer') && hasPermission('api.overtime.hrm_sync')
       <span class="fw-bold small">Đồng bộ HRM (hrm.smcmfg.com.vn):</span>
       <span class="badge bg-secondary font-monospace" id="hrmSyncLastTimeBadge">Đang kiểm tra...</span>
       <span class="badge bg-light text-dark border" id="hrmSyncStatusBadge">-</span>
+      <span class="badge bg-primary-subtle text-primary border font-monospace d-inline-flex align-items-center gap-1" id="hrmSyncCountdownBadge" title="Thời gian tự động đồng bộ kế tiếp">
+        <span class="material-icons" style="font-size:13px;">timer</span>
+        <span id="hrmSyncCountdownText">--:--:--</span>
+      </span>
       <span class="text-muted small d-none d-md-inline" id="hrmSyncMsgBadge"></span>
     </div>
     <div class="d-flex align-items-center gap-2">
@@ -462,6 +466,20 @@ let hideCompletedActive = true;
 
 document.addEventListener('DOMContentLoaded', () => {
   loadReconciliations(1);
+  fetch('api/overtime_hrm_sync.php?action=check_schedule')
+    .then(r => r.json())
+    .then(d => {
+      if (d.last_sync_time) {
+        updateHrmSyncDisplay({
+          last_sync_time: d.last_sync_time,
+          last_sync_time_formatted: d.last_sync_time_formatted,
+          last_sync_status: d.success ? 'success' : 'failed',
+          last_sync_message: d.message,
+          seconds_remaining: d.seconds_remaining
+        });
+      }
+    })
+    .catch(console.error);
 });
 
 function handleOtDateChange() {
@@ -541,6 +559,50 @@ function updateHrmSyncDisplay(info) {
   if (msgBadge && info.last_sync_message) {
     msgBadge.textContent = '— ' + info.last_sync_message;
   }
+
+  if (info.seconds_remaining !== undefined) {
+    startOtCountdown(info.seconds_remaining);
+  }
+}
+
+let otCountdownInterval = null;
+let otRemainingSec = 0;
+
+function startOtCountdown(sec) {
+  otRemainingSec = Math.max(0, parseInt(sec) || 0);
+  const cdText = document.getElementById('hrmSyncCountdownText');
+  if (!cdText) return;
+
+  if (otCountdownInterval) clearInterval(otCountdownInterval);
+
+  function renderOtCd() {
+    const h = Math.floor(otRemainingSec / 3600);
+    const m = Math.floor((otRemainingSec % 3600) / 60);
+    const s = otRemainingSec % 60;
+    cdText.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  renderOtCd();
+  otCountdownInterval = setInterval(() => {
+    otRemainingSec--;
+    if (otRemainingSec <= 0) {
+      clearInterval(otCountdownInterval);
+      cdText.textContent = 'Đang đồng bộ...';
+      fetch('api/overtime_hrm_sync.php?action=check_schedule')
+        .then(r => r.json())
+        .then(d => {
+          if (d.ran_sync) {
+            loadReconciliationData();
+          }
+          if (d.seconds_remaining !== undefined) {
+            startOtCountdown(d.seconds_remaining);
+          }
+        })
+        .catch(console.error);
+    } else {
+      renderOtCd();
+    }
+  }, 1000);
 }
 
 async function triggerHrmSyncFromRec(e) {
@@ -849,41 +911,43 @@ async function loadReconciliations(page = 1) {
       // Cụm Icon Buttons chức năng chuẩn UI/UX kèm Bootstrap Tooltip
       // 1. Xem chi tiết (Eye icon)
       let actionsHtml = `
-        <button class="btn btn-sm btn-outline-primary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
-          onclick="openRecDetail(${r.id})" 
-          data-bs-toggle="tooltip" data-bs-placement="top" title="Xem chi tiết đối chiếu" style="width: 28px; height: 28px;">
-          <span class="material-icons" style="font-size: 15px;">visibility</span>
-        </button>
+
       `;
 
+        //       <button class="btn btn-sm btn-outline-primary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+        //   onclick="openRecDetail(${r.id})" 
+        //   data-bs-toggle="tooltip" data-bs-placement="top" title="Xem chi tiết đối chiếu" style="width: 28px; height: 28px;">
+        //   <span class="material-icons" style="font-size: 15px;">visibility</span>
+        // </button>
+
       // 2. Xem lịch sử tăng ca (History icon)
-      actionsHtml += `
-        <button class="btn btn-sm btn-outline-secondary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
-          onclick="openEmpHistoryModal('${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}')" 
-          data-bs-toggle="tooltip" data-bs-placement="top" title="Xem lịch sử tăng ca" style="width: 28px; height: 28px;">
-          <span class="material-icons" style="font-size: 15px;">history</span>
-        </button>
-      `;
+      // actionsHtml += `
+      //   <button class="btn btn-sm btn-outline-secondary p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+      //     onclick="openEmpHistoryModal('${escapeHtml(r.employee_code)}', '${escapeHtml(r.full_name || '')}')" 
+      //     data-bs-toggle="tooltip" data-bs-placement="top" title="Xem lịch sử tăng ca" style="width: 28px; height: 28px;">
+      //     <span class="material-icons" style="font-size: 15px;">history</span>
+      //   </button>
+      // `;
 
       if (CAN_MANAGE_REC) {
         // 3. Đồng bộ lại / So khớp lại lệnh này (Refresh icon)
-        actionsHtml += `
-          <button class="btn btn-sm btn-outline-info p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
-            onclick="reconcileSingleRow(${r.id})" 
-            data-bs-toggle="tooltip" data-bs-placement="top" title="So khớp lại ca này" style="width: 28px; height: 28px;">
-            <span class="material-icons" style="font-size: 15px;">refresh</span>
-          </button>
-        `;
+        // actionsHtml += `
+        //   <button class="btn btn-sm btn-outline-info p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+        //     onclick="reconcileSingleRow(${r.id})" 
+        //     data-bs-toggle="tooltip" data-bs-placement="top" title="So khớp lại ca này" style="width: 28px; height: 28px;">
+        //     <span class="material-icons" style="font-size: 15px;">refresh</span>
+        //   </button>
+        // `;
 
         if (isDismissed) {
           // Khôi phục lại (Undo / Restore icon)
-          actionsHtml += `
-            <button class="btn btn-sm btn-outline-success p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
-              onclick="handleRestoreRequest(${r.id})" 
-              data-bs-toggle="tooltip" data-bs-placement="top" title="Khôi phục lại lệnh" style="width: 28px; height: 28px;">
-              <span class="material-icons" style="font-size: 15px;">undo</span>
-            </button>
-          `;
+          // actionsHtml += `
+          //   <button class="btn btn-sm btn-outline-success p-1 rounded-circle d-inline-flex align-items-center justify-content-center" 
+          //     onclick="handleRestoreRequest(${r.id})" 
+          //     data-bs-toggle="tooltip" data-bs-placement="top" title="Khôi phục lại lệnh" style="width: 28px; height: 28px;">
+          //     <span class="material-icons" style="font-size: 15px;">undo</span>
+          //   </button>
+          // `;
         } else if (isExpRequested) {
           // Tạm hủy yêu cầu (Block / Cancel icon)
           actionsHtml += `

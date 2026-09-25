@@ -90,6 +90,10 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
           <span class="material-icons">account_tree</span>
           <span class="label">Sơ đồ nhân sự kiểm kê</span>
         </a>
+        <a href="index.php?mainpage=hrm&subpage=leave_management" class="submenu-item <?= ($current_main === 'hrm' && $current_sub === 'leave_management') ? 'active' : '' ?>">
+          <span class="material-icons">event_busy</span>
+          <span class="label">Quản lý phép nghỉ</span>
+        </a>
         <?php endif; ?>
       </div>
     </div>

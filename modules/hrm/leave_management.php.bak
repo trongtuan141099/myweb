@@ -1,0 +1,2909 @@
+<?php
+/**
+ * Module: Quản Lý Phép Nghỉ & Lịch Nghỉ Lao Động
+ * DX Plastic Group - Factory Management System
+ */
+require_once __DIR__ . '/../../core/check_permission.php';
+checkAuth();
+requirePermission('hrm.view');
+
+$currentMonth = intval(date('m'));
+$currentYear  = intval(date('Y'));
+$userRole     = $_SESSION['user']['role'] ?? 'viewer';
+$curUsername  = $_SESSION['user']['username'] ?? 'User';
+$canManageLeave = ($userRole !== 'viewer') && hasPermission(['hrm.manage', 'admin']);
+?>
+
+<style>
+/* CSS Ma Trận Timeline Nghỉ Phép */
+.leave-container {
+  padding-bottom: 24px;
+}
+
+.metric-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.metric-card-leave {
+  background: var(--dx-bg-card);
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-md);
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.metric-card-leave:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.metric-icon-box {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.metric-icon-box .material-icons {
+  font-size: 26px;
+}
+.metric-icon-blue   { background: rgba(59, 130, 246, 0.12); color: #3b82f6; }
+.metric-icon-green  { background: rgba(16, 185, 129, 0.12); color: #10b981; }
+.metric-icon-yellow { background: rgba(245, 158, 11, 0.12); color: #f59e0b; }
+.metric-icon-purple { background: rgba(139, 92, 246, 0.12); color: #8b5cf6; }
+
+.metric-info .metric-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--dx-text-main);
+  line-height: 1.2;
+}
+.metric-info .metric-label {
+  font-size: 12.5px;
+  color: var(--dx-text-muted);
+  margin-top: 2px;
+}
+
+/* Nav Tabs Chính */
+.leave-main-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 2px solid var(--dx-border);
+  margin-bottom: 20px;
+  overflow-x: auto;
+}
+.leave-main-tab {
+  padding: 10px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--dx-text-muted);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+.leave-main-tab:hover {
+  color: var(--dx-text-main);
+}
+.leave-main-tab.active {
+  color: var(--dx-primary);
+  border-bottom-color: var(--dx-primary);
+  font-weight: 700;
+}
+.leave-main-tab .tab-badge {
+  padding: 2px 7px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.15);
+  color: #d97706;
+}
+
+/* Khung Điều Khiển Filter Bar */
+.filter-card-leave {
+  background: var(--dx-bg-card);
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-md);
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.filter-group-left {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.mode-pill-group {
+  display: inline-flex;
+  background: var(--dx-bg-subtle, #f1f5f9);
+  padding: 3px;
+  border-radius: 8px;
+  border: 1px solid var(--dx-border);
+}
+.mode-pill {
+  padding: 6px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+  border: none;
+  background: transparent;
+  color: var(--dx-text-muted);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.mode-pill.active {
+  background: var(--dx-bg-card, #ffffff);
+  color: var(--dx-text-main);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  font-weight: 700;
+}
+
+/* Chú thích màu sắc (Legend) */
+.legend-bar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+  padding: 8px 16px;
+  background: var(--dx-bg-subtle, rgba(0,0,0,0.02));
+  border-radius: var(--dx-radius-sm);
+  border: 1px solid var(--dx-border);
+  font-size: 12.5px;
+  margin-bottom: 16px;
+}
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--dx-text-main);
+  font-weight: 500;
+}
+.legend-square {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Màu ô vuông Timeline Chuẩn */
+.sq-yellow {
+  background-color: #f59e0b !important;
+  border: 1px solid #d97706 !important;
+  box-shadow: 0 1px 2px rgba(245, 158, 11, 0.35);
+}
+.sq-green {
+  background-color: #10b981 !important;
+  border: 1px solid #059669 !important;
+  box-shadow: 0 1px 2px rgba(16, 185, 129, 0.35);
+}
+.sq-blue {
+  background-color: #3b82f6 !important;
+  border: 1px solid #2563eb !important;
+}
+.sq-dashed {
+  background: repeating-linear-gradient(45deg, #fef3c7, #fef3c7 4px, #fde68a 4px, #fde68a 8px) !important;
+  border: 1px dashed #d97706 !important;
+}
+
+/* Bảng Theo Dõi Quân Số Nhóm Làm Việc (Manpower Matrix) */
+.manpower-card {
+  background: var(--dx-bg-card);
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-md);
+  margin-bottom: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.manpower-header {
+  padding: 12px 18px;
+  border-bottom: 1px solid var(--dx-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--dx-bg-subtle, #f8fafc);
+}
+.manpower-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12px;
+}
+.manpower-table th, .manpower-table td {
+  padding: 7px 4px;
+  text-align: center;
+  border-bottom: 1px solid var(--dx-border);
+  border-right: 1px solid var(--dx-border);
+  white-space: nowrap;
+}
+.manpower-table th {
+  background: var(--dx-bg-subtle, #f1f5f9);
+  font-weight: 700;
+  color: var(--dx-text-muted);
+}
+.manpower-table .col-grp-name {
+  text-align: left;
+  font-weight: 700;
+  padding-left: 14px;
+  min-width: 170px;
+  position: sticky;
+  left: 0;
+  background: var(--dx-bg-card);
+  z-index: 5;
+  border-right: 2px solid var(--dx-border-strong, #cbd5e1);
+}
+.manpower-table .col-grp-total {
+  font-weight: 700;
+  min-width: 75px;
+  background: var(--dx-bg-card);
+}
+.manpower-cell-leave {
+  font-weight: 700;
+  border-radius: 4px;
+  padding: 2px 4px;
+  display: inline-block;
+  min-width: 22px;
+}
+.manpower-cell-leave.has-leaves {
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+.manpower-cell-leave.heavy-leaves {
+  background: rgba(239, 68, 68, 0.15);
+  color: #dc2626;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Ma Trận Bảng Timeline Chính */
+.timeline-wrapper {
+  background: var(--dx-bg-card);
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-md);
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.timeline-scroll {
+  overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 360px);
+  position: relative;
+}
+
+.timeline-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 12.5px;
+}
+
+.timeline-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--dx-bg-card);
+  border-bottom: 2px solid var(--dx-border);
+  border-right: 1px solid var(--dx-border);
+  padding: 6px 4px;
+  text-align: center;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+/* Cột cố định bên trái (Sticky Columns) */
+.timeline-table .col-sticky-stt {
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--dx-bg-card);
+  width: 44px;
+  min-width: 44px;
+  max-width: 44px;
+  text-align: center;
+  border-right: 1px solid var(--dx-border);
+}
+.timeline-table .col-sticky-code {
+  position: sticky;
+  left: 44px;
+  z-index: 10;
+  background: var(--dx-bg-card);
+  width: 85px;
+  min-width: 85px;
+  border-right: 1px solid var(--dx-border);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.timeline-table .col-sticky-name {
+  position: sticky;
+  left: 129px;
+  z-index: 10;
+  background: var(--dx-bg-card);
+  width: 170px;
+  min-width: 170px;
+  border-right: 2px solid var(--dx-border-strong, #cbd5e1);
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.timeline-table thead th.col-sticky-stt,
+.timeline-table thead th.col-sticky-code,
+.timeline-table thead th.col-sticky-name {
+  z-index: 30;
+}
+
+/* Các ô ngày */
+.timeline-table td.day-cell {
+  padding: 4px 2px;
+  text-align: center;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--dx-border);
+  border-right: 1px solid var(--dx-border);
+  width: 32px;
+  min-width: 32px;
+  height: 34px;
+  position: relative;
+}
+
+/* Ngày chủ nhật & Hôm nay */
+.bg-sunday {
+  background-color: rgba(239, 68, 68, 0.05) !important;
+}
+.th-sunday {
+  color: #ef4444 !important;
+}
+.col-today {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+.th-today {
+  background-color: var(--dx-primary) !important;
+  color: #ffffff !important;
+  border-radius: 4px;
+}
+
+/* Ô vuông biểu thị trạng thái nghỉ */
+.leave-cell-box {
+  width: 24px;
+  height: 24px;
+  margin: 0 auto;
+  border-radius: 5px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+  user-select: none;
+}
+.leave-cell-box:hover {
+  transform: scale(1.22);
+  z-index: 15;
+}
+
+/* Hàng tiêu đề Nhóm làm việc */
+.group-header-row td {
+  background: var(--dx-bg-subtle, #f8fafc);
+  padding: 10px 14px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--dx-primary);
+  border-bottom: 1px solid var(--dx-border);
+  border-top: 1px solid var(--dx-border);
+}
+.group-total-row td {
+  background: var(--dx-bg-subtle, #f8fafc);
+  font-weight: 700;
+  font-size: 11.5px;
+  color: var(--dx-text-muted);
+  border-bottom: 2px solid var(--dx-border);
+  text-align: center;
+  padding: 6px 2px;
+}
+
+/* Tooltip tùy chỉnh hiện đại */
+.custom-tooltip-box {
+  position: fixed;
+  z-index: 99999;
+  background: #1e293b;
+  color: #ffffff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  pointer-events: none;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+  display: none;
+  max-width: 290px;
+  line-height: 1.4;
+  border: 1px solid #334155;
+}
+.custom-tooltip-box .tt-title {
+  font-weight: 700;
+  font-size: 13px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid #334155;
+  padding-bottom: 4px;
+}
+.custom-tooltip-box .tt-row {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 3px;
+  gap: 8px;
+}
+.custom-tooltip-box .tt-label {
+  color: #94a3b8;
+}
+
+/* Autocomplete Suggestion Dropdown */
+.autocomplete-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 1060;
+  background: var(--dx-bg-card, #ffffff);
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-sm);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.18);
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 4px;
+  display: none;
+}
+.autocomplete-item {
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border-bottom: 1px solid var(--dx-border);
+  transition: background-color 0.1s ease;
+}
+.autocomplete-item:hover, .autocomplete-item.active {
+  background-color: var(--dx-bg-subtle, #f1f5f9);
+}
+.autocomplete-item:last-child {
+  border-bottom: none;
+}
+.emp-match-hl {
+  color: var(--dx-primary);
+  font-weight: 700;
+}
+.badge-workgroup {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.badge-wg-dun_tu      { background: rgba(59, 130, 246, 0.15); color: #2563eb; }
+.badge-wg-dun_t       { background: rgba(139, 92, 246, 0.15); color: #7c3aed; }
+.badge-wg-thiet_bi    { background: rgba(6, 182, 212, 0.15); color: #0891b2; }
+.badge-wg-shotblast   { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+.badge-wg-nghien_nhua { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.badge-wg-khac        { background: rgba(100, 116, 139, 0.15); color: #475569; }
+
+/* Bảng danh sách kế hoạch */
+.badge-status {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11.5px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.badge-pending  { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.badge-approved { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.badge-rejected { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+
+/* Log Console HRM Sync */
+.sync-terminal {
+  background: #0f172a;
+  color: #38bdf8;
+  font-family: 'Consolas', monospace;
+  font-size: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #1e293b;
+  margin-top: 14px;
+}
+.sync-terminal .log-line {
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+.sync-terminal .log-time {
+  color: #64748b;
+  margin-right: 8px;
+}
+.sync-terminal .log-success { color: #4ade80; }
+.sync-terminal .log-warning { color: #fbbf24; }
+.sync-terminal .log-error   { color: #f87171; }
+.sync-terminal .log-url     { color: #c084fc; text-decoration: underline; }
+
+/* Ma Trận Phân Bổ Nhóm Kanban */
+.workgroup-matrix-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+  gap: 16px;
+  max-height: 70vh;
+  overflow-y: auto;
+  padding: 4px;
+}
+.workgroup-column {
+  background: var(--dx-bg-card);
+  border: 1px solid var(--dx-border);
+  border-radius: var(--dx-radius-md);
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+  transition: all 0.2s ease;
+}
+.workgroup-column.drag-over {
+  border-color: var(--dx-primary);
+  background: rgba(59, 130, 246, 0.05);
+  box-shadow: 0 0 0 2px var(--dx-primary);
+}
+.workgroup-col-header {
+  padding: 12px 16px;
+  border-bottom: 2px solid;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+  border-top-left-radius: inherit;
+  border-top-right-radius: inherit;
+}
+.workgroup-col-body {
+  padding: 12px;
+  flex: 1;
+  overflow-y: auto;
+  max-height: 480px;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.emp-matrix-card {
+  background: var(--dx-bg-subtle, #f8fafc);
+  border: 1px solid var(--dx-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: grab;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+.emp-matrix-card:hover {
+  border-color: var(--dx-primary);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  transform: translateY(-1px);
+}
+.emp-matrix-card.dragging {
+  opacity: 0.4;
+  cursor: grabbing;
+}
+.emp-matrix-card .emp-code-badge {
+  font-family: monospace;
+  font-size: 11px;
+  font-weight: 700;
+  background: rgba(59,130,246,0.1);
+  color: #2563eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.emp-matrix-card .cost-center-badge {
+  font-size: 11px;
+  color: var(--dx-text-muted);
+}
+</style>
+
+<div class="app-page-wrapper leave-container">
+  <!-- 1. Header Trang Chuẩn 5S -->
+  <div class="app-page-header">
+    <div>
+      <h1 class="app-page-title">
+        <span class="material-icons">event_busy</span>
+        <span>Quản Lý Phép Nghỉ & Lịch Nghỉ Lao Động</span>
+      </h1>
+      <p class="app-page-subtitle">Theo dõi ma trận kế hoạch, duyệt phép trưởng nhóm và tự động đồng bộ phép thực tế từ HRM</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <button class="app-btn app-btn-secondary" type="button" onclick="openWorkGroupMatrixModal()">
+        <span class="material-icons">view_kanban</span>
+        <span>Phân bổ nhóm làm việc</span>
+      </button>
+      <button class="app-btn app-btn-primary" type="button" onclick="openPlanModal()">
+        <span class="material-icons">add_circle</span>
+        <span>Đăng ký phép kế hoạch</span>
+      </button>
+      <button class="app-btn app-btn-outline" type="button" onclick="switchMainTab('sync')">
+        <span class="material-icons">sync</span>
+        <span>Đồng bộ HRM</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- 2. Thẻ Thống Kê Tổng Quan (Top Metric Cards) -->
+  <div class="metric-grid-4">
+    <div class="metric-card-leave">
+      <div class="metric-icon-box metric-icon-blue">
+        <span class="material-icons">group</span>
+      </div>
+      <div class="metric-info">
+        <div class="metric-num" id="statTotalEmployees">--</div>
+        <div class="metric-label">Tổng nhân sự theo dõi</div>
+      </div>
+    </div>
+    <div class="metric-card-leave">
+      <div class="metric-icon-box metric-icon-purple">
+        <span class="material-icons">person_off</span>
+      </div>
+      <div class="metric-info">
+        <div class="metric-num" id="statTodayLeaves">--</div>
+        <div class="metric-label">Số lượt nghỉ hôm nay</div>
+      </div>
+    </div>
+    <div class="metric-card-leave">
+      <div class="metric-icon-box metric-icon-green">
+        <span class="material-icons">check_circle</span>
+      </div>
+      <div class="metric-info">
+        <div class="metric-num" id="statActualLeaves">--</div>
+        <div class="metric-label">Phép thực tế HRM (Tháng)</div>
+      </div>
+    </div>
+    <div class="metric-card-leave">
+      <div class="metric-icon-box metric-icon-yellow">
+        <span class="material-icons">pending_actions</span>
+      </div>
+      <div class="metric-info">
+        <div class="metric-num" id="statPlannedLeaves">--</div>
+        <div class="metric-label">Phép dự kiến kế hoạch</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Navigation Tabs Chính -->
+  <div class="leave-main-tabs">
+    <button class="leave-main-tab active" id="tabBtnTimeline" onclick="switchMainTab('timeline')">
+      <span class="material-icons">grid_on</span>
+      <span>Ma Trận Timeline Nghỉ Phép</span>
+    </button>
+    <button class="leave-main-tab" id="tabBtnPlans" onclick="switchMainTab('plans')">
+      <span class="material-icons">approval</span>
+      <span>Đăng Ký & Phê Duyệt Kế Hoạch</span>
+      <span class="tab-badge" id="badgePendingCount">0 chờ duyệt</span>
+    </button>
+    <button class="leave-main-tab" id="tabBtnSync" onclick="switchMainTab('sync')">
+      <span class="material-icons">cloud_sync</span>
+      <span>Đồng Bộ Dữ Liệu HRM & File Excel</span>
+    </button>
+  </div>
+
+  <!-- ==========================================
+       TAB 1: MA TRẬN TIMELINE NGHỈ PHÉP
+       ========================================== -->
+  <div id="tabContentTimeline">
+    <!-- Filter bar -->
+    <div class="filter-card-leave">
+      <div class="filter-group-left">
+        <!-- Chọn Tháng / Năm (Mặc định tháng hiện tại) -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="small text-muted fw-bold">Tháng:</label>
+          <select id="filterMonth" class="form-select form-select-sm" style="width: 105px;" onchange="loadTimelineData()">
+            <?php for ($m = 1; $m <= 12; $m++): ?>
+              <option value="<?= $m ?>" <?= ($m == $currentMonth) ? 'selected' : '' ?>>Tháng <?= $m ?></option>
+            <?php endfor; ?>
+          </select>
+          <select id="filterYear" class="form-select form-select-sm" style="width: 88px;" onchange="loadTimelineData()">
+            <?php for ($y = $currentYear - 1; $y <= $currentYear + 2; $y++): ?>
+              <option value="<?= $y ?>" <?= ($y == $currentYear) ? 'selected' : '' ?>><?= $y ?></option>
+            <?php endfor; ?>
+          </select>
+        </div>
+
+        <!-- Lọc theo nhóm làm việc (Đùn TU, Đùn T, Thiết bị, Shotblast, Nghiền nhựa...) -->
+        <div class="d-flex align-items-center gap-1">
+          <label class="small text-muted fw-bold">Nhóm làm việc:</label>
+          <select id="filterGroup" class="form-select form-select-sm" style="min-width: 175px;" onchange="loadTimelineData()">
+            <option value="">-- Tất cả nhóm làm việc --</option>
+            <option value="Đùn TU">Đùn TU</option>
+            <option value="Đùn T">Đùn T</option>
+            <option value="Thiết bị">Thiết bị</option>
+            <option value="Shotblast">Shotblast</option>
+            <option value="Nghiền nhựa">Nghiền nhựa</option>
+            <option value="Khác">Khác</option>
+          </select>
+        </div>
+
+        <!-- Ô tìm kiếm nhân viên -->
+        <div class="d-flex align-items-center gap-1">
+          <input type="text" id="filterSearch" class="form-control form-control-sm" placeholder="Tìm mã hoặc tên NV..." style="width: 180px;" onkeyup="if(event.key==='Enter') loadTimelineData()">
+          <button class="app-btn app-btn-outline app-btn-sm" type="button" onclick="loadTimelineData()">
+            <span class="material-icons">search</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Chế độ hiển thị Timeline -->
+      <div class="d-flex align-items-center gap-2">
+        <label class="small text-muted fw-bold d-none d-lg-inline">Chế độ:</label>
+        <div class="mode-pill-group">
+          <button class="mode-pill active" id="modeBtnStandard" onclick="setTimelineMode('standard')">
+            <span class="material-icons" style="font-size: 15px;">auto_awesome</span>
+            <span>Quy tắc chuẩn</span>
+          </button>
+          <button class="mode-pill" id="modeBtnPlan" onclick="setTimelineMode('plan')">
+            <span class="legend-square sq-yellow" style="width:10px;height:10px;"></span>
+            <span>Chỉ Kế hoạch</span>
+          </button>
+          <button class="mode-pill" id="modeBtnActual" onclick="setTimelineMode('actual')">
+            <span class="legend-square sq-green" style="width:10px;height:10px;"></span>
+            <span>Chỉ Thực tế</span>
+          </button>
+          <button class="mode-pill" id="modeBtnCompare" onclick="setTimelineMode('compare')">
+            <span class="material-icons" style="font-size: 15px;">compare_arrows</span>
+            <span>Đối soát</span>
+          </button>
+        </div>
+        <button class="app-btn app-btn-secondary app-btn-sm" type="button" onclick="openWorkGroupMatrixModal()" title="Điều chỉnh phân bổ nhóm làm việc">
+          <span class="material-icons" style="font-size: 15px;">view_kanban</span>
+          <span class="d-none d-md-inline ms-1">Phân bổ nhóm</span>
+        </button>
+        <button class="app-btn app-btn-outline app-btn-sm" type="button" onclick="loadTimelineData()" title="Làm mới">
+          <span class="material-icons">refresh</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- 2.1. BẢNG THEO DÕI QUÂN SỐ TỪNG NHÓM THEO TỪNG NGÀY (MANPOWER OVERVIEW MATRIX) -->
+    <div class="manpower-card">
+      <div class="manpower-header">
+        <div class="d-flex align-items-center gap-2">
+          <span class="material-icons text-primary" style="font-size: 20px;">groups</span>
+          <span class="fw-bold text-main" style="font-size: 13.5px;">Quân Số Làm Việc & Nghỉ Phép Theo Từng Nhóm Công Việc</span>
+          <span class="badge bg-light text-muted border ms-2" id="manpowerMonthLabel">Tháng <?= $currentMonth ?>/<?= $currentYear ?></span>
+        </div>
+        <div class="d-flex align-items-center gap-3 small text-muted">
+          <span><span class="manpower-cell-leave has-leaves px-1">1</span> : Có người nghỉ</span>
+          <span><span class="manpower-cell-leave heavy-leaves px-1">3+</span> : Nghỉ nhiều (Thiếu hụt)</span>
+        </div>
+      </div>
+      <div class="timeline-scroll">
+        <table class="manpower-table" id="manpowerTable">
+          <thead id="manpowerThead">
+            <!-- Header render bằng JS -->
+          </thead>
+          <tbody id="manpowerTbody">
+            <tr><td colspan="34" class="text-center py-3 text-muted">Đang tải bảng quân số nhóm...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Chú thích màu sắc (Legend) -->
+    <div class="legend-bar">
+      <span class="fw-bold me-2"><span class="material-icons align-middle" style="font-size:16px;">info</span> Quy ước hiển thị:</span>
+      <div class="legend-item">
+        <span class="legend-square sq-green"></span>
+        <span><strong>Màu xanh lá:</strong> Phép thực tế từ HRM (Áp dụng $\le$ Hôm nay)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-square sq-yellow"></span>
+        <span><strong>Màu vàng:</strong> Phép dự kiến kế hoạch (Áp dụng $>$ Hôm nay)</span>
+      </div>
+      <div class="legend-item">
+        <span class="legend-square sq-dashed"></span>
+        <span>Kế hoạch không thực hiện (Nghỉ hụt)</span>
+      </div>
+      <div class="legend-item text-muted small ms-auto">
+        <span class="material-icons align-middle text-primary" style="font-size:16px;">touch_app</span> Di chuột vào ô để xem chi tiết
+      </div>
+    </div>
+
+    <!-- Khung Bảng Ma Trận Timeline Chính -->
+    <div class="timeline-wrapper">
+      <div class="timeline-scroll" id="timelineScrollContainer">
+        <table class="timeline-table" id="timelineTable">
+          <thead id="timelineThead">
+            <!-- Header được render bằng JavaScript -->
+          </thead>
+          <tbody id="timelineTbody">
+            <tr>
+              <td colspan="35" class="text-center py-5 text-muted">
+                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                <div>Đang tải ma trận nghỉ phép...</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       TAB 2: ĐĂNG KÝ & PHÊ DUYỆT KẾ HOẠCH
+       ========================================== -->
+  <div id="tabContentPlans" style="display: none;">
+    <!-- Filter bar kế hoạch -->
+    <div class="filter-card-leave">
+      <div class="filter-group-left">
+        <select id="planStatusFilter" class="form-select form-select-sm" style="width: 160px;" onchange="loadPlansData(1)">
+          <option value="all">Tất cả trạng thái</option>
+          <option value="pending" selected>⏳ Chờ phê duyệt</option>
+          <option value="approved">✅ Đã phê duyệt</option>
+          <option value="rejected">❌ Đã từ chối</option>
+        </select>
+        <input type="text" id="planSearchInput" class="form-control form-control-sm" placeholder="Tìm theo mã NV, tên..." style="width: 220px;" onkeyup="if(event.key==='Enter') loadPlansData(1)">
+        <button class="app-btn app-btn-outline app-btn-sm" type="button" onclick="loadPlansData(1)">
+          <span class="material-icons">search</span>
+        </button>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <button class="app-btn app-btn-success app-btn-sm" type="button" id="btnBulkApprove" onclick="bulkApprovePlans()" style="display: none;">
+          <span class="material-icons">check_circle</span>
+          <span id="bulkApproveText">Duyệt đã chọn</span>
+        </button>
+        <button class="app-btn app-btn-primary app-btn-sm" type="button" onclick="openPlanModal()">
+          <span class="material-icons">add</span>
+          <span>Tạo đơn phép mới</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Bảng danh sách phép kế hoạch -->
+    <div class="app-card">
+      <div class="table-responsive">
+        <table class="app-table">
+          <thead>
+            <tr>
+              <th style="width: 38px; text-align: center;">
+                <input type="checkbox" id="checkAllPlans" onchange="toggleSelectAllPlans(this)">
+              </th>
+              <th style="width: 50px; text-align: center;">STT</th>
+              <th style="width: 95px;">Mã NV</th>
+              <th>Họ và tên</th>
+              <th>Nhóm làm việc</th>
+              <th style="width: 105px; text-align: center;">Ngày nghỉ</th>
+              <th style="width: 80px; text-align: center;">Buổi</th>
+              <th>Loại phép</th>
+              <th>Lý do</th>
+              <th style="width: 110px; text-align: center;">Trạng thái</th>
+              <th>Phê duyệt bởi</th>
+              <th style="width: 110px; text-align: center;">Thao tác</th>
+            </tr>
+          </thead>
+          <tbody id="plansTbody">
+            <tr><td colspan="12" class="text-center py-4 text-muted">Đang tải danh sách phép...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Phân trang chuẩn -->
+      <div class="d-flex align-items-center justify-content-between p-3 border-top" id="plansPagination">
+        <div class="small text-muted" id="plansPageInfo">Hiển thị 0 dòng</div>
+        <div class="d-flex gap-1" id="plansPageBtns"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================
+       TAB 3: TỰ ĐỘNG ĐỒNG BỘ HRM & IMPORT EXCEL
+       ========================================== -->
+  <div id="tabContentSync" style="display: none;">
+    <div class="row g-3">
+      <!-- Cột Trái: Trạng thái & Kích hoạt HRM -->
+      <div class="col-lg-7">
+        <div class="app-card h-100 p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0 text-main d-flex align-items-center gap-2">
+              <span class="material-icons text-primary">sync</span>
+              <span>Đồng Bộ Tự Động Từ Máy Chủ HRM</span>
+            </h5>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1" id="syncStatusBadge">
+              Trực tuyến
+            </span>
+          </div>
+
+          <p class="text-muted small mb-3">
+            Hệ thống tự động kết nối cổng nội bộ HRM (<code>https://hrm.smcmfg.com.vn</code>), gửi xác thực Token và tải file xuất <strong>/Portal/NghiPhep/ExportDeDuyetNghiPhep</strong> với cơ chế UPSERT thông minh vào cơ sở dữ liệu.
+          </p>
+
+          <div class="alert alert-info py-2 px-3 small mb-3 d-flex align-items-center gap-2">
+            <span class="material-icons fs-5">verified</span>
+            <span>Định dạng chuẩn theo mẫu tham khảo <strong>data/DanhSachDuyetNghiPhep.xlsx</strong> (14 cột: Mã nhân viên, Họ tên, Nhóm, Tổ đội, Từ ngày, Đến ngày, Số ngày nghỉ, Loại nghỉ phép, Hình thức nghỉ phép, Lý do nghỉ phép, Cấp trên trực tiếp, Cấp trên gián tiếp, Lý do từ chối, Trạng thái duyệt).</span>
+          </div>
+
+          <div class="bg-subtle p-3 rounded mb-4 border">
+            <div class="d-flex justify-content-between py-1 border-bottom">
+              <span class="text-muted small">Lần đồng bộ thành công gần nhất:</span>
+              <strong class="text-main small" id="lastSyncTime">--</strong>
+            </div>
+            <div class="d-flex justify-content-between py-1 border-bottom">
+              <span class="text-muted small">Tần suất tự động:</span>
+              <span class="text-main small">Mỗi 3 giờ (Định kỳ nền)</span>
+            </div>
+            <div class="d-flex justify-content-between py-1">
+              <span class="text-muted small">Kết quả lần chạy trước:</span>
+              <span class="small fw-bold text-success" id="lastSyncMsg">Chưa chạy</span>
+            </div>
+          </div>
+
+          <!-- Khoảng ngày đồng bộ -->
+          <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold">Từ ngày:</label>
+              <input type="date" id="syncDateFrom" class="form-control form-control-sm" value="<?= date('Y-m-01') ?>">
+            </div>
+            <div class="col-sm-6">
+              <label class="form-label small fw-bold">Đến ngày:</label>
+              <input type="date" id="syncDateTo" class="form-control form-control-sm" value="<?= date('Y-m-t') ?>">
+            </div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button class="app-btn app-btn-primary" type="button" id="btnTriggerSync" onclick="triggerHrmSync()">
+              <span class="material-icons">sync</span>
+              <span>Bắt đầu Đồng Bộ HRM Ngay</span>
+            </button>
+            <button class="app-btn app-btn-outline" type="button" onclick="clearSyncTerminal()">
+              <span class="material-icons">clear_all</span>
+              <span>Xóa nhật ký</span>
+            </button>
+          </div>
+
+          <!-- Khung hiển thị tiến trình chi tiết & Console URL -->
+          <div class="sync-terminal mt-3" id="syncTerminal">
+            <div class="log-line"><span class="log-time">[<?= date('H:i:s') ?>]</span> Hệ thống sẵn sàng kết nối HRM SMC...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cột Phải: Import file Excel thủ công -->
+      <div class="col-lg-5">
+        <div class="app-card h-100 p-4">
+          <h5 class="fw-bold mb-3 text-main d-flex align-items-center gap-2">
+            <span class="material-icons text-primary">upload_file</span>
+            <span>Import File Excel Thủ Công</span>
+          </h5>
+          <p class="text-muted small mb-3">
+            Trường hợp cần nạp tức thì file Excel xuất từ HRM (Mẫu chuẩn <code>data/DanhSachDuyetNghiPhep.xlsx</code>), bạn có thể tải lên trực tiếp tại đây:
+          </p>
+
+          <form id="excelUploadForm" onsubmit="handleManualExcelUpload(event)">
+            <div class="border-2 border-dashed rounded p-4 text-center mb-3" style="border: 2px dashed var(--dx-border); background: var(--dx-bg-subtle);">
+              <span class="material-icons text-muted" style="font-size: 48px;">cloud_upload</span>
+              <div class="fw-bold mt-2 mb-1">Chọn file Excel (.xlsx, .xls)</div>
+              <div class="small text-muted mb-3">Hỗ trợ tệp xuất nguyên bản từ cổng HRM</div>
+              <input type="file" id="manualExcelFile" name="excel_file" class="form-control form-control-sm mx-auto" style="max-width: 260px;" accept=".xlsx,.xls" required>
+            </div>
+
+            <button type="submit" class="app-btn app-btn-success w-100" id="btnUploadExcel">
+              <span class="material-icons">upload</span>
+              <span>Bắt Đầu Nạp Dữ Liệu Excel</span>
+            </button>
+          </form>
+
+          <div id="uploadResultAlert" class="mt-3" style="display: none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Hàng 2: Cấu Hình Tham Số Kết Nối HRM & Quản Lý Tài Khoản -->
+    <div class="row g-3 mt-2">
+      <!-- Cấu hình tham số kết nối HRM -->
+      <div class="col-lg-7">
+        <div class="app-card h-100 p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0 text-main d-flex align-items-center gap-2">
+              <span class="material-icons text-primary">tune</span>
+              <span>Cấu Hình Tham Số Kết Nối HRM Tùy Chỉnh</span>
+            </h5>
+            <button class="app-btn app-btn-outline app-btn-xs" type="button" onclick="resetHrmConfigToDefault()" title="Khôi phục endpoints mặc định">
+              <span class="material-icons" style="font-size:14px;">restart_alt</span>
+              <span>Mặc định</span>
+            </button>
+          </div>
+          <form id="formHrmConfig" onsubmit="saveHrmConfig(event)">
+            <div class="mb-2">
+              <label class="form-label small fw-bold">HRM Base URL:</label>
+              <input type="text" id="cfgHrmUrl" name="hrm_url" class="form-control form-control-sm font-monospace" placeholder="https://hrm.smcmfg.com.vn" required>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Login Endpoint (GET Token):</label>
+                <input type="text" id="cfgLoginEndpoint" name="login_endpoint" class="form-control form-control-sm font-monospace" placeholder="https://hrm.smcmfg.com.vn/login" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Auth Endpoint (POST Xác thực):</label>
+                <input type="text" id="cfgAuthEndpoint" name="auth_endpoint" class="form-control form-control-sm font-monospace" placeholder="https://hrm.smcmfg.com.vn/Account/GetLogin_KiemTraLoginLanDau" required>
+              </div>
+            </div>
+            <div class="row g-2 mb-2">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Portal Endpoint (GET Verification Token):</label>
+                <input type="text" id="cfgPortalEndpoint" name="portal_endpoint" class="form-control form-control-sm font-monospace" placeholder="https://hrm.smcmfg.com.vn/NghiPhep/DuyetPhep" required>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Export Endpoint (POST Xuất Phép):</label>
+                <input type="text" id="cfgExportEndpoint" name="export_endpoint" class="form-control form-control-sm font-monospace" placeholder="https://hrm.smcmfg.com.vn/Portal/NghiPhep/ExportDeDuyetNghiPhep" required>
+              </div>
+            </div>
+            <div class="mb-2">
+              <label class="form-label small fw-bold">Download Excel Endpoint (GET File):</label>
+              <input type="text" id="cfgDownloadEndpoint" name="download_endpoint" class="form-control form-control-sm font-monospace" placeholder="https://hrm.smcmfg.com.vn/Download/ExcelDownload" required>
+            </div>
+            <div class="row g-2 mb-3">
+              <div class="col-md-6">
+                <label class="form-label small fw-bold">Tần suất đồng bộ định kỳ:</label>
+                <select id="cfgSyncInterval" name="sync_interval_hours" class="form-select form-select-sm">
+                  <option value="1">Mỗi 1 giờ</option>
+                  <option value="2">Mỗi 2 giờ</option>
+                  <option value="3" selected>Mỗi 3 giờ (Mặc định chuẩn)</option>
+                  <option value="6">Mỗi 6 giờ</option>
+                  <option value="12">Mỗi 12 giờ</option>
+                  <option value="24">Mỗi 24 giờ</option>
+                </select>
+              </div>
+              <div class="col-md-6 d-flex align-items-center mt-3">
+                <div class="form-check form-switch">
+                  <input class="form-check-input" type="checkbox" id="cfgAutoSync" name="auto_sync_enabled" checked>
+                  <label class="form-check-label small fw-bold" for="cfgAutoSync">Kích hoạt tự động đồng bộ ngầm</label>
+                </div>
+              </div>
+            </div>
+            <div class="d-flex justify-content-end gap-2">
+              <button type="submit" class="app-btn app-btn-primary" id="btnSaveHrmConfig">
+                <span class="material-icons">save</span>
+                <span>Lưu Cấu Hình Kết Nối</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Quản lý tài khoản kết nối HRM -->
+      <div class="col-lg-5">
+        <div class="app-card h-100 p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <h5 class="fw-bold mb-0 text-main d-flex align-items-center gap-2">
+              <span class="material-icons text-primary">manage_accounts</span>
+              <span>Tài Khoản Kết Nối HRM</span>
+            </h5>
+            <button class="app-btn app-btn-primary app-btn-sm" type="button" onclick="openHrmAccountModal()">
+              <span class="material-icons">person_add</span>
+              <span>Thêm tài khoản</span>
+            </button>
+          </div>
+          <div class="table-responsive">
+            <table class="app-table align-middle">
+              <thead>
+                <tr>
+                  <th style="width:38px;">ID</th>
+                  <th>Mô tả / Tên tài khoản</th>
+                  <th>Username</th>
+                  <th style="width:85px; text-align:center;">Trạng thái</th>
+                  <th style="width:120px; text-align:center;">Thao tác</th>
+                </tr>
+              </thead>
+              <tbody id="hrmAccountsTbody">
+                <tr><td colspan="5" class="text-center py-3 text-muted">Đang tải danh sách tài khoản...</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div class="mt-3 p-2 bg-subtle rounded border small text-muted">
+            <span class="material-icons align-middle text-primary" style="font-size:16px;">info</span>
+            <span>Hệ thống sẽ lần lượt sử dụng các tài khoản đang hoạt động để lấy token và tự động tải dữ liệu phép nghỉ của các bộ phận liên quan về máy chủ. Bạn có thể bấm nút kiểm tra kết nối để xác thực tài khoản.</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL: MA TRẬN PHÂN BỔ CÔNG VIỆC THEO NHÓM (KANBAN CARDS)
+     ========================================== -->
+<div class="modal fade" id="modalWorkGroupMatrix" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable" style="max-width: 95%;">
+    <div class="modal-content" style="background: var(--dx-bg-card); color: var(--dx-text-main); border: 1px solid var(--dx-border);">
+      <div class="modal-header border-bottom py-3">
+        <div class="d-flex align-items-center gap-2">
+          <span class="material-icons text-primary" style="font-size: 26px;">view_kanban</span>
+          <div>
+            <h5 class="modal-title fw-bold mb-0">Ma Trận Phân Bổ Công Việc Theo Nhóm (Work Group Allocation Matrix)</h5>
+            <div class="small text-muted">Kéo thả nhân sự giữa các thẻ nhóm hoặc chọn chuyển nhóm trực tiếp trên giao diện</div>
+          </div>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-3">
+        <!-- Filter bar in Modal -->
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 p-2 bg-subtle rounded border">
+          <div class="d-flex align-items-center gap-2">
+            <input type="text" id="matrixEmpSearch" class="form-control form-control-sm" placeholder="Tìm theo tên hoặc mã NV..." style="width: 240px;" oninput="filterMatrixCards(this.value)">
+            <span class="badge bg-light text-primary border fw-bold" id="matrixTotalEmpsBadge">0 nhân sự</span>
+          </div>
+          <!-- Bulk actions -->
+          <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted fw-bold" id="matrixSelectedCount">Đã chọn: 0 NV</span>
+            <select id="matrixBulkTargetGroup" class="form-select form-select-sm" style="width: 170px;">
+              <option value="">-- Chuyển sang nhóm --</option>
+              <option value="Đùn TU">Đùn TU</option>
+              <option value="Đùn T">Đùn T</option>
+              <option value="Thiết bị">Thiết bị</option>
+              <option value="Shotblast">Shotblast</option>
+              <option value="Nghiền nhựa">Nghiền nhựa</option>
+              <option value="Khác">Khác</option>
+            </select>
+            <button class="app-btn app-btn-primary app-btn-sm" type="button" onclick="submitBulkMatrixMove()">
+              <span class="material-icons" style="font-size:15px;">low_priority</span>
+              <span>Áp dụng chuyển</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 6 Group Cards Board -->
+        <div class="workgroup-matrix-board" id="matrixBoardContainer">
+          <div class="text-center py-5 text-muted w-100"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div>Đang tải ma trận phân bổ...</div></div>
+        </div>
+      </div>
+      <div class="modal-footer border-top py-2">
+        <button type="button" class="app-btn app-btn-outline" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL: CHUYỂN NHANH NHÓM CHO 1 NHÂN VIÊN
+     ========================================== -->
+<div class="modal fade" id="modalQuickChangeGroup" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="background: var(--dx-bg-card); color: var(--dx-text-main); border: 1px solid var(--dx-border);">
+      <div class="modal-header border-bottom py-2">
+        <h6 class="modal-title fw-bold d-flex align-items-center gap-1">
+          <span class="material-icons text-primary">swap_horiz</span>
+          <span>Chuyển Nhóm Làm Việc</span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formQuickChangeGroup" onsubmit="submitQuickChangeGroup(event)">
+        <div class="modal-body p-3">
+          <input type="hidden" id="quickEmpCode">
+          <div class="mb-2">
+            <div class="small text-muted">Nhân viên:</div>
+            <strong class="text-main" id="quickEmpName">--</strong>
+          </div>
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Chọn nhóm mới: <span class="text-danger">*</span></label>
+            <select id="quickNewGroup" class="form-select form-select-sm" required>
+              <option value="Đùn TU">Đùn TU</option>
+              <option value="Đùn T">Đùn T</option>
+              <option value="Thiết bị">Thiết bị</option>
+              <option value="Shotblast">Shotblast</option>
+              <option value="Nghiền nhựa">Nghiền nhựa</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+        </div>
+        <div class="modal-footer border-top p-2">
+          <button type="button" class="app-btn app-btn-outline app-btn-sm" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="app-btn app-btn-primary app-btn-sm" id="btnSubmitQuickChange">Cập nhật</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL: THÊM / SỬA TÀI KHOẢN KẾT NỐI HRM
+     ========================================== -->
+<div class="modal fade" id="modalHrmAccount" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: var(--dx-bg-card); color: var(--dx-text-main); border: 1px solid var(--dx-border);">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+          <span class="material-icons text-primary">manage_accounts</span>
+          <span id="hrmAccountModalTitle">Thêm Tài Khoản HRM</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formHrmAccount" onsubmit="submitHrmAccount(event)">
+        <div class="modal-body p-4">
+          <input type="hidden" id="accFormId" name="id" value="0">
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Tên mô tả tài khoản: <span class="text-danger">*</span></label>
+            <input type="text" id="accFormName" name="account_name" class="form-control form-control-sm" placeholder="Ví dụ: Tài khoản HRM 1 (Chính)" required>
+          </div>
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Username HRM: <span class="text-danger">*</span></label>
+              <input type="text" id="accFormUser" name="username" class="form-control form-control-sm font-monospace" placeholder="Ví dụ: 02114273" required>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Mật khẩu HRM: <span id="accPassRequired" class="text-danger">*</span></label>
+              <input type="password" id="accFormPass" name="password" class="form-control form-control-sm font-monospace" placeholder="••••••••">
+              <small class="text-muted" style="font-size:11px;" id="accPassHelp">Để trống nếu không muốn đổi mật khẩu</small>
+            </div>
+          </div>
+          <div class="mb-2">
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="accFormActive" name="is_active" value="1" checked>
+              <label class="form-check-label small fw-bold" for="accFormActive">Kích hoạt tài khoản này khi đồng bộ</label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="app-btn app-btn-outline" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="app-btn app-btn-primary" id="btnSubmitHrmAccount">Lưu Tài Khoản</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL: ĐĂNG KÝ PHÉP KẾ HOẠCH (VỚI AUTOCOMPLETE THÔNG MINH)
+     ========================================== -->
+<div class="modal fade" id="modalPlanLeave" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="background: var(--dx-bg-card); color: var(--dx-text-main); border: 1px solid var(--dx-border);">
+      <div class="modal-header border-bottom">
+        <h5 class="modal-title fw-bold d-flex align-items-center gap-2">
+          <span class="material-icons text-primary">event_note</span>
+          <span>Đăng Ký Phép Nghỉ Kế Hoạch</span>
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formPlanLeave" onsubmit="submitPlanLeave(event)">
+        <div class="modal-body p-4">
+          <!-- 1. Gợi ý tự động (Autocomplete) Nhân viên -->
+          <div class="mb-3 position-relative">
+            <label class="form-label small fw-bold">Tìm nhân viên (Gõ mã hoặc tên): <span class="text-danger">*</span></label>
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-subtle"><span class="material-icons" style="font-size:16px;">search</span></span>
+              <input type="text" id="planEmpSearch" class="form-control" placeholder="Ví dụ: 02021645 hoặc Tỉnh..." autocomplete="off" oninput="handleEmpSearchInput(this.value)" onkeydown="handleEmpSearchKeydown(event)">
+              <button class="app-btn app-btn-outline" type="button" onclick="handleEmpSearchInput(document.getElementById('planEmpSearch').value)">
+                <span class="material-icons">refresh</span>
+              </button>
+            </div>
+            <!-- Khung Dropdown Gợi Ý Autocomplete -->
+            <div id="empSuggestionBox" class="autocomplete-dropdown"></div>
+
+            <input type="hidden" id="planEmpCode" name="employee_code" required>
+            <input type="hidden" id="planFullName" name="full_name">
+            <input type="hidden" id="planGroupName" name="group_name" value="Plastic Extrusion">
+            <input type="hidden" id="planTeamName" name="team_name">
+
+            <!-- Thẻ hiển thị nhân viên đã chọn -->
+            <div id="planSelectedCard" class="mt-2 p-2 rounded border bg-light d-flex align-items-center justify-content-between" style="display: none !important;">
+              <div class="d-flex align-items-center gap-2">
+                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center fw-bold" style="width:32px;height:32px;font-size:12px;" id="planSelectedAvatar">NV</div>
+                <div>
+                  <div class="fw-bold text-main" id="planSelectedName">--</div>
+                  <div class="small text-muted" id="planSelectedSub">--</div>
+                </div>
+              </div>
+              <button type="button" class="btn btn-sm btn-link text-danger p-0" onclick="clearSelectedEmployee()" title="Bỏ chọn">
+                <span class="material-icons" style="font-size:18px;">close</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. Nhóm làm việc -->
+          <div class="mb-3">
+            <label class="form-label small fw-bold">Nhóm làm việc: <span class="text-danger">*</span></label>
+            <select name="work_group" id="planWorkGroup" class="form-select form-select-sm" required>
+              <option value="Đùn TU">Đùn TU</option>
+              <option value="Đùn T">Đùn T</option>
+              <option value="Thiết bị">Thiết bị</option>
+              <option value="Shotblast">Shotblast</option>
+              <option value="Nghiền nhựa">Nghiền nhựa</option>
+              <option value="Khác">Khác</option>
+            </select>
+          </div>
+
+          <!-- Khoảng ngày -->
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Từ ngày: <span class="text-danger">*</span></label>
+              <input type="date" id="planStartDate" name="start_date" class="form-control form-control-sm" required value="<?= date('Y-m-d') ?>" onchange="syncEndDate(this.value)">
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Đến ngày:</label>
+              <input type="date" id="planEndDate" name="end_date" class="form-control form-control-sm" value="<?= date('Y-m-d') ?>">
+            </div>
+          </div>
+
+          <!-- Buổi & Loại phép -->
+          <div class="row g-2 mb-3">
+            <div class="col-6">
+              <label class="form-label small fw-bold">Buổi nghỉ:</label>
+              <select name="session_type" id="planSessionType" class="form-select form-select-sm">
+                <option value="all_day">Cả ngày (1.0 ngày)</option>
+                <option value="morning">Buổi sáng (0.5 ngày)</option>
+                <option value="afternoon">Buổi chiều (0.5 ngày)</option>
+              </select>
+            </div>
+            <div class="col-6">
+              <label class="form-label small fw-bold">Loại phép:</label>
+              <select name="leave_type" id="planLeaveType" class="form-select form-select-sm">
+                <option value="Nghỉ phép năm">Nghỉ phép năm</option>
+                <option value="Nghỉ việc riêng">Nghỉ việc riêng</option>
+                <option value="Nghỉ không lương">Nghỉ không lương</option>
+                <option value="Nghỉ có lương CĐ đặc biệt">Nghỉ có lương CĐ đặc biệt</option>
+                <option value="Nghỉ BHXH">Nghỉ BHXH</option>
+                <option value="Nghỉ bù">Nghỉ bù</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Lý do -->
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Lý do nghỉ:</label>
+            <textarea name="reason" id="planReason" class="form-control form-control-sm" rows="2" placeholder="Ví dụ: Về quê giải quyết việc gia đình..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top">
+          <button type="button" class="app-btn app-btn-outline" data-bs-dismiss="modal">Đóng</button>
+          <button type="submit" class="app-btn app-btn-primary" id="btnSubmitPlan">Gửi Đăng Ký</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ==========================================
+     MODAL: TỪ CHỐI DUYỆT (LEADER REJECTION)
+     ========================================== -->
+<div class="modal fade" id="modalRejectLeave" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-sm">
+    <div class="modal-content" style="background: var(--dx-bg-card); color: var(--dx-text-main); border: 1px solid var(--dx-border);">
+      <div class="modal-header border-bottom">
+        <h6 class="modal-title fw-bold text-danger d-flex align-items-center gap-1">
+          <span class="material-icons">cancel</span>
+          <span>Từ Chối Phê Duyệt</span>
+        </h6>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="formRejectLeave" onsubmit="submitRejectLeave(event)">
+        <div class="modal-body p-3">
+          <input type="hidden" id="rejectPlanId">
+          <div class="mb-2">
+            <label class="form-label small fw-bold">Lý do từ chối: <span class="text-danger">*</span></label>
+            <textarea id="rejectReason" class="form-control form-control-sm" rows="3" required placeholder="Nhập lý do không phê duyệt đơn nghỉ..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer border-top p-2">
+          <button type="button" class="app-btn app-btn-outline app-btn-sm" data-bs-dismiss="modal">Hủy</button>
+          <button type="submit" class="app-btn app-btn-danger app-btn-sm">Xác Nhận Từ Chối</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Custom Tooltip Container -->
+<div id="customTooltip" class="custom-tooltip-box"></div>
+
+<!-- JavaScript Logic Chính -->
+<script>
+let currentMode = 'standard';
+let timelineRawData = null;
+let currentPlanPage = 1;
+let selectedPlanIds = [];
+let empSearchTimeout = null;
+let currentSearchItems = [];
+let focusedSearchIndex = -1;
+
+// Biến quản lý Ma trận Phân bổ nhóm làm việc
+let matrixAllocations = [];
+let matrixSelectedCodes = [];
+let draggedEmpCode = null;
+let draggedFromGroup = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+  loadTimelineData();
+  loadSyncConfig();
+  loadHrmAccounts();
+
+  // Đóng dropdown autocomplete khi click ra ngoài
+  document.addEventListener('click', function(e) {
+    const box = document.getElementById('empSuggestionBox');
+    const input = document.getElementById('planEmpSearch');
+    if (box && !box.contains(e.target) && e.target !== input) {
+      box.style.display = 'none';
+    }
+  });
+});
+
+// Chuyển Tab Chính
+function switchMainTab(tabName) {
+  document.querySelectorAll('.leave-main-tab').forEach(b => b.classList.remove('active'));
+  document.getElementById('tabContentTimeline').style.display = 'none';
+  document.getElementById('tabContentPlans').style.display = 'none';
+  document.getElementById('tabContentSync').style.display = 'none';
+
+  if (tabName === 'timeline') {
+    document.getElementById('tabBtnTimeline').classList.add('active');
+    document.getElementById('tabContentTimeline').style.display = 'block';
+  } else if (tabName === 'plans') {
+    document.getElementById('tabBtnPlans').classList.add('active');
+    document.getElementById('tabContentPlans').style.display = 'block';
+    loadPlansData(1);
+  } else if (tabName === 'sync') {
+    document.getElementById('tabBtnSync').classList.add('active');
+    document.getElementById('tabContentSync').style.display = 'block';
+    loadSyncConfig();
+    loadHrmAccounts();
+  }
+}
+
+// Chuyển Chế Độ Timeline
+function setTimelineMode(mode) {
+  currentMode = mode;
+  document.querySelectorAll('.mode-pill').forEach(b => b.classList.remove('active'));
+  if (mode === 'standard') document.getElementById('modeBtnStandard').classList.add('active');
+  else if (mode === 'plan') document.getElementById('modeBtnPlan').classList.add('active');
+  else if (mode === 'actual') document.getElementById('modeBtnActual').classList.add('active');
+  else if (mode === 'compare') document.getElementById('modeBtnCompare').classList.add('active');
+
+  loadTimelineData();
+}
+
+// 1. Tải Ma Trận Timeline & Bảng Quân Số Nhóm từ API
+function loadTimelineData() {
+  const month = document.getElementById('filterMonth').value;
+  const year  = document.getElementById('filterYear').value;
+  const group = document.getElementById('filterGroup').value;
+  const search = document.getElementById('filterSearch').value.trim();
+
+  document.getElementById('manpowerMonthLabel').textContent = `Tháng ${month}/${year}`;
+
+  const tbody = document.getElementById('timelineTbody');
+  tbody.innerHTML = `<tr><td colspan="35" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div>Đang nạp dữ liệu timeline...</div></td></tr>`;
+
+  fetch(`api/hrm_leave.php?action=get_timeline&month=${month}&year=${year}&group_name=${encodeURIComponent(group)}&search=${encodeURIComponent(search)}&mode=${currentMode}`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) {
+        tbody.innerHTML = `<tr><td colspan="35" class="text-center py-4 text-danger">${res.message || 'Lỗi tải timeline'}</td></tr>`;
+        return;
+      }
+      timelineRawData = res.data;
+      renderManpowerMatrix(timelineRawData);
+      renderTimeline(timelineRawData);
+      updateTopMetrics(timelineRawData);
+    })
+    .catch(err => {
+      tbody.innerHTML = `<tr><td colspan="35" class="text-center py-4 text-danger">Lỗi kết nối máy chủ: ${err}</td></tr>`;
+    });
+}
+
+// 2. Render Bảng Theo Dõi Quân Số Nhóm Làm Việc (Manpower Matrix)
+function renderManpowerMatrix(data) {
+  const thead = document.getElementById('manpowerThead');
+  const tbody = document.getElementById('manpowerTbody');
+  const daysInMonth = data.days_in_month;
+  const today = data.today;
+  const curYear = data.year;
+  const curMonth = data.month;
+
+  // Header
+  let thRow1 = `<tr>
+    <th class="col-grp-name" rowspan="2">Nhóm Làm Việc</th>
+    <th class="col-grp-total" rowspan="2">Tổng NS</th>`;
+  let thRow2 = `<tr>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${curYear}-${String(curMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt = new Date(curYear, curMonth - 1, d);
+    const dayOfWeek = dt.getDay(); // 0 is Sunday
+    const isSunday = (dayOfWeek === 0);
+    const isToday = (dateStr === today);
+
+    const dowName = isSunday ? 'CN' : ('T' + (dayOfWeek + 1));
+    const thClass = isToday ? 'th-today' : (isSunday ? 'th-sunday' : '');
+
+    thRow1 += `<th style="width:30px;" class="${thClass} ${isSunday ? 'bg-sunday' : ''}">${d}</th>`;
+    thRow2 += `<th style="font-size:10px;" class="${isSunday ? 'th-sunday bg-sunday' : 'text-muted'}">${dowName}</th>`;
+  }
+  thRow1 += `</tr>`;
+  thRow2 += `</tr>`;
+  thead.innerHTML = thRow1 + thRow2;
+
+  // Rows
+  if (!data.work_group_summary || data.work_group_summary.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${daysInMonth + 2}" class="text-center py-3 text-muted">Không có dữ liệu nhóm làm việc</td></tr>`;
+    return;
+  }
+
+  let html = '';
+  data.work_group_summary.forEach(wg => {
+    let grpBadgeClass = 'badge-wg-khac';
+    const gn = wg.work_group.toLowerCase();
+    if (gn.includes('tu')) grpBadgeClass = 'badge-wg-dun_tu';
+    else if (gn.includes('đùn t') || gn.includes('t extrusion')) grpBadgeClass = 'badge-wg-dun_t';
+    else if (gn.includes('thiết bị')) grpBadgeClass = 'badge-wg-thiet_bi';
+    else if (gn.includes('shotblast') || gn.includes('bắn cát')) grpBadgeClass = 'badge-wg-shotblast';
+    else if (gn.includes('nghiền')) grpBadgeClass = 'badge-wg-nghien_nhua';
+
+    html += `<tr>
+      <td class="col-grp-name">
+        <span class="badge-workgroup ${grpBadgeClass} me-1">${wg.work_group}</span>
+      </td>
+      <td class="col-grp-total font-monospace">${wg.total_emps}</td>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const leaves = wg.daily_leaves[d] || 0;
+      const working = wg.daily_working[d];
+      let display = '<span class="text-muted opacity-50">-</span>';
+
+      if (leaves > 0) {
+        const heavyClass = (leaves >= 3) ? 'heavy-leaves' : 'has-leaves';
+        display = `<span class="manpower-cell-leave ${heavyClass}" title="${wg.work_group} - Ngày ${d}: ${leaves} nghỉ, ${working} đi làm">${leaves}</span>`;
+      }
+
+      html += `<td>${display}</td>`;
+    }
+    html += `</tr>`;
+  });
+
+  // Hàng tổng toàn xưởng
+  html += `<tr style="background: var(--dx-bg-subtle, #f8fafc); font-weight: 700;">
+    <td class="col-grp-name text-primary">Tổng nghỉ toàn xưởng</td>
+    <td class="col-grp-total text-primary font-monospace">${data.total_employees}</td>`;
+  for (let d = 1; d <= daysInMonth; d++) {
+    const tot = data.daily_stats_total[d] || 0;
+    const disp = tot > 0 ? `<strong class="text-danger">${tot}</strong>` : '<span class="text-muted opacity-50">-</span>';
+    html += `<td>${disp}</td>`;
+  }
+  html += `</tr>`;
+
+  tbody.innerHTML = html;
+}
+
+// 3. Render Giao Diện Bảng Ma Trận Timeline Chi Tiết
+function renderTimeline(data) {
+  const thead = document.getElementById('timelineThead');
+  const tbody = document.getElementById('timelineTbody');
+
+  const daysInMonth = data.days_in_month;
+  const today = data.today;
+  const curYear = data.year;
+  const curMonth = data.month;
+
+  // Thead
+  let thRow1 = `<tr>
+    <th class="col-sticky-stt" rowspan="2">STT</th>
+    <th class="col-sticky-code" rowspan="2">Mã NV</th>
+    <th class="col-sticky-name" rowspan="2">Họ và tên</th>`;
+  let thRow2 = `<tr>`;
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${curYear}-${String(curMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const dt = new Date(curYear, curMonth - 1, d);
+    const dayOfWeek = dt.getDay();
+    const isSunday = (dayOfWeek === 0);
+    const isToday = (dateStr === today);
+
+    const dowName = isSunday ? 'CN' : ('T' + (dayOfWeek + 1));
+    const thClass = isToday ? 'th-today' : (isSunday ? 'th-sunday' : '');
+
+    thRow1 += `<th class="day-cell ${thClass} ${isSunday ? 'bg-sunday' : ''}">${d}</th>`;
+    thRow2 += `<th class="day-cell ${isSunday ? 'th-sunday bg-sunday' : 'text-muted'}" style="font-size:10px;">${dowName}</th>`;
+  }
+  thRow1 += `</tr>`;
+  thRow2 += `</tr>`;
+  thead.innerHTML = thRow1 + thRow2;
+
+  // Tbody
+  if (!data.groups || data.groups.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="${daysInMonth + 3}" class="text-center py-5 text-muted">Không tìm thấy nhân viên phù hợp</td></tr>`;
+    return;
+  }
+
+  let html = '';
+  let globalStt = 1;
+
+  data.groups.forEach(grp => {
+    // Dòng Header Nhóm Làm Việc
+    html += `<tr class="group-header-row">
+      <td colspan="${daysInMonth + 3}">
+        <span class="material-icons align-middle me-1 text-primary" style="font-size:16px;">workspaces</span>
+        <strong>${grp.group_name}</strong>
+        <span class="badge bg-light text-muted border ms-2">${grp.total_emps} nhân sự</span>
+      </td>
+    </tr>`;
+
+    // Từng nhân viên trong nhóm
+    grp.employees.forEach(emp => {
+      html += `<tr>
+        <td class="col-sticky-stt text-muted small">${globalStt++}</td>
+        <td class="col-sticky-code font-monospace fw-bold text-primary">${emp.employee_code}</td>
+        <td class="col-sticky-name fw-semibold">
+          <div class="d-flex align-items-center justify-content-between gap-1">
+            <span class="text-truncate" title="${emp.full_name}">${emp.full_name}</span>
+            <button type="button" class="btn btn-link btn-xs p-0 text-muted opacity-75 hover-primary" title="Điều chỉnh nhóm làm việc" onclick="quickChangeWorkGroup('${emp.employee_code}', '${grp.group_name.replace(/'/g, "\\'")}', '${emp.full_name.replace(/'/g, "\\'")}')">
+              <span class="material-icons" style="font-size: 14px;">swap_horiz</span>
+            </button>
+          </div>
+        </td>`;
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const cell = emp.days[d];
+        const isSunday = cell.is_sunday;
+        const isToday = cell.is_today;
+        let cellContent = '';
+
+        if (cell.state === 'actual') {
+          cellContent = `<div class="leave-cell-box sq-green" data-tt="${encodeURIComponent(JSON.stringify(cell))}" data-emp="${encodeURIComponent(emp.full_name)} (${emp.employee_code})">TT</div>`;
+        } else if (cell.state === 'plan') {
+          cellContent = `<div class="leave-cell-box sq-yellow" data-tt="${encodeURIComponent(JSON.stringify(cell))}" data-emp="${encodeURIComponent(emp.full_name)} (${emp.employee_code})">KH</div>`;
+        } else if (cell.state === 'both') {
+          cellContent = `<div class="leave-cell-box sq-blue" data-tt="${encodeURIComponent(JSON.stringify(cell))}" data-emp="${encodeURIComponent(emp.full_name)} (${emp.employee_code})">K+T</div>`;
+        } else if (cell.state === 'plan_missed') {
+          cellContent = `<div class="leave-cell-box sq-dashed" data-tt="${encodeURIComponent(JSON.stringify(cell))}" data-emp="${encodeURIComponent(emp.full_name)} (${emp.employee_code})" title="Kế hoạch nhưng không có thực tế">--</div>`;
+        }
+
+        const tdClass = isToday ? 'col-today' : (isSunday ? 'bg-sunday' : '');
+        html += `<td class="day-cell ${tdClass}">${cellContent}</td>`;
+      }
+
+      html += `</tr>`;
+    });
+
+    // Dòng tổng cộng nhóm (Group Daily Summary)
+    html += `<tr class="group-total-row">
+      <td class="col-sticky-stt text-muted"></td>
+      <td class="col-sticky-code text-muted">Nghỉ:</td>
+      <td class="col-sticky-name text-start text-muted">${grp.group_name}</td>`;
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const cnt = grp.daily_stats[d] || 0;
+      const displayVal = cnt > 0 ? `<strong class="text-primary">${cnt}</strong>` : '<span class="text-muted opacity-50">-</span>';
+      html += `<td class="day-cell">${displayVal}</td>`;
+    }
+    html += `</tr>`;
+  });
+
+  tbody.innerHTML = html;
+
+  // Tooltips
+  setupCellTooltips();
+}
+
+// 4. Cập nhật Thẻ Thống Kê
+function updateTopMetrics(data) {
+  document.getElementById('statTotalEmployees').textContent = data.total_employees || 0;
+  document.getElementById('statTodayLeaves').textContent = data.today_leaves_count || 0;
+  document.getElementById('statActualLeaves').textContent = (data.total_actual_leaves || 0) + ' ngày';
+  document.getElementById('statPlannedLeaves').textContent = (data.total_planned_leaves || 0) + ' ngày';
+}
+
+// 5. Quản lý Tooltip Hiện Đại
+function setupCellTooltips() {
+  const tooltip = document.getElementById('customTooltip');
+  document.querySelectorAll('.leave-cell-box').forEach(el => {
+    el.addEventListener('mouseenter', function(e) {
+      try {
+        const cell = JSON.parse(decodeURIComponent(this.getAttribute('data-tt')));
+        const empName = decodeURIComponent(this.getAttribute('data-emp'));
+        const dateParts = cell.date.split('-');
+        const dateFormatted = `${dateParts[2]}/${dateParts[1]}/${dateParts[0]}`;
+
+        let stateTitle = '';
+        if (cell.state === 'actual') stateTitle = '<span class="text-success fw-bold">● Phép Thực Tế HRM</span>';
+        else if (cell.state === 'plan') stateTitle = '<span class="text-warning fw-bold">● Phép Dự Kiến Kế Hoạch</span>';
+        else if (cell.state === 'both') stateTitle = '<span class="text-info fw-bold">● Khớp Cả Kế Hoạch & Thực Tế</span>';
+        else if (cell.state === 'plan_missed') stateTitle = '<span class="text-secondary fw-bold">● Kế Hoạch Chưa Có Thực Tế</span>';
+
+        tooltip.innerHTML = `
+          <div class="tt-title">${empName}</div>
+          <div class="tt-row"><span class="tt-label">Ngày:</span> <strong>${dateFormatted} (T${cell.day_of_week === 7 ? 'CN' : cell.day_of_week + 1})</strong></div>
+          <div class="tt-row"><span class="tt-label">Loại nghỉ:</span> <strong>${cell.leave_type || 'Phép nghỉ'}</strong></div>
+          <div class="tt-row"><span class="tt-label">Buổi:</span> <span>${cell.session || 'Cả ngày'}</span></div>
+          ${cell.reason ? `<div class="tt-row"><span class="tt-label">Lý do:</span> <span>${cell.reason}</span></div>` : ''}
+          <div class="tt-row mt-2 pt-1 border-top"><span class="tt-label">Nguồn:</span> ${stateTitle}</div>
+        `;
+
+        tooltip.style.display = 'block';
+        moveTooltip(e);
+      } catch (err) {}
+    });
+
+    el.addEventListener('mousemove', moveTooltip);
+
+    el.addEventListener('mouseleave', function() {
+      tooltip.style.display = 'none';
+    });
+  });
+}
+
+function moveTooltip(e) {
+  const tooltip = document.getElementById('customTooltip');
+  const pad = 12;
+  let x = e.clientX + pad;
+  let y = e.clientY + pad;
+
+  if (x + 290 > window.innerWidth) x = e.clientX - 290 - pad;
+  if (y + 160 > window.innerHeight) y = e.clientY - 160 - pad;
+
+  tooltip.style.left = x + 'px';
+  tooltip.style.top = y + 'px';
+}
+
+// 6. Gợi ý tự động (Autocomplete) Nhân Viên Khi Đăng Ký
+function handleEmpSearchInput(kw) {
+  clearTimeout(empSearchTimeout);
+  const box = document.getElementById('empSuggestionBox');
+  kw = kw.trim();
+
+  if (kw.length < 1) {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    return;
+  }
+
+  empSearchTimeout = setTimeout(() => {
+    fetch(`api/hrm_leave.php?action=get_employees&search=${encodeURIComponent(kw)}&limit=25`)
+      .then(r => r.json())
+      .then(res => {
+        if (res.success && res.employees && res.employees.length > 0) {
+          currentSearchItems = res.employees;
+          focusedSearchIndex = -1;
+          renderAutocompleteItems(res.employees, kw);
+          box.style.display = 'block';
+        } else {
+          box.innerHTML = '<div class="p-3 text-center text-muted small">Không tìm thấy nhân viên phù hợp</div>';
+          box.style.display = 'block';
+        }
+      });
+  }, 150);
+}
+
+function renderAutocompleteItems(items, kw) {
+  const box = document.getElementById('empSuggestionBox');
+  let html = '';
+
+  items.forEach((e, idx) => {
+    let grpBadgeClass = 'badge-wg-khac';
+    const gn = (e.work_group || '').toLowerCase();
+    if (gn.includes('tu')) grpBadgeClass = 'badge-wg-dun_tu';
+    else if (gn.includes('đùn t') || gn.includes('t extrusion')) grpBadgeClass = 'badge-wg-dun_t';
+    else if (gn.includes('thiết bị')) grpBadgeClass = 'badge-wg-thiet_bi';
+    else if (gn.includes('shotblast') || gn.includes('bắn cát')) grpBadgeClass = 'badge-wg-shotblast';
+    else if (gn.includes('nghiền')) grpBadgeClass = 'badge-wg-nghien_nhua';
+
+    // Highlight text
+    const re = new RegExp(`(${escapeRegExp(kw)})`, 'gi');
+    const hlCode = e.employee_code.replace(re, '<span class="emp-match-hl">$1</span>');
+    const hlName = e.full_name.replace(re, '<span class="emp-match-hl">$1</span>');
+
+    html += `
+      <div class="autocomplete-item" id="acItem_${idx}" onclick="selectEmployee(${idx})">
+        <div class="d-flex align-items-center gap-2">
+          <span class="badge bg-light text-primary border font-monospace px-2 py-1">${hlCode}</span>
+          <div>
+            <div class="fw-bold small text-main">${hlName}</div>
+            <div class="text-muted" style="font-size:11px;">CC: ${e.cost_center || '-'} ${e.team_name ? '| Tổ: ' + e.team_name : ''}</div>
+          </div>
+        </div>
+        <div>
+          <span class="badge-workgroup ${grpBadgeClass}">${e.work_group || 'Khác'}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  box.innerHTML = html;
+}
+
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function handleEmpSearchKeydown(e) {
+  const box = document.getElementById('empSuggestionBox');
+  if (box.style.display !== 'block' || currentSearchItems.length === 0) return;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    focusedSearchIndex = Math.min(focusedSearchIndex + 1, currentSearchItems.length - 1);
+    highlightFocusedItem();
+  } else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    focusedSearchIndex = Math.max(focusedSearchIndex - 1, 0);
+    highlightFocusedItem();
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (focusedSearchIndex >= 0 && focusedSearchIndex < currentSearchItems.length) {
+      selectEmployee(focusedSearchIndex);
+    }
+  } else if (e.key === 'Escape') {
+    box.style.display = 'none';
+  }
+}
+
+function highlightFocusedItem() {
+  document.querySelectorAll('.autocomplete-item').forEach((el, idx) => {
+    if (idx === focusedSearchIndex) {
+      el.classList.add('active');
+      el.scrollIntoView({ block: 'nearest' });
+    } else {
+      el.classList.remove('active');
+    }
+  });
+}
+
+function selectEmployee(idx) {
+  const e = currentSearchItems[idx];
+  if (!e) return;
+
+  document.getElementById('planEmpCode').value = e.employee_code;
+  document.getElementById('planFullName').value = e.full_name;
+  document.getElementById('planTeamName').value = e.team_name || e.work_group || '';
+  document.getElementById('planEmpSearch').value = `${e.employee_code} - ${e.full_name}`;
+
+  // Tự động gán nhóm làm việc tương ứng
+  const wgSelect = document.getElementById('planWorkGroup');
+  if (wgSelect) {
+    let found = false;
+    for (let i = 0; i < wgSelect.options.length; i++) {
+      if (wgSelect.options[i].value === e.work_group) {
+        wgSelect.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      const opt = document.createElement('option');
+      opt.value = e.work_group;
+      opt.textContent = e.work_group;
+      opt.selected = true;
+      wgSelect.appendChild(opt);
+    }
+  }
+
+  // Hiển thị thẻ xác nhận
+  const card = document.getElementById('planSelectedCard');
+  card.style.setProperty('display', 'flex', 'important');
+  document.getElementById('planSelectedAvatar').textContent = e.full_name.charAt(0);
+  document.getElementById('planSelectedName').textContent = `${e.full_name} (${e.employee_code})`;
+  document.getElementById('planSelectedSub').textContent = `Nhóm: ${e.work_group || 'Chưa phân nhóm'} | Tổ: ${e.team_name || '-'}`;
+
+  document.getElementById('empSuggestionBox').style.display = 'none';
+}
+
+function clearSelectedEmployee() {
+  document.getElementById('planEmpCode').value = '';
+  document.getElementById('planFullName').value = '';
+  document.getElementById('planTeamName').value = '';
+  document.getElementById('planEmpSearch').value = '';
+  const card = document.getElementById('planSelectedCard');
+  card.style.setProperty('display', 'none', 'important');
+  document.getElementById('planEmpSearch').focus();
+}
+
+function syncEndDate(startVal) {
+  const endInput = document.getElementById('planEndDate');
+  if (!endInput.value || endInput.value < startVal) {
+    endInput.value = startVal;
+  }
+}
+
+// 7. Modal Đăng Ký Phép Kế Hoạch
+function openPlanModal() {
+  document.getElementById('formPlanLeave').reset();
+  clearSelectedEmployee();
+  document.getElementById('planStartDate').value = new Date().toISOString().split('T')[0];
+  document.getElementById('planEndDate').value = new Date().toISOString().split('T')[0];
+  new bootstrap.Modal(document.getElementById('modalPlanLeave')).show();
+}
+
+function submitPlanLeave(e) {
+  e.preventDefault();
+  const empCode = document.getElementById('planEmpCode').value;
+  if (!empCode) {
+    alert('Vui lòng chọn nhân viên từ danh sách gợi ý tự động.');
+    document.getElementById('planEmpSearch').focus();
+    return;
+  }
+
+  const form = document.getElementById('formPlanLeave');
+  const formData = new FormData(form);
+  formData.append('action', 'create_plan');
+
+  const btn = document.getElementById('btnSubmitPlan');
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu...';
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = 'Gửi Đăng Ký';
+      alert(res.message);
+      if (res.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalPlanLeave')).hide();
+        loadTimelineData();
+        loadPlansData(1);
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = 'Gửi Đăng Ký';
+      alert('Lỗi gửi đăng ký: ' + err);
+    });
+}
+
+// 8. Danh Sách & Phê Duyệt Kế Hoạch (Tab 2)
+function loadPlansData(page = 1) {
+  currentPlanPage = page;
+  const month = document.getElementById('filterMonth').value;
+  const year  = document.getElementById('filterYear').value;
+  const status = document.getElementById('planStatusFilter').value;
+  const search = document.getElementById('planSearchInput').value.trim();
+
+  const tbody = document.getElementById('plansTbody');
+  tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-muted"><div class="spinner-border spinner-border-sm text-primary mb-2"></div><div>Đang tải danh sách phép...</div></td></tr>`;
+
+  fetch(`api/hrm_leave.php?action=get_plans&month=${month}&year=${year}&status=${status}&search=${encodeURIComponent(search)}&page=${page}&limit=25`)
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) {
+        tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">${res.message || 'Lỗi tải dữ liệu'}</td></tr>`;
+        return;
+      }
+      renderPlansTable(res.data, res.pagination);
+    })
+    .catch(err => {
+      tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-danger">Lỗi: ${err}</td></tr>`;
+    });
+}
+
+function renderPlansTable(list, pagination) {
+  const tbody = document.getElementById('plansTbody');
+  if (!list || list.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="12" class="text-center py-4 text-muted">Không có đơn phép nào</td></tr>`;
+    document.getElementById('plansPageInfo').textContent = 'Hiển thị 0 dòng';
+    document.getElementById('plansPageBtns').innerHTML = '';
+    return;
+  }
+
+  let html = '';
+  let pendingCount = 0;
+  selectedPlanIds = [];
+  document.getElementById('checkAllPlans').checked = false;
+  document.getElementById('btnBulkApprove').style.display = 'none';
+
+  list.forEach((item, idx) => {
+    if (item.status === 'pending') pendingCount++;
+
+    let statusBadge = '';
+    if (item.status === 'approved') statusBadge = '<span class="badge-status badge-approved"><span class="material-icons" style="font-size:14px;">check</span> Đã duyệt</span>';
+    else if (item.status === 'rejected') statusBadge = '<span class="badge-status badge-rejected"><span class="material-icons" style="font-size:14px;">close</span> Từ chối</span>';
+    else statusBadge = '<span class="badge-status badge-pending"><span class="material-icons" style="font-size:14px;">hourglass_empty</span> Chờ duyệt</span>';
+
+    const sessionText = item.session_type === 'all_day' ? 'Cả ngày' : (item.session_type === 'morning' ? 'Sáng' : 'Chiều');
+    const dateFormatted = item.leave_date.split('-').reverse().join('/');
+    const workGroupDisplay = item.work_group || item.team_name || 'Khác';
+
+    html += `<tr>
+      <td style="text-align: center;">
+        ${item.status === 'pending' ? `<input type="checkbox" class="plan-checkbox" value="${item.id}" onchange="handlePlanCheck(this)">` : ''}
+      </td>
+      <td style="text-align: center;" class="text-muted small">${(pagination.current_page - 1) * pagination.limit + idx + 1}</td>
+      <td class="font-monospace fw-bold text-primary">${item.employee_code}</td>
+      <td class="fw-semibold">${item.full_name}</td>
+      <td>
+        <button type="button" class="badge bg-light text-primary border d-inline-flex align-items-center gap-1 cursor-pointer" style="border: 1px solid var(--dx-border) !important; background: var(--dx-bg-subtle) !important;" title="Bấm để điều chỉnh nhóm làm việc" onclick="quickChangeWorkGroup('${item.employee_code}', '${workGroupDisplay.replace(/'/g, "\\'")}', '${item.full_name.replace(/'/g, "\\'")}')">
+          <span>${workGroupDisplay}</span>
+          <span class="material-icons" style="font-size:12px;">edit</span>
+        </button>
+      </td>
+      <td style="text-align: center;" class="fw-bold">${dateFormatted}</td>
+      <td style="text-align: center;"><span class="badge bg-light text-dark">${sessionText}</span></td>
+      <td>${item.leave_type}</td>
+      <td class="small text-muted">${item.reason || '-'}</td>
+      <td style="text-align: center;">${statusBadge}</td>
+      <td class="small text-muted">${item.approved_by ? `${item.approved_by}` : '-'}</td>
+      <td style="text-align: center;">
+        <div class="d-flex align-items-center justify-content-center gap-1">
+          <button class="app-btn app-btn-outline app-btn-xs text-primary" type="button" onclick="quickChangeWorkGroup('${item.employee_code}', '${workGroupDisplay.replace(/'/g, "\\'")}', '${item.full_name.replace(/'/g, "\\'")}')" title="Phân bổ lại nhóm làm việc">
+            <span class="material-icons" style="font-size:14px;">swap_horiz</span>
+          </button>
+          ${item.status === 'pending' ? `
+            <button class="app-btn app-btn-success app-btn-xs" type="button" onclick="approvePlan(${item.id})" title="Phê duyệt">
+              <span class="material-icons" style="font-size:14px;">done</span>
+            </button>
+            <button class="app-btn app-btn-danger app-btn-xs" type="button" onclick="openRejectModal(${item.id})" title="Từ chối">
+              <span class="material-icons" style="font-size:14px;">close</span>
+            </button>
+          ` : ''}
+          <button class="app-btn app-btn-outline app-btn-xs text-danger" type="button" onclick="deletePlan(${item.id})" title="Xóa">
+            <span class="material-icons" style="font-size:14px;">delete</span>
+          </button>
+        </div>
+      </td>
+    </tr>`;
+  });
+
+  tbody.innerHTML = html;
+  document.getElementById('badgePendingCount').textContent = `${pendingCount} chờ duyệt`;
+  renderPagination(pagination);
+}
+
+function renderPagination(p) {
+  const info = document.getElementById('plansPageInfo');
+  const btns = document.getElementById('plansPageBtns');
+
+  info.textContent = `Trang ${p.current_page} / ${p.total_pages || 1} (Tổng ${p.total_rows} bản ghi)`;
+
+  let btnHtml = '';
+  if (p.current_page > 1) {
+    btnHtml += `<button class="app-btn app-btn-outline app-btn-xs" onclick="loadPlansData(${p.current_page - 1})"><span class="material-icons">chevron_left</span></button>`;
+  }
+  for (let i = Math.max(1, p.current_page - 2); i <= Math.min(p.total_pages, p.current_page + 2); i++) {
+    const active = (i === p.current_page) ? 'app-btn-primary' : 'app-btn-outline';
+    btnHtml += `<button class="app-btn ${active} app-btn-xs" onclick="loadPlansData(${i})">${i}</button>`;
+  }
+  if (p.current_page < p.total_pages) {
+    btnHtml += `<button class="app-btn app-btn-outline app-btn-xs" onclick="loadPlansData(${p.current_page + 1})"><span class="material-icons">chevron_right</span></button>`;
+  }
+  btns.innerHTML = btnHtml;
+}
+
+// Xử lý Checkbox Bulk
+function handlePlanCheck(el) {
+  const id = parseInt(el.value);
+  if (el.checked) {
+    if (!selectedPlanIds.includes(id)) selectedPlanIds.push(id);
+  } else {
+    selectedPlanIds = selectedPlanIds.filter(x => x !== id);
+  }
+  updateBulkButton();
+}
+
+function toggleSelectAllPlans(master) {
+  document.querySelectorAll('.plan-checkbox').forEach(cb => {
+    cb.checked = master.checked;
+    const id = parseInt(cb.value);
+    if (master.checked) {
+      if (!selectedPlanIds.includes(id)) selectedPlanIds.push(id);
+    } else {
+      selectedPlanIds = [];
+    }
+  });
+  updateBulkButton();
+}
+
+function updateBulkButton() {
+  const btn = document.getElementById('btnBulkApprove');
+  const txt = document.getElementById('bulkApproveText');
+  if (selectedPlanIds.length > 0) {
+    btn.style.display = 'inline-flex';
+    txt.textContent = `Duyệt (${selectedPlanIds.length}) đơn`;
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+function approvePlan(id) {
+  if (!confirm('Bạn có chắc chắn muốn phê duyệt đơn phép này?')) return;
+  const formData = new FormData();
+  formData.append('action', 'approve_plan');
+  formData.append('plan_id', id);
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(res => {
+      alert(res.message);
+      if (res.success) {
+        loadPlansData(currentPlanPage);
+        loadTimelineData();
+      }
+    });
+}
+
+function bulkApprovePlans() {
+  if (selectedPlanIds.length === 0) return;
+  if (!confirm(`Bạn có chắc muốn phê duyệt đồng loạt ${selectedPlanIds.length} đơn đã chọn?`)) return;
+
+  const formData = new FormData();
+  formData.append('action', 'approve_plan');
+  selectedPlanIds.forEach(id => formData.append('plan_ids[]', id));
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(res => {
+      alert(res.message);
+      if (res.success) {
+        loadPlansData(currentPlanPage);
+        loadTimelineData();
+      }
+    });
+}
+
+function openRejectModal(id) {
+  document.getElementById('rejectPlanId').value = id;
+  document.getElementById('rejectReason').value = '';
+  new bootstrap.Modal(document.getElementById('modalRejectLeave')).show();
+}
+
+function submitRejectLeave(e) {
+  e.preventDefault();
+  const id = document.getElementById('rejectPlanId').value;
+  const reason = document.getElementById('rejectReason').value.trim();
+
+  const formData = new FormData();
+  formData.append('action', 'reject_plan');
+  formData.append('plan_id', id);
+  formData.append('reason', reason);
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(res => {
+      alert(res.message);
+      if (res.success) {
+        bootstrap.Modal.getInstance(document.getElementById('modalRejectLeave')).hide();
+        loadPlansData(currentPlanPage);
+        loadTimelineData();
+      }
+    });
+}
+
+function deletePlan(id) {
+  if (!confirm('Bạn có chắc chắn muốn xóa bản ghi kế hoạch này?')) return;
+  const formData = new FormData();
+  formData.append('action', 'delete_plan');
+  formData.append('plan_id', id);
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: formData })
+    .then(r => r.json())
+    .then(res => {
+      alert(res.message);
+      if (res.success) {
+        loadPlansData(currentPlanPage);
+        loadTimelineData();
+      }
+    });
+}
+
+// 9. Tự Động Đồng Bộ HRM & File Excel (Tab 3)
+function loadSyncConfig() {
+  fetch('api/hrm_leave_sync.php?action=get_config')
+    .then(r => r.json())
+    .then(res => {
+      if (res.success && res.config) {
+        const c = res.config;
+        document.getElementById('lastSyncTime').textContent = c.last_sync_time || 'Chưa từng đồng bộ';
+        document.getElementById('lastSyncMsg').textContent = c.last_sync_message || '-';
+        if (c.sync_date_from) document.getElementById('syncDateFrom').value = c.sync_date_from;
+        if (c.sync_date_to) document.getElementById('syncDateTo').value = c.sync_date_to;
+
+        // Custom endpoints & params
+        if (document.getElementById('cfgHrmUrl')) document.getElementById('cfgHrmUrl').value = c.hrm_url || 'https://hrm.smcmfg.com.vn';
+        if (document.getElementById('cfgLoginEndpoint')) document.getElementById('cfgLoginEndpoint').value = c.login_endpoint || 'https://hrm.smcmfg.com.vn/login';
+        if (document.getElementById('cfgAuthEndpoint')) document.getElementById('cfgAuthEndpoint').value = c.auth_endpoint || 'https://hrm.smcmfg.com.vn/Account/GetLogin_KiemTraLoginLanDau';
+        if (document.getElementById('cfgPortalEndpoint')) document.getElementById('cfgPortalEndpoint').value = c.portal_endpoint || 'https://hrm.smcmfg.com.vn/NghiPhep/DuyetPhep';
+        if (document.getElementById('cfgExportEndpoint')) document.getElementById('cfgExportEndpoint').value = c.export_endpoint || 'https://hrm.smcmfg.com.vn/Portal/NghiPhep/ExportDeDuyetNghiPhep';
+        if (document.getElementById('cfgDownloadEndpoint')) document.getElementById('cfgDownloadEndpoint').value = c.download_endpoint || 'https://hrm.smcmfg.com.vn/Download/ExcelDownload';
+        if (document.getElementById('cfgSyncInterval')) document.getElementById('cfgSyncInterval').value = c.sync_interval_hours || 3;
+        if (document.getElementById('cfgAutoSync')) document.getElementById('cfgAutoSync').checked = (c.auto_sync_enabled !== false);
+      }
+    });
+}
+
+function saveHrmConfig(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSaveHrmConfig');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...`;
+
+  const form = document.getElementById('formHrmConfig');
+  const fd = new FormData(form);
+  fd.append('action', 'save_config');
+  fd.set('auto_sync_enabled', document.getElementById('cfgAutoSync').checked ? '1' : '0');
+
+  fetch('api/hrm_leave_sync.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-icons">save</span> <span>Lưu Cấu Hình Kết Nối</span>`;
+      alert(res.message);
+      if (res.success) {
+        logTerminal('Đã lưu cấu hình kết nối HRM tùy chỉnh.', 'success');
+        loadSyncConfig();
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-icons">save</span> <span>Lưu Cấu Hình Kết Nối</span>`;
+      alert('Lỗi lưu cấu hình: ' + err);
+    });
+}
+
+function resetHrmConfigToDefault() {
+  if (!confirm('Khôi phục các URL và tham số kết nối về giá trị mặc định chuẩn của HRM SMC?')) return;
+  document.getElementById('cfgHrmUrl').value = 'https://hrm.smcmfg.com.vn';
+  document.getElementById('cfgLoginEndpoint').value = 'https://hrm.smcmfg.com.vn/login';
+  document.getElementById('cfgAuthEndpoint').value = 'https://hrm.smcmfg.com.vn/Account/GetLogin_KiemTraLoginLanDau';
+  document.getElementById('cfgPortalEndpoint').value = 'https://hrm.smcmfg.com.vn/NghiPhep/DuyetPhep';
+  document.getElementById('cfgExportEndpoint').value = 'https://hrm.smcmfg.com.vn/Portal/NghiPhep/ExportDeDuyetNghiPhep';
+  document.getElementById('cfgDownloadEndpoint').value = 'https://hrm.smcmfg.com.vn/Download/ExcelDownload';
+  document.getElementById('cfgSyncInterval').value = '3';
+  document.getElementById('cfgAutoSync').checked = true;
+}
+
+function loadHrmAccounts() {
+  const tbody = document.getElementById('hrmAccountsTbody');
+  if (!tbody) return;
+
+  fetch('api/hrm_leave_sync.php?action=get_accounts')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success || !res.accounts || res.accounts.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">Chưa có tài khoản HRM nào. Vui lòng bấm "Thêm tài khoản".</td></tr>`;
+        return;
+      }
+
+      let html = '';
+      res.accounts.forEach(a => {
+        const isActive = (a.is_active == 1);
+        const statusBadge = isActive
+          ? `<span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1"><span class="material-icons align-middle" style="font-size:12px;">check_circle</span> Hoạt động</span>`
+          : `<span class="badge bg-secondary-subtle text-secondary border px-2 py-1"><span class="material-icons align-middle" style="font-size:12px;">pause</span> Tắt</span>`;
+
+        const safeName = escapeHtml(a.account_name || ('Tài khoản ' + a.username));
+        const safeUser = escapeHtml(a.username);
+
+        html += `
+          <tr>
+            <td style="text-align:center;" class="text-muted small">${a.id}</td>
+            <td>
+              <div class="fw-bold text-main">${safeName}</div>
+              <div class="text-muted" style="font-size:11px;">Lần cuối: ${a.last_sync_time || 'Chưa chạy'}</div>
+            </td>
+            <td><code class="fw-bold text-primary font-monospace">${safeUser}</code></td>
+            <td style="text-align:center;">${statusBadge}</td>
+            <td style="text-align:center;">
+              <div class="d-flex align-items-center justify-content-center gap-1">
+                <button class="app-btn app-btn-outline app-btn-xs text-info" type="button" onclick="testHrmAccount(${a.id}, '${safeUser.replace(/'/g, "\\'")}')" title="Kiểm tra kết nối & lấy token">
+                  <span class="material-icons" style="font-size:14px;">network_check</span>
+                </button>
+                <button class="app-btn app-btn-outline app-btn-xs text-primary" type="button" onclick="openHrmAccountModal(${a.id}, '${safeName.replace(/'/g, "\\'")}', '${safeUser.replace(/'/g, "\\'")}', ${a.is_active})" title="Sửa">
+                  <span class="material-icons" style="font-size:14px;">edit</span>
+                </button>
+                <button class="app-btn app-btn-outline app-btn-xs text-danger" type="button" onclick="deleteHrmAccount(${a.id}, '${safeUser.replace(/'/g, "\\'")}')" title="Xóa">
+                  <span class="material-icons" style="font-size:14px;">delete</span>
+                </button>
+              </div>
+            </td>
+          </tr>
+        `;
+      });
+      tbody.innerHTML = html;
+    })
+    .catch(err => {
+      tbody.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-danger">Lỗi tải tài khoản: ${err}</td></tr>`;
+    });
+}
+
+function openHrmAccountModal(id = 0, name = '', username = '', isActive = 1) {
+  document.getElementById('accFormId').value = id;
+  document.getElementById('accFormName').value = name;
+  document.getElementById('accFormUser').value = username;
+  document.getElementById('accFormPass').value = '';
+  document.getElementById('accFormActive').checked = (isActive == 1);
+
+  if (id > 0) {
+    document.getElementById('hrmAccountModalTitle').textContent = `Sửa Tài Khoản HRM [${username}]`;
+    document.getElementById('accPassRequired').style.display = 'none';
+    document.getElementById('accPassHelp').style.display = 'block';
+    document.getElementById('accFormPass').required = false;
+  } else {
+    document.getElementById('hrmAccountModalTitle').textContent = 'Thêm Tài Khoản HRM';
+    document.getElementById('accPassRequired').style.display = 'inline';
+    document.getElementById('accPassHelp').style.display = 'none';
+    document.getElementById('accFormPass').required = true;
+  }
+
+  const modalEl = document.getElementById('modalHrmAccount');
+  let modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (!modalInstance) {
+    modalInstance = new bootstrap.Modal(modalEl);
+  }
+  modalInstance.show();
+}
+
+function submitHrmAccount(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitHrmAccount');
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu...';
+
+  const fd = new FormData(document.getElementById('formHrmAccount'));
+  fd.append('action', 'save_account');
+  fd.set('is_active', document.getElementById('accFormActive').checked ? '1' : '0');
+
+  fetch('api/hrm_leave_sync.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = 'Lưu Tài Khoản';
+      alert(res.message);
+      if (res.success) {
+        const modalEl = document.getElementById('modalHrmAccount');
+        const inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+        loadHrmAccounts();
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = 'Lưu Tài Khoản';
+      alert('Lỗi: ' + err);
+    });
+}
+
+function deleteHrmAccount(id, username) {
+  if (!confirm(`Bạn có chắc chắn muốn xóa tài khoản HRM [${username}]?`)) return;
+
+  const fd = new FormData();
+  fd.append('action', 'delete_account');
+  fd.append('id', id);
+
+  fetch('api/hrm_leave_sync.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      alert(res.message);
+      if (res.success) {
+        loadHrmAccounts();
+      }
+    });
+}
+
+function testHrmAccount(id, username) {
+  logTerminal(`--- BẮT ĐẦU KIỂM TRA KẾT NỐI TÀI KHOẢN [${username}] ---`, 'info');
+  logTerminal(`Đang thực hiện quy trình đăng nhập, trích xuất Token và gọi Endpoint HRM...`, 'info');
+
+  const fd = new FormData();
+  fd.append('action', 'test_connection');
+  fd.append('account_id', id);
+
+  if (document.getElementById('cfgLoginEndpoint')) fd.append('login_endpoint', document.getElementById('cfgLoginEndpoint').value);
+  if (document.getElementById('cfgAuthEndpoint')) fd.append('auth_endpoint', document.getElementById('cfgAuthEndpoint').value);
+  if (document.getElementById('cfgPortalEndpoint')) fd.append('portal_endpoint', document.getElementById('cfgPortalEndpoint').value);
+  if (document.getElementById('cfgExportEndpoint')) fd.append('export_endpoint', document.getElementById('cfgExportEndpoint').value);
+  if (document.getElementById('cfgDownloadEndpoint')) fd.append('download_endpoint', document.getElementById('cfgDownloadEndpoint').value);
+
+  fetch('api/hrm_leave_sync.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      if (res.steps && res.steps.length > 0) {
+        res.steps.forEach(st => {
+          const type = (st.status === 'success') ? 'success' : ((st.status === 'error') ? 'error' : 'warning');
+          logTerminal(`[${st.account}] ${st.title} (${st.method} ${st.http_code ? st.http_code : ''}): ${st.detail}`, type);
+        });
+      }
+
+      if (res.urls_called && res.urls_called.length > 0) {
+        logTerminal(`CÁC URL HRM ĐÃ GỌI:`, 'info');
+        res.urls_called.forEach(u => logTerminal(`→ ${u}`, 'url'));
+      }
+
+      if (res.success) {
+        logTerminal(`KẾT QUẢ: ${res.message}`, 'success');
+        if (res.stats) {
+          logTerminal(`Dữ liệu thực tế: ${res.stats.updated || 0} bản ghi cập nhật, ${res.stats.inserted || 0} bản ghi thêm mới.`, 'success');
+        }
+        alert(res.message);
+        loadTimelineData();
+      } else {
+        logTerminal(`KẾT QUẢ THẤT BẠI: ${res.message}`, 'error');
+        alert(res.message);
+      }
+    })
+    .catch(err => {
+      logTerminal(`Lỗi gọi API: ${err}`, 'error');
+      alert('Lỗi kiểm tra kết nối: ' + err);
+    });
+}
+
+function triggerHrmSync() {
+  const btn = document.getElementById('btnTriggerSync');
+  const dFrom = document.getElementById('syncDateFrom').value;
+  const dTo = document.getElementById('syncDateTo').value;
+
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang đồng bộ...`;
+
+  logTerminal(`Bắt đầu đồng bộ phép nghỉ từ ngày ${dFrom} đến ngày ${dTo}...`, 'info');
+  logTerminal(`Đang gửi yêu cầu POST đến /Portal/NghiPhep/ExportDeDuyetNghiPhep...`, 'info');
+
+  const fd = new FormData();
+  fd.append('action', 'trigger_sync');
+  fd.append('date_from', dFrom);
+  fd.append('date_to', dTo);
+
+  fetch('api/hrm_leave_sync.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-icons">sync</span> <span>Bắt đầu Đồng Bộ HRM Ngay</span>`;
+
+      if (res.steps && res.steps.length > 0) {
+        res.steps.forEach(st => {
+          const type = (st.status === 'success') ? 'success' : ((st.status === 'error') ? 'error' : 'warning');
+          logTerminal(`[${st.account}] ${st.title} (${st.method} ${st.http_code ? st.http_code : ''}): ${st.detail}`, type);
+        });
+      }
+
+      if (res.urls_called && res.urls_called.length > 0) {
+        logTerminal(`--- CÁC ENDPOINT ĐÃ GỌI RA MÁY CHỦ HRM ---`, 'info');
+        res.urls_called.forEach(u => {
+          logTerminal(`→ ${u}`, 'url');
+        });
+      }
+
+      if (res.success) {
+        logTerminal(`KẾT QUẢ: ${res.message}`, 'success');
+        alert(res.message);
+        loadSyncConfig();
+        loadTimelineData();
+      } else {
+        logTerminal(`THẤT BẠI: ${res.message}`, 'error');
+        alert(res.message);
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-icons">sync</span> <span>Bắt đầu Đồng Bộ HRM Ngay</span>`;
+      logTerminal(`Lỗi gọi API: ${err}`, 'error');
+      alert('Lỗi kết nối: ' + err);
+    });
+}
+
+function handleManualExcelUpload(e) {
+  e.preventDefault();
+  const fileInput = document.getElementById('manualExcelFile');
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert('Vui lòng chọn file Excel.');
+    return;
+  }
+
+  const btn = document.getElementById('btnUploadExcel');
+  const alertBox = document.getElementById('uploadResultAlert');
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner-border spinner-border-sm me-1"></span> Đang nạp dữ liệu...`;
+
+  const fd = new FormData();
+  fd.append('action', 'upload_excel');
+  fd.append('excel_file', fileInput.files[0]);
+
+  fetch('api/hrm_leave_sync.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-icons">upload</span> <span>Bắt Đầu Nạp Dữ Liệu Excel</span>`;
+      alertBox.style.display = 'block';
+
+      if (res.success) {
+        alertBox.className = 'alert alert-success small mt-3';
+        alertBox.textContent = res.message;
+        document.getElementById('excelUploadForm').reset();
+        loadSyncConfig();
+        loadTimelineData();
+      } else {
+        alertBox.className = 'alert alert-danger small mt-3';
+        alertBox.textContent = res.message;
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.innerHTML = `<span class="material-icons">upload</span> <span>Bắt Đầu Nạp Dữ Liệu Excel</span>`;
+      alertBox.style.display = 'block';
+      alertBox.className = 'alert alert-danger small mt-3';
+      alertBox.textContent = 'Lỗi tải lên: ' + err;
+    });
+}
+
+function logTerminal(msg, type = 'info') {
+  const terminal = document.getElementById('syncTerminal');
+  const line = document.createElement('div');
+  line.className = 'log-line';
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+
+  let cls = '';
+  if (type === 'success') cls = 'log-success';
+  else if (type === 'warning') cls = 'log-warning';
+  else if (type === 'error') cls = 'log-error';
+  else if (type === 'url') cls = 'log-url';
+
+  line.innerHTML = `<span class="log-time">[${timeStr}]</span> <span class="${cls}">${msg}</span>`;
+  terminal.appendChild(line);
+  terminal.scrollTop = terminal.scrollHeight;
+}
+
+function clearSyncTerminal() {
+  document.getElementById('syncTerminal').innerHTML = '';
+}
+
+// ==========================================
+// 10. MA TRẬN PHÂN BỔ NHÓM LÀM VIỆC (KANBAN CARDS)
+// ==========================================
+function openWorkGroupMatrixModal() {
+  document.getElementById('matrixEmpSearch').value = '';
+  matrixSelectedCodes = [];
+  updateMatrixSelectedCount();
+
+  const modalEl = document.getElementById('modalWorkGroupMatrix');
+  let modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (!modalInstance) {
+    modalInstance = new bootstrap.Modal(modalEl);
+  }
+  modalInstance.show();
+  loadWorkGroupMatrixData();
+}
+
+function loadWorkGroupMatrixData() {
+  const container = document.getElementById('matrixBoardContainer');
+  container.innerHTML = `
+    <div class="text-center py-5 text-muted w-100">
+      <div class="spinner-border spinner-border-sm text-primary mb-2"></div>
+      <div>Đang tải ma trận phân bổ...</div>
+    </div>`;
+
+  fetch('api/hrm_leave.php?action=get_group_allocations')
+    .then(r => r.json())
+    .then(res => {
+      if (!res.success) {
+        container.innerHTML = `<div class="alert alert-danger w-100">${res.message || 'Lỗi tải ma trận'}</div>`;
+        return;
+      }
+      matrixAllocations = res.groups || [];
+      document.getElementById('matrixTotalEmpsBadge').textContent = `${res.total_employees || 0} nhân sự`;
+      renderWorkGroupMatrixBoard(matrixAllocations);
+    })
+    .catch(err => {
+      container.innerHTML = `<div class="alert alert-danger w-100">Lỗi kết nối máy chủ: ${err}</div>`;
+    });
+}
+
+function renderWorkGroupMatrixBoard(groups) {
+  const container = document.getElementById('matrixBoardContainer');
+  if (!groups || groups.length === 0) {
+    container.innerHTML = `<div class="text-center py-5 text-muted w-100">Không có dữ liệu nhóm</div>`;
+    return;
+  }
+
+  let html = '';
+  groups.forEach(g => {
+    let grpBadgeClass = 'badge-wg-khac';
+    const gn = (g.group_name || '').toLowerCase();
+    if (gn.includes('tu')) grpBadgeClass = 'badge-wg-dun_tu';
+    else if (gn.includes('đùn t') || gn.includes('t extrusion')) grpBadgeClass = 'badge-wg-dun_t';
+    else if (gn.includes('thiết bị')) grpBadgeClass = 'badge-wg-thiet_bi';
+    else if (gn.includes('shotblast') || gn.includes('bắn cát')) grpBadgeClass = 'badge-wg-shotblast';
+    else if (gn.includes('nghiền')) grpBadgeClass = 'badge-wg-nghien_nhua';
+
+    const safeGroupName = escapeHtml(g.group_name);
+    const safeAttrGroup = safeGroupName.replace(/"/g, '&quot;');
+    const color = g.color_code || '#64748b';
+
+    html += `
+      <div class="workgroup-column" data-group-name="${safeAttrGroup}" ondragover="handleMatrixColDragOver(event)" ondragleave="handleMatrixColDragLeave(event)" ondrop="handleMatrixColDrop(event, '${safeGroupName.replace(/'/g, "\\'")}')">
+        <div class="workgroup-col-header" style="border-bottom-color: ${color}; color: ${color}; background: rgba(0,0,0,0.02);">
+          <div class="d-flex align-items-center gap-2">
+            <span class="material-icons" style="font-size: 18px;">view_week</span>
+            <span class="wg-header-title">${safeGroupName}</span>
+          </div>
+          <div class="d-flex align-items-center gap-1">
+            <span class="badge rounded-pill bg-light text-dark border fw-bold grp-count-badge" id="badgeCount_${sanitizeId(g.group_name)}">${g.count} NV</span>
+          </div>
+        </div>
+        <div class="workgroup-col-body" id="colBody_${sanitizeId(g.group_name)}">
+    `;
+
+    if (!g.employees || g.employees.length === 0) {
+      html += `<div class="text-center py-4 text-muted small empty-col-msg">Kéo thả nhân sự vào đây</div>`;
+    } else {
+      g.employees.forEach(e => {
+        const isSelected = matrixSelectedCodes.includes(e.employee_code);
+        const safeName = escapeHtml(e.full_name);
+        const safeCode = escapeHtml(e.employee_code);
+
+        html += `
+          <div class="emp-matrix-card" id="matrixCard_${safeCode}" draggable="true" 
+               ondragstart="handleMatrixCardDragStart(event, '${safeCode}', '${safeGroupName.replace(/'/g, "\\'")}')" 
+               ondragend="handleMatrixCardDragEnd(event)" 
+               data-code="${safeCode.toLowerCase()}" 
+               data-name="${safeName.toLowerCase()}" 
+               data-group="${safeGroupName}">
+            <div class="d-flex align-items-center justify-content-between gap-1">
+              <div class="d-flex align-items-center gap-2">
+                <input class="form-check-input matrix-card-chk m-0" type="checkbox" value="${safeCode}" onchange="toggleMatrixCardSelect(this, '${safeCode}')" ${isSelected ? 'checked' : ''}>
+                <span class="emp-code-badge">${safeCode}</span>
+              </div>
+              <button class="btn btn-link btn-xs p-0 text-muted hover-primary" type="button" onclick="quickChangeWorkGroup('${safeCode}', '${safeGroupName.replace(/'/g, "\\'")}', '${safeName.replace(/'/g, "\\'")}')" title="Chuyển sang nhóm khác">
+                <span class="material-icons" style="font-size: 15px;">swap_horiz</span>
+              </button>
+            </div>
+            <div class="fw-bold small text-main mt-1 emp-card-name">${safeName}</div>
+            <div class="cost-center-badge mt-1 d-flex align-items-center justify-content-between">
+              <span>CC: ${escapeHtml(e.cost_center || '-')}</span>
+              <span class="text-muted" style="font-size:10px;"><span class="material-icons align-middle" style="font-size:11px;">drag_indicator</span> Kéo thẻ</span>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    html += `
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+}
+
+function handleMatrixCardDragStart(e, code, fromGroup) {
+  draggedEmpCode = code;
+  draggedFromGroup = fromGroup;
+  e.dataTransfer.setData('text/plain', code);
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+
+function handleMatrixCardDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.workgroup-column').forEach(c => c.classList.remove('drag-over'));
+  draggedEmpCode = null;
+  draggedFromGroup = null;
+}
+
+function handleMatrixColDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  const col = e.currentTarget;
+  if (!col.classList.contains('drag-over')) {
+    col.classList.add('drag-over');
+  }
+}
+
+function handleMatrixColDragLeave(e) {
+  const col = e.currentTarget;
+  if (!col.contains(e.relatedTarget)) {
+    col.classList.remove('drag-over');
+  }
+}
+
+function handleMatrixColDrop(e, targetGroupName) {
+  e.preventDefault();
+  const col = e.currentTarget;
+  col.classList.remove('drag-over');
+
+  const empCode = draggedEmpCode || e.dataTransfer.getData('text/plain');
+  if (!empCode) return;
+
+  if (draggedFromGroup === targetGroupName) {
+    return;
+  }
+
+  updateEmployeeWorkGroup(empCode, targetGroupName);
+}
+
+function updateEmployeeWorkGroup(target, newGroup) {
+  const fd = new FormData();
+  fd.append('action', 'update_employee_work_group');
+  fd.append('work_group', newGroup);
+
+  if (Array.isArray(target)) {
+    target.forEach(c => fd.append('employee_codes[]', c));
+  } else {
+    fd.append('employee_code', target);
+  }
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      if (res.success) {
+        loadWorkGroupMatrixData();
+        loadTimelineData();
+        if (document.getElementById('tabContentPlans').style.display !== 'none') {
+          loadPlansData(currentPlanPage);
+        }
+      } else {
+        alert(res.message || 'Lỗi cập nhật nhóm');
+      }
+    })
+    .catch(err => {
+      alert('Lỗi kết nối: ' + err);
+    });
+}
+
+function toggleMatrixCardSelect(cb, code) {
+  if (cb.checked) {
+    if (!matrixSelectedCodes.includes(code)) matrixSelectedCodes.push(code);
+  } else {
+    matrixSelectedCodes = matrixSelectedCodes.filter(c => c !== code);
+  }
+  updateMatrixSelectedCount();
+}
+
+function updateMatrixSelectedCount() {
+  const el = document.getElementById('matrixSelectedCount');
+  if (el) el.textContent = `Đã chọn: ${matrixSelectedCodes.length} NV`;
+}
+
+function submitBulkMatrixMove() {
+  const targetGroup = document.getElementById('matrixBulkTargetGroup').value;
+  if (!targetGroup) {
+    alert('Vui lòng chọn nhóm làm việc cần chuyển đến.');
+    document.getElementById('matrixBulkTargetGroup').focus();
+    return;
+  }
+  if (matrixSelectedCodes.length === 0) {
+    alert('Vui lòng tích chọn ít nhất một nhân viên qua checkbox trên thẻ.');
+    return;
+  }
+
+  if (!confirm(`Bạn có chắc chắn muốn chuyển ${matrixSelectedCodes.length} nhân sự đã chọn sang nhóm [${targetGroup}]?`)) {
+    return;
+  }
+
+  const codes = [...matrixSelectedCodes];
+  updateEmployeeWorkGroup(codes, targetGroup);
+  matrixSelectedCodes = [];
+  updateMatrixSelectedCount();
+}
+
+function filterMatrixCards(kw) {
+  kw = (kw || '').trim().toLowerCase();
+  const columns = document.querySelectorAll('.workgroup-column');
+
+  columns.forEach(col => {
+    const cards = col.querySelectorAll('.emp-matrix-card');
+    let visibleCount = 0;
+
+    cards.forEach(card => {
+      const code = card.getAttribute('data-code') || '';
+      const name = card.getAttribute('data-name') || '';
+
+      if (!kw || code.includes(kw) || name.includes(kw)) {
+        card.style.display = '';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    const badge = col.querySelector('.grp-count-badge');
+    if (badge) {
+      badge.textContent = `${visibleCount} NV`;
+    }
+  });
+}
+
+function quickChangeWorkGroup(empCode, currentGroup, empName) {
+  document.getElementById('quickEmpCode').value = empCode;
+  document.getElementById('quickEmpName').textContent = `${empName} (${empCode})`;
+
+  const sel = document.getElementById('quickNewGroup');
+  if (sel) {
+    let found = false;
+    for (let i = 0; i < sel.options.length; i++) {
+      if (sel.options[i].value === currentGroup) {
+        sel.selectedIndex = i;
+        found = true;
+        break;
+      }
+    }
+    if (!found && currentGroup) {
+      const opt = document.createElement('option');
+      opt.value = currentGroup;
+      opt.textContent = currentGroup;
+      opt.selected = true;
+      sel.appendChild(opt);
+    }
+  }
+
+  const modalEl = document.getElementById('modalQuickChangeGroup');
+  let modalInstance = bootstrap.Modal.getInstance(modalEl);
+  if (!modalInstance) {
+    modalInstance = new bootstrap.Modal(modalEl);
+  }
+  modalInstance.show();
+}
+
+function submitQuickChangeGroup(e) {
+  e.preventDefault();
+  const code = document.getElementById('quickEmpCode').value;
+  const newGroup = document.getElementById('quickNewGroup').value;
+
+  if (!code || !newGroup) return;
+
+  const btn = document.getElementById('btnSubmitQuickChange');
+  btn.disabled = true;
+  btn.textContent = 'Đang lưu...';
+
+  const fd = new FormData();
+  fd.append('action', 'update_employee_work_group');
+  fd.append('employee_code', code);
+  fd.append('work_group', newGroup);
+
+  fetch('api/hrm_leave.php', { method: 'POST', body: fd })
+    .then(r => r.json())
+    .then(res => {
+      btn.disabled = false;
+      btn.textContent = 'Cập nhật';
+
+      if (res.success) {
+        const modalEl = document.getElementById('modalQuickChangeGroup');
+        const inst = bootstrap.Modal.getInstance(modalEl);
+        if (inst) inst.hide();
+
+        loadTimelineData();
+        if (document.getElementById('tabContentPlans').style.display !== 'none') {
+          loadPlansData(currentPlanPage);
+        }
+        const matrixModal = document.getElementById('modalWorkGroupMatrix');
+        if (matrixModal && matrixModal.classList.contains('show')) {
+          loadWorkGroupMatrixData();
+        }
+      } else {
+        alert(res.message || 'Lỗi cập nhật');
+      }
+    })
+    .catch(err => {
+      btn.disabled = false;
+      btn.textContent = 'Cập nhật';
+      alert('Lỗi kết nối: ' + err);
+    });
+}
+
+function sanitizeId(str) {
+  return (str || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+</script>

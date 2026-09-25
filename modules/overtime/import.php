@@ -39,6 +39,10 @@ requirePermission('overtime.import');
       <div class="d-flex align-items-center gap-2">
         <span class="badge bg-secondary" id="hrmLastStatusBadge">Đang kiểm tra...</span>
         <span class="text-muted small" id="hrmLastSyncTimeText"></span>
+        <span class="badge bg-primary-subtle text-primary border font-monospace ms-1 d-inline-flex align-items-center gap-1" id="importHrmCountdownBadge" title="Thời gian tự động đồng bộ kế tiếp">
+          <span class="material-icons" style="font-size:13px;">timer</span>
+          <span id="importHrmCountdownText">--:--:--</span>
+        </span>
         <button class="app-btn app-btn-secondary btn-sm ms-2" type="button" onclick="openAddAccountModal()">
           <span class="material-icons fs-6">person_add</span> Thêm Tài Khoản HRM
         </button>
@@ -426,6 +430,18 @@ async function loadHrmSyncConfig() {
     if (document.getElementById('hrmAutoSyncEnabled')) document.getElementById('hrmAutoSyncEnabled').checked = !!gc.auto_sync_enabled;
     if (document.getElementById('hrmSyncDateFrom') && gc.sync_date_from) document.getElementById('hrmSyncDateFrom').value = gc.sync_date_from;
     if (document.getElementById('hrmSyncDateTo') && gc.sync_date_to) document.getElementById('hrmSyncDateTo').value = gc.sync_date_to;
+
+    fetch('api/overtime_hrm_sync.php?action=check_schedule')
+      .then(r => r.json())
+      .then(d => {
+        if (d.seconds_remaining !== undefined && d.auto_sync_enabled) {
+          startImportCountdown(d.seconds_remaining);
+        } else if (!d.auto_sync_enabled) {
+          const cdText = document.getElementById('importHrmCountdownText');
+          if (cdText) cdText.textContent = 'Đã tắt';
+        }
+      })
+      .catch(console.error);
 
     // 3. Render bảng danh sách tài khoản
     const tbody = document.getElementById('hrmAccountsTableBody');
@@ -989,6 +1005,48 @@ async function openBatchLogs(batchId, batchCode) {
   } catch (err) {
     console.error('Lỗi openBatchLogs:', err);
   }
+}
+
+let importCountdownInterval = null;
+let importRemainingSec = 0;
+
+function startImportCountdown(sec) {
+  importRemainingSec = Math.max(0, parseInt(sec) || 0);
+  const cdText = document.getElementById('importHrmCountdownText');
+  if (!cdText) return;
+
+  if (importCountdownInterval) clearInterval(importCountdownInterval);
+
+  function renderImportCd() {
+    const h = Math.floor(importRemainingSec / 3600);
+    const m = Math.floor((importRemainingSec % 3600) / 60);
+    const s = importRemainingSec % 60;
+    cdText.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  renderImportCd();
+  importCountdownInterval = setInterval(() => {
+    importRemainingSec--;
+    if (importRemainingSec <= 0) {
+      clearInterval(importCountdownInterval);
+      cdText.textContent = 'Đang đồng bộ...';
+      fetch('api/overtime_hrm_sync.php?action=check_schedule')
+        .then(r => r.json())
+        .then(d => {
+          if (d.ran_sync) {
+            loadHrmGlobalConfig();
+          }
+          if (d.seconds_remaining !== undefined && d.auto_sync_enabled) {
+            startImportCountdown(d.seconds_remaining);
+          } else if (!d.auto_sync_enabled) {
+            cdText.textContent = 'Đã tắt';
+          }
+        })
+        .catch(console.error);
+    } else {
+      renderImportCd();
+    }
+  }, 1000);
 }
 
 function escapeHtml(str) {

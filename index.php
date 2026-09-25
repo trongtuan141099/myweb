@@ -37,7 +37,8 @@ $route_permissions = [
     'hrm' => [
         'list'                => 'hrm.view',
         'add_employee'        => 'hrm.manage',
-        'inventory_org_chart' => 'hrm.view'
+        'inventory_org_chart' => 'hrm.view',
+        'leave_management'    => 'hrm.view'
     ],
     'document' => [
         'viewer' => 'document.view'

@@ -762,20 +762,34 @@ try {
         case 'cron':
         case 'check_schedule':
             $globalCfg = loadGlobalHrmConfig($configFile);
+            $intervalSec = intval($globalCfg['sync_interval_hours'] ?? 3) * 3600;
+            $lastTime = !empty($globalCfg['last_sync_time']) ? strtotime($globalCfg['last_sync_time']) : 0;
+            $timeSince = ($lastTime > 0) ? (time() - $lastTime) : 99999999;
+            $secondsRemaining = max(0, $intervalSec - $timeSince);
+            $nextSyncTime = date('Y-m-d H:i:s', ($lastTime > 0 ? $lastTime : time()) + $intervalSec);
+
             if (empty($globalCfg['auto_sync_enabled'])) {
-                echo json_encode(['success' => true, 'ran_sync' => false, 'message' => 'Tính năng tự động đồng bộ đang tắt.']);
+                echo json_encode([
+                    'success'           => true,
+                    'ran_sync'          => false,
+                    'auto_sync_enabled' => false,
+                    'seconds_remaining' => -1,
+                    'next_sync_time'    => null,
+                    'last_sync_time'    => $globalCfg['last_sync_time'] ?? null,
+                    'message'           => 'Tính năng tự động đồng bộ đang tắt.'
+                ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
-            $intervalSec = intval($globalCfg['sync_interval_hours'] ?? 3) * 3600;
-            $lastTime = !empty($globalCfg['last_sync_time']) ? strtotime($globalCfg['last_sync_time']) : 0;
-            $timeSince = time() - $lastTime;
-
-            if ($timeSince < $intervalSec) {
+            if ($action === 'check_schedule' && $timeSince < $intervalSec) {
                 $nextInMin = ceil(($intervalSec - $timeSince) / 60);
                 echo json_encode([
                     'success'                  => true,
                     'ran_sync'                 => false,
+                    'needs_sync'               => false,
+                    'auto_sync_enabled'        => true,
+                    'seconds_remaining'        => $secondsRemaining,
+                    'next_sync_time'           => $nextSyncTime,
                     'message'                  => "Chưa đến lịch đồng bộ tiếp theo (còn khoảng {$nextInMin} phút).",
                     'last_sync_time'           => $globalCfg['last_sync_time'],
                     'last_sync_time_formatted' => formatVnDateTime($globalCfg['last_sync_time']),
@@ -811,6 +825,10 @@ try {
             echo json_encode([
                 'success'                  => true,
                 'ran_sync'                 => true,
+                'auto_sync_enabled'        => true,
+                'seconds_remaining'        => $intervalSec,
+                'next_sync_time'           => date('Y-m-d H:i:s', time() + $intervalSec),
+                'interval_hours'           => $globalCfg['sync_interval_hours'],
                 'message'                  => $globalCfg['last_sync_message'],
                 'last_sync_time'           => $nowVn,
                 'last_sync_time_formatted' => formatVnDateTime($nowVn),

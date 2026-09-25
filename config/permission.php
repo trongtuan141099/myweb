@@ -79,6 +79,20 @@ return array (
       69 => 'api.overtime.explain',
       70 => 'api.overtime.yearly',
       71 => 'api.overtime.export',
+      72 => 'hrm.leave_view',
+      73 => 'hrm.leave_manage',
+      74 => 'api.hrm.leave',
+      75 => 'hrm.leave_plan',
+      76 => 'hrm.leave_approve',
+      77 => 'hrm.leave_group_manage',
+      78 => 'hrm.leave_sync',
+      79 => 'api.hrm.leave_timeline',
+      80 => 'api.hrm.leave_dashboard',
+      81 => 'api.hrm.leave_summary',
+      82 => 'api.hrm.leave_plan',
+      83 => 'api.hrm.leave_approve',
+      84 => 'api.hrm.leave_group',
+      85 => 'api.hrm.leave_sync',
     ),
     'editor' => 
     array (
@@ -144,6 +158,20 @@ return array (
       59 => 'api.overtime.explain',
       60 => 'api.overtime.yearly',
       61 => 'api.overtime.export',
+      62 => 'hrm.leave_view',
+      63 => 'hrm.leave_manage',
+      64 => 'api.hrm.leave',
+      65 => 'hrm.leave_plan',
+      66 => 'hrm.leave_approve',
+      67 => 'hrm.leave_group_manage',
+      68 => 'hrm.leave_sync',
+      69 => 'api.hrm.leave_timeline',
+      70 => 'api.hrm.leave_dashboard',
+      71 => 'api.hrm.leave_summary',
+      72 => 'api.hrm.leave_plan',
+      73 => 'api.hrm.leave_approve',
+      74 => 'api.hrm.leave_group',
+      75 => 'api.hrm.leave_sync',
     ),
     'viewer' => 
     array (
@@ -178,6 +206,10 @@ return array (
       28 => 'api.overtime.dashboard',
       29 => 'api.overtime.reconcile',
       30 => 'api.overtime.yearly',
+      31 => 'hrm.leave_view',
+      32 => 'api.hrm.leave_timeline',
+      33 => 'api.hrm.leave_dashboard',
+      34 => 'api.hrm.leave_summary',
     ),
   ),
   'permission_catalog' => 
@@ -265,6 +297,8 @@ return array (
       array (
         'hrm.view' => 'Xem danh sách nhân sự & sơ đồ kiểm kê',
         'hrm.manage' => 'Thêm mới nhân sự & cập nhật sơ đồ kiểm kê',
+        'hrm.leave_view' => 'Xem ma trận timeline & lịch nghỉ phép lao động',
+        'hrm.leave_manage' => 'Đăng ký & phê duyệt phép kế hoạch, đồng bộ phép HRM',
       ),
     ),
     'system' => 
@@ -288,6 +322,19 @@ return array (
         'overtime.explain' => 'Quản lý & xét duyệt phiếu giải trình',
         'overtime.yearly' => 'Tra cứu & kiểm soát lũy kế 200 giờ/năm',
         'overtime.export' => 'Xuất báo cáo dữ liệu tăng ca ra Excel',
+      ),
+    ),
+    'hrm_leave' => 
+    array (
+      'name' => 'Quản lý Nghỉ Phép & Phân Bổ (Leave Management)',
+      'icon' => 'event_busy',
+      'permissions' => 
+      array (
+        'hrm.leave_view' => 'Xem ma trận timeline, quân số nhóm & dashboard nghỉ phép',
+        'hrm.leave_plan' => 'Đăng ký & tạo mới đơn phép kế hoạch lao động',
+        'hrm.leave_approve' => 'Xét duyệt hoặc từ chối các đơn phép kế hoạch của nhân viên',
+        'hrm.leave_group_manage' => 'Quản lý phân bổ nhóm làm việc, điều chỉnh & cấu hình ca',
+        'hrm.leave_sync' => 'Kích hoạt đồng bộ tự động từ máy chủ HRM & Import Excel',
       ),
     ),
   ),
@@ -557,6 +604,12 @@ return array (
           'endpoint' => 'api/inventory_org_chart.php',
           'method' => 'POST',
         ),
+        'api.hrm.leave' => 
+        array (
+          'name' => 'Quản lý phép nghỉ & API đồng bộ dữ liệu HRM',
+          'endpoint' => 'api/hrm_leave.php',
+          'method' => 'GET/POST',
+        ),
       ),
     ),
     'system' => 
@@ -626,6 +679,56 @@ return array (
           'name' => 'Xuất dữ liệu đối soát ra Excel',
           'endpoint' => 'api/overtime_export.php',
           'method' => 'GET',
+        ),
+      ),
+    ),
+    'hrm_leave' => 
+    array (
+      'name' => 'Quản lý Nghỉ Phép API (Leave Management API)',
+      'icon' => 'event_busy',
+      'apis' => 
+      array (
+        'api.hrm.leave_timeline' => 
+        array (
+          'name' => 'Truy vấn ma trận timeline và quân số làm việc theo nhóm',
+          'endpoint' => 'api/hrm_leave.php?action=get_timeline',
+          'method' => 'GET',
+        ),
+        'api.hrm.leave_dashboard' => 
+        array (
+          'name' => 'Thống kê tổng quan KPI, xu hướng và cơ cấu nghỉ phép (Dashboard)',
+          'endpoint' => 'api/hrm_leave.php?action=get_dashboard',
+          'method' => 'GET',
+        ),
+        'api.hrm.leave_summary' => 
+        array (
+          'name' => 'Tổng hợp toàn bộ dữ liệu phép đã duyệt từ HRM & ma trận 12 tháng',
+          'endpoint' => 'api/hrm_leave.php?action=get_hrm_summary',
+          'method' => 'GET',
+        ),
+        'api.hrm.leave_plan' => 
+        array (
+          'name' => 'Tạo mới và xóa đơn phép kế hoạch nghỉ của nhân viên',
+          'endpoint' => 'api/hrm_leave.php?action=create_plan',
+          'method' => 'POST',
+        ),
+        'api.hrm.leave_approve' => 
+        array (
+          'name' => 'Phê duyệt hoặc từ chối đơn phép kế hoạch (Đơn lẻ & Hàng loạt)',
+          'endpoint' => 'api/hrm_leave.php?action=approve_plan',
+          'method' => 'POST',
+        ),
+        'api.hrm.leave_group' => 
+        array (
+          'name' => 'Phân bổ nhóm làm việc, điều chỉnh ca làm việc cho nhân viên',
+          'endpoint' => 'api/hrm_leave.php?action=update_employee_work_group',
+          'method' => 'POST',
+        ),
+        'api.hrm.leave_sync' => 
+        array (
+          'name' => 'Kích hoạt đồng bộ tự động từ cổng HRM hoặc upload file Excel',
+          'endpoint' => 'api/hrm_leave_sync.php',
+          'method' => 'POST',
         ),
       ),
     ),
