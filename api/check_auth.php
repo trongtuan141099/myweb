@@ -2,19 +2,25 @@
 /**
  * Kiểm tra xem người dùng đã đăng nhập hay chưa
  */
-
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
-if (isset($_SESSION['user_id'])) {
+$userId = $_SESSION['user_id'] ?? ($_SESSION['user']['id'] ?? null);
+
+if ($userId) {
     echo json_encode([
         'authenticated' => true,
         'user' => [
-            'id' => $_SESSION['user_id'],
-            'username' => $_SESSION['username'],
-            'email' => $_SESSION['email'],
-            'fullname' => $_SESSION['fullname']
+            'id' => (int)$userId,
+            'username' => $_SESSION['username'] ?? ($_SESSION['user']['username'] ?? 'User'),
+            'email' => $_SESSION['email'] ?? ($_SESSION['user']['email'] ?? ''),
+            'fullname' => $_SESSION['fullname'] ?? ($_SESSION['user']['fullname'] ?? 'User')
         ]
     ]);
 } else {
@@ -23,4 +29,3 @@ if (isset($_SESSION['user_id'])) {
         'message' => 'Chưa đăng nhập'
     ]);
 }
-?>

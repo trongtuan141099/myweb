@@ -1,7 +1,11 @@
 <?php
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
-requireApiPermission(['mixer.view', 'api.mixer.export']);
+
+// Hỗ trợ xuất dữ liệu nhanh không bắt buộc đăng nhập
+if (isset($_SESSION['user_id']) || isset($_SESSION['user'])) {
+    syncUserAuth();
+}
 
 $where = ["1=1"];
 $params = [];

@@ -1,13 +1,18 @@
 <?php
 ob_start();
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
 error_reporting(0);
 ini_set('display_errors', 0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
     require_once __DIR__ . '/../core/check_permission.php';
-    requireApiPermission(['materials.view', 'api.materials.get_viscosity']);
+
+    // Hỗ trợ truy cập nhanh tra cứu dữ liệu không cần đăng nhập
+    if (isset($_SESSION['user_id']) || isset($_SESSION['user'])) {
+        syncUserAuth();
+    }
 
     $page      = (int)($_GET['page'] ?? 1);
     $limit     = (int)($_GET['limit'] ?? 50);

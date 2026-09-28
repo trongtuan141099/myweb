@@ -93,6 +93,18 @@ return array (
       83 => 'api.hrm.leave_approve',
       84 => 'api.hrm.leave_group',
       85 => 'api.hrm.leave_sync',
+      86 => 'warehouse.view',
+      87 => 'warehouse.create',
+      88 => 'warehouse.check',
+      89 => 'warehouse.approve',
+      90 => 'warehouse.issue',
+      91 => 'warehouse.handover',
+      92 => 'warehouse.manage',
+      93 => 'warehouse.settings',
+      94 => 'api.warehouse.get',
+      95 => 'api.warehouse.create',
+      96 => 'api.warehouse.approve',
+      97 => 'api.warehouse.manage',
     ),
     'editor' => 
     array (
@@ -172,6 +184,14 @@ return array (
       73 => 'api.hrm.leave_approve',
       74 => 'api.hrm.leave_group',
       75 => 'api.hrm.leave_sync',
+      76 => 'warehouse.view',
+      77 => 'warehouse.create',
+      78 => 'warehouse.check',
+      79 => 'warehouse.approve',
+      80 => 'warehouse.handover',
+      81 => 'api.warehouse.get',
+      82 => 'api.warehouse.create',
+      83 => 'api.warehouse.approve',
     ),
     'viewer' => 
     array (
@@ -210,6 +230,8 @@ return array (
       32 => 'api.hrm.leave_timeline',
       33 => 'api.hrm.leave_dashboard',
       34 => 'api.hrm.leave_summary',
+      35 => 'warehouse.view',
+      36 => 'api.warehouse.get',
     ),
   ),
   'permission_catalog' => 
@@ -335,6 +357,22 @@ return array (
         'hrm.leave_approve' => 'Xét duyệt hoặc từ chối các đơn phép kế hoạch của nhân viên',
         'hrm.leave_group_manage' => 'Quản lý phân bổ nhóm làm việc, điều chỉnh & cấu hình ca',
         'hrm.leave_sync' => 'Kích hoạt đồng bộ tự động từ máy chủ HRM & Import Excel',
+      ),
+    ),
+    'warehouse' => 
+    array (
+      'name' => 'Quản lý Kho (Xuất vật tư)',
+      'icon' => 'inventory_2',
+      'permissions' => 
+      array (
+        'warehouse.view' => 'Xem danh mục vật tư, phiếu xuất kho và dashboard',
+        'warehouse.create' => 'Tạo phiếu yêu cầu xuất vật tư (tiêu hao & bất thường)',
+        'warehouse.check' => 'Thẩm định & phê duyệt ở bước Người kiểm tra',
+        'warehouse.approve' => 'Xét duyệt ở bước Quản lý phê duyệt',
+        'warehouse.issue' => 'Xác nhận xuất kho & trừ tồn kho thực tế (Admin/Thủ kho)',
+        'warehouse.handover' => 'Xác nhận bàn giao & nhận vật tư hiện trường',
+        'warehouse.manage' => 'Cập nhật tồn kho thực tế, ngưỡng an toàn ROP & MOQ',
+        'warehouse.settings' => 'Cấu hình danh sách người phê duyệt theo cấp và nhóm',
       ),
     ),
   ),
@@ -728,6 +766,38 @@ return array (
         array (
           'name' => 'Kích hoạt đồng bộ tự động từ cổng HRM hoặc upload file Excel',
           'endpoint' => 'api/hrm_leave_sync.php',
+          'method' => 'POST',
+        ),
+      ),
+    ),
+    'warehouse' => 
+    array (
+      'name' => 'Quản lý Kho & Xuất Vật Tư API',
+      'icon' => 'inventory_2',
+      'apis' => 
+      array (
+        'api.warehouse.get' => 
+        array (
+          'name' => 'Truy vấn danh mục vật tư, lịch sử 3 tháng, phiếu xuất, dashboard',
+          'endpoint' => 'api/warehouse.php?action=get_materials',
+          'method' => 'GET',
+        ),
+        'api.warehouse.create' => 
+        array (
+          'name' => 'Tạo mới phiếu yêu cầu xuất kho (tiêu hao & bất thường)',
+          'endpoint' => 'api/warehouse.php?action=create_issue',
+          'method' => 'POST',
+        ),
+        'api.warehouse.approve' => 
+        array (
+          'name' => 'Thực hiện phê duyệt, xuất kho & xác nhận bàn giao theo quy trình 5 bước',
+          'endpoint' => 'api/warehouse.php?action=approve_step',
+          'method' => 'POST',
+        ),
+        'api.warehouse.manage' => 
+        array (
+          'name' => 'Cập nhật tồn kho, cấu hình người duyệt, xử lý cảnh báo ROP',
+          'endpoint' => 'api/warehouse.php?action=update_stock',
           'method' => 'POST',
         ),
       ),

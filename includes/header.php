@@ -1,3 +1,6 @@
+<?php
+$is_guest = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
+?>
 <!-- MAIN WRAPPER START -->
 <div class="main-wrapper">
   <header class="top-header">
@@ -7,6 +10,7 @@
     </button>
 
     <div class="header-actions">
+      <?php if (!$is_guest): ?>
       <!-- Menu Thông báo 5S real-time -->
       <div class="notification-menu">
         <button class="header-icon-btn" type="button" id="notificationToggle" aria-label="Thông báo" aria-expanded="false">
@@ -26,12 +30,14 @@
           </a>
         </div>
       </div>
+      <?php endif; ?>
 
       <!-- Nút đổi Theme 1 chạm nhanh trên headbar -->
       <button class="header-icon-btn" type="button" id="themeQuickToggle" onclick="toggleTheme(event)" title="Chuyển chế độ Sáng / Tối" aria-label="Đổi giao diện">
         <span class="material-icons" id="themeQuickIcon">dark_mode</span>
       </button>
 
+      <?php if (!$is_guest): ?>
       <!-- Menu Người dùng & Đăng xuất -->
       <div class="user-menu">
         <button class="user-menu-toggle" type="button" id="userMenuToggle" aria-expanded="false">
@@ -68,12 +74,24 @@
           </button>
         </div>
       </div>
+      <?php else: ?>
+      <!-- Nút Đăng nhập dành cho Khách truy cập tiện ích -->
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge bg-primary-subtle text-primary d-none d-sm-inline-flex align-items-center gap-1" style="font-size: 12px; padding: 6px 10px; border-radius: 6px;">
+          <span class="material-icons" style="font-size: 15px;">bolt</span> Khách / Tiện ích nhanh
+        </span>
+        <a href="index.php?mainpage=authentication&subpage=login" class="app-btn app-btn-primary app-btn-sm" style="display: inline-flex; align-items: center; gap: 6px; text-decoration: none; padding: 6px 14px; font-weight: 600; border-radius: 6px;">
+          <span class="material-icons" style="font-size: 16px;">login</span> Đăng nhập
+        </a>
+      </div>
+      <?php endif; ?>
     </div>
   </header>
 
   <!-- CONTENT AREA START (Chứa nội dung của module) -->
   <main class="content-area">
 
+  <?php if (!$is_guest): ?>
   <script>
     (function () {
       const notificationToggle = document.getElementById('notificationToggle');
@@ -166,3 +184,4 @@
         });
     }());
   </script>
+  <?php endif; ?>

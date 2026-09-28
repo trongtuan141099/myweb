@@ -5,12 +5,13 @@
  */
 $current_main = $mainpage ?? ($_GET['mainpage'] ?? 'dashboard');
 $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
+$is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
 ?>
 
 <aside class="sidebar" id="sidebar">
   <!-- Sidebar Header / Brand Logo -->
   <div class="sidebar-header">
-    <a href="index.php?mainpage=dashboard&subpage=overview" class="sidebar-logo">
+    <a href="<?= $is_guest ? 'index.php?mainpage=materials&subpage=viscoscity' : 'index.php?mainpage=dashboard&subpage=overview' ?>" class="sidebar-logo">
       <div class="logo-badge">DX</div>
       <span class="logo-text">Plastic Group</span>
     </a>
@@ -21,6 +22,45 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
 
   <!-- Sidebar Navigation Menu -->
   <nav class="sidebar-menu">
+    <?php if ($is_guest): ?>
+    <div style="padding: 10px 16px 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--dx-text-muted); letter-spacing: 0.5px;">
+      Tiện ích tra cứu nhanh
+    </div>
+
+    <!-- 1. Độ nhớt vật liệu -->
+    <div class="has-submenu <?= ($current_main === 'materials') ? 'open' : '' ?>">
+      <a href="index.php?mainpage=materials&subpage=viscoscity" class="menu-item menu-parent <?= ($current_main === 'materials' && $current_sub === 'viscoscity') ? 'active' : '' ?>">
+        <span class="material-icons" style="color: var(--dx-primary, #0ea5e9);">science</span>
+        <span class="label">Độ nhớt vật liệu</span>
+      </a>
+    </div>
+
+    <!-- 2. Tiện ích trộn màu -->
+    <div class="has-submenu <?= ($current_main === 'utilities') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'utilities') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons" style="color: var(--dx-success, #10b981);">palette</span>
+        <span class="label">Tiện ích trộn màu</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=utilities&subpage=color_mixer" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'color_mixer') ? 'active' : '' ?>">
+          <span class="material-icons">manage_search</span>
+          <span class="label">Tra cứu trộn màu</span>
+        </a>
+        <a href="index.php?mainpage=utilities&subpage=color_mixer_summary" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'color_mixer_summary') ? 'active' : '' ?>">
+          <span class="material-icons">grid_view</span>
+          <span class="label">Bảng tổng quan trộn</span>
+        </a>
+      </div>
+    </div>
+
+    <div style="margin-top: 24px; padding: 12px 14px;">
+      <a href="index.php?mainpage=authentication&subpage=login" class="app-btn app-btn-primary w-100" style="display: flex; align-items: center; justify-content: center; gap: 8px; text-decoration: none; border-radius: 8px; font-weight: 600; padding: 10px 14px;">
+        <span class="material-icons" style="font-size: 18px;">lock</span>
+        <span>Đăng nhập hệ thống</span>
+      </a>
+    </div>
+    <?php else: ?>
     <!-- 1. Tổng quan (Dashboard) -->
     <?php if (hasPermission('dashboard.view')): ?>
     <div class="has-submenu <?= ($current_main === 'dashboard') ? 'open' : '' ?>">
@@ -154,6 +194,45 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
     </div>
     <?php endif; ?>
 
+    <!-- 3.2. Quản lý kho (Xuất vật tư) -->
+    <?php if (hasPermission(['warehouse.view', 'warehouse.create', 'warehouse.check', 'warehouse.approve', 'warehouse.issue', 'warehouse.handover'])): ?>
+    <div class="has-submenu <?= ($current_main === 'warehouse') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'warehouse') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">inventory_2</span>
+        <span class="label">Quản lý xuất kho</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=warehouse&subpage=issue_request" class="submenu-item <?= ($current_main === 'warehouse' && $current_sub === 'issue_request') ? 'active' : '' ?>">
+          <span class="material-icons">post_add</span>
+          <span class="label">Yêu cầu xuất vật tư</span>
+        </a>
+        <a href="index.php?mainpage=warehouse&subpage=approval" class="submenu-item <?= ($current_main === 'warehouse' && $current_sub === 'approval') ? 'active' : '' ?>">
+          <span class="material-icons">fact_check</span>
+          <span class="label">Quản lý & Duyệt phiếu</span>
+        </a>
+        <a href="index.php?mainpage=warehouse&subpage=materials" class="submenu-item <?= ($current_main === 'warehouse' && $current_sub === 'materials') ? 'active' : '' ?>">
+          <span class="material-icons">category</span>
+          <span class="label">Danh mục vật tư</span>
+        </a>
+        <a href="index.php?mainpage=warehouse&subpage=reorder_tracking" class="submenu-item <?= ($current_main === 'warehouse' && $current_sub === 'reorder_tracking') ? 'active' : '' ?>">
+          <span class="material-icons">track_changes</span>
+          <span class="label">Theo dõi đặt hàng (ROP)</span>
+        </a>
+        <a href="index.php?mainpage=warehouse&subpage=dashboard" class="submenu-item <?= ($current_main === 'warehouse' && $current_sub === 'dashboard') ? 'active' : '' ?>">
+          <span class="material-icons">insights</span>
+          <span class="label">Dashboard & Cảnh báo</span>
+        </a>
+        <?php if (hasPermission(['role.manage', 'warehouse.settings', 'admin'])): ?>
+        <a href="index.php?mainpage=warehouse&subpage=settings" class="submenu-item <?= ($current_main === 'warehouse' && $current_sub === 'settings') ? 'active' : '' ?>">
+          <span class="material-icons">tune</span>
+          <span class="label">Cấu hình người duyệt</span>
+        </a>
+        <?php endif; ?>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- 4. Quản lý tài liệu -->
     <?php if (hasPermission('document.view')): ?>
     <div class="has-submenu <?= ($current_main === 'document') ? 'open' : '' ?>">
@@ -280,6 +359,7 @@ $current_sub  = $subpage ?? ($_GET['subpage'] ?? 'overview');
       </a>
     </div>
     <?php endif; ?>
+    <?php endif; // End is_guest check ?>
   </nav>
 </aside>
 

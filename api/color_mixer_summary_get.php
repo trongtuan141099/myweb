@@ -4,11 +4,18 @@ ini_set('display_errors', 0);
 error_reporting(E_ALL);
 
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
+header('Pragma: no-cache');
+header('Expires: 0');
 
 try {
     require_once __DIR__ . '/../config/db.php';
     require_once __DIR__ . '/../core/check_permission.php';
-    requireApiPermission(['mixer.view', 'api.mixer.summary']);
+
+    // Hỗ trợ truy cập nhanh tra cứu ma trận tổng quan không cần đăng nhập
+    if (isset($_SESSION['user_id']) || isset($_SESSION['user'])) {
+        syncUserAuth();
+    }
 
     $mixer_type = $_GET['mixer_type'] ?? 'mixer_speed_small';
     if (!in_array($mixer_type, ['mixer_speed_small', 'mixer_speed_large'])) {

@@ -43,30 +43,51 @@ document.addEventListener("DOMContentLoaded", function () {
 
   // Kiểm tra trạng thái xác thực người dùng
   checkAuthentication();
+
+  // Khắc phục triệt để lỗi màn hình đen do Modal Backdrop trong Bootstrap 5:
+  // Tự động di chuyển toàn bộ Modal trực tiếp ra body để không bị kẹt stacking context
+  document.querySelectorAll('.modal').forEach(function (modalEl) {
+    if (modalEl.parentElement && modalEl.parentElement !== document.body) {
+      document.body.appendChild(modalEl);
+    }
+  });
+
+  document.addEventListener('show.bs.modal', function (e) {
+    if (e.target && e.target.parentElement !== document.body) {
+      document.body.appendChild(e.target);
+    }
+  });
+
+  // Tự động dọn dẹp các backdrop mồ côi nếu tất cả modal đã đóng
+  document.addEventListener('hidden.bs.modal', function () {
+    setTimeout(function () {
+      const openModals = document.querySelectorAll('.modal.show');
+      if (openModals.length === 0) {
+        document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+        document.body.classList.remove('modal-open');
+        document.body.style.removeProperty('overflow');
+        document.body.style.removeProperty('padding-right');
+      }
+    }, 150);
+  });
 });
 
-// Kiểm tra xác thực session qua API
+// Kiểm tra xác thực session qua API (Chỉ đồng bộ thông tin user khi có phiên, không tự ý chuyển hướng)
 async function checkAuthentication() {
   try {
     const response = await fetch('api/check_auth.php', {
       method: 'GET',
-      credentials: 'same-origin'
+      credentials: 'same-origin',
+      cache: 'no-store'
     });
 
     if (!response.ok) return;
     const data = await response.json();
 
-    if (!data.authenticated) {
-      // Nếu chưa đăng nhập và không ở trang login
-      const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.get('mainpage') !== 'authentication') {
-        window.location.href = 'index.php?mainpage=authentication&subpage=login';
-      }
-      return;
+    // Nếu đã đăng nhập, cập nhật thông tin hiển thị lên header
+    if (data && data.authenticated && data.user) {
+      displayUserInfo(data.user);
     }
-
-    // Cập nhật thông tin hiển thị nếu có
-    displayUserInfo(data.user);
   } catch (error) {
     console.warn('Lưu ý khi kiểm tra phiên đăng nhập:', error);
   }

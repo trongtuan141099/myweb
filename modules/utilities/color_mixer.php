@@ -1,3 +1,6 @@
+<?php
+$canEditMixer = hasPermission('mixer.edit');
+?>
 <style>
 /* CSS RIÊNG CỦA MODULE BỘ TRỘN MÀU */
 .bg-unused {
@@ -159,9 +162,11 @@
       <table class="app-table table-sticky-header">
         <thead>
           <tr>
+            <?php if ($canEditMixer): ?>
             <th class="ps-3" style="width: 40px;">
               <input type="checkbox" class="form-check-input" id="checkAll" onchange="toggleSelectAll(this)">
             </th>
+            <?php endif; ?>
             <th>#</th>
             <th>Loại Màu</th>
             <th>Loại Ống</th>
@@ -173,7 +178,9 @@
             <th class="text-end">Nhựa Nguyên Sinh (kg/h)</th>
             <th class="text-end">Lưu Lượng Màu (kg/h)</th>
             <th>Người & Ngày Cập Nhật</th>
+            <?php if ($canEditMixer): ?>
             <th class="text-center">Thao Tác</th>
+            <?php endif; ?>
           </tr>
         </thead>
         <tbody id="mixer-table-body">
@@ -285,6 +292,7 @@
 </div>
 
 <script>
+const CAN_EDIT_MIXER = <?= $canEditMixer ? 'true' : 'false' ?>;
 let currentPage = 1;
 const limit = 15;
 let loadedDatabaseData = [];
@@ -294,8 +302,10 @@ let formModalInstance = null;
 let csvModalInstance = null;
 
 document.addEventListener("DOMContentLoaded", () => {
-  formModalInstance = new bootstrap.Modal(document.getElementById('modalAddForm'));
-  csvModalInstance = new bootstrap.Modal(document.getElementById('modalImportCsv'));
+  const addModalEl = document.getElementById('modalAddForm');
+  if (addModalEl) formModalInstance = new bootstrap.Modal(addModalEl);
+  const csvModalEl = document.getElementById('modalImportCsv');
+  if (csvModalEl) csvModalInstance = new bootstrap.Modal(csvModalEl);
   applyFilterAndFetch(1);
 });
 
@@ -345,10 +355,12 @@ function applyFilterAndFetch(page = 1) {
 function renderTable(data, startIndex = 0) {
   const tbody = document.getElementById('mixer-table-body');
   tbody.innerHTML = '';
-  document.getElementById('checkAll').checked = false;
+  const masterCheck = document.getElementById('checkAll');
+  if (masterCheck) masterCheck.checked = false;
 
   if (!data || data.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="13" class="text-center py-4 text-muted">Không tìm thấy dữ liệu phù hợp trong cơ sở dữ liệu.</td></tr>`;
+    const totalCols = CAN_EDIT_MIXER ? 13 : 11;
+    tbody.innerHTML = `<tr><td colspan="${totalCols}" class="text-center py-4 text-muted">Không tìm thấy dữ liệu phù hợp trong cơ sở dữ liệu.</td></tr>`;
     return;
   }
 
@@ -358,10 +370,16 @@ function renderTable(data, startIndex = 0) {
     const isChecked = selectedIds.has(item.id) ? 'checked' : '';
 
     const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="ps-3">
-        <input type="checkbox" class="form-check-input item-checkbox" value="${item.id}" ${isChecked} onchange="toggleItemSelect(${item.id}, this.checked)">
-      </td>
+    let cells = '';
+
+    if (CAN_EDIT_MIXER) {
+      cells += `
+        <td class="ps-3">
+          <input type="checkbox" class="form-check-input item-checkbox" value="${item.id}" ${isChecked} onchange="toggleItemSelect(${item.id}, this.checked)">
+        </td>`;
+    }
+
+    cells += `
       <td class="fw-bold text-muted">${startIndex + index + 1}</td>
       <td><span class="app-badge badge-info">${item.color_type}</span></td>
       <td><strong>${item.pipe_type}</strong></td>
@@ -375,7 +393,10 @@ function renderTable(data, startIndex = 0) {
       <td class="small">
         <div class="fw-bold text-dark">${item.updated_by_name || 'Hệ thống'}</div>
         <div class="text-muted" style="font-size: 11px;">${item.updated_at || ''}</div>
-      </td>
+      </td>`;
+
+    if (CAN_EDIT_MIXER) {
+      cells += `
       <td class="text-center">
         <button class="app-btn app-btn-outline app-btn-sm btn-action-icon me-1" onclick="editSetting(${item.id})" title="Chỉnh sửa">
           <span class="material-icons" style="font-size: 15px;">edit</span>
@@ -383,8 +404,10 @@ function renderTable(data, startIndex = 0) {
         <button class="app-btn app-btn-danger app-btn-sm btn-action-icon" onclick="deleteSetting(${item.id})" title="Xóa">
           <span class="material-icons" style="font-size: 15px;">delete</span>
         </button>
-      </td>
-    `;
+      </td>`;
+    }
+
+    tr.innerHTML = cells;
     tbody.appendChild(tr);
   });
 }

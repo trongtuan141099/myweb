@@ -22,8 +22,23 @@ if ($mainpage === 'authentication' && $subpage === 'login') {
     exit;
 }
 
+// Danh sách các tiện ích công khai (cho phép truy cập nhanh không cần đăng nhập)
+$public_routes = [
+    'materials' => ['viscoscity'],
+    'utilities' => ['color_mixer', 'color_mixer_summary']
+];
+$is_public_route = isset($public_routes[$mainpage]) && in_array($subpage, $public_routes[$mainpage], true);
+
 // 2. Kiểm tra bắt buộc đăng nhập và đồng bộ vai trò/quyền mới nhất
-checkAuth();
+if ($is_public_route) {
+    // Nếu là tiện ích công khai và đã có phiên đăng nhập, đồng bộ quyền người dùng
+    if (isset($_SESSION['user_id']) || isset($_SESSION['user'])) {
+        syncUserAuth();
+    }
+} else {
+    // Với các trang nội bộ khác, bắt buộc phải đăng nhập hợp lệ
+    checkAuth();
+}
 
 // 3. Định nghĩa ma trận quyền Route toàn hệ thống
 $route_permissions = [
@@ -75,6 +90,14 @@ $route_permissions = [
         'yearly_control' => 'overtime.yearly',
         'records'        => 'overtime.view',
         'export'         => 'overtime.export'
+    ],
+    'warehouse' => [
+        'issue_request'    => 'warehouse.view',
+        'approval'         => 'warehouse.view',
+        'materials'        => 'warehouse.view',
+        'reorder_tracking' => 'warehouse.view',
+        'dashboard'        => 'warehouse.view',
+        'settings'         => 'warehouse.settings'
     ]
 ];
 
@@ -88,7 +111,7 @@ include "includes/header.php";
 // 5. Kiểm tra phân quyền truy cập Web Route
 $required_perm = $route_permissions[$mainpage][$subpage] ?? null;
 
-if ($required_perm && !hasPermission($required_perm)) {
+if (!$is_public_route && $required_perm && !hasPermission($required_perm)) {
     // Chặn hiển thị và thông báo 403 Forbidden
     $userRole = $_SESSION['user']['role'] ?? 'viewer';
     echo '

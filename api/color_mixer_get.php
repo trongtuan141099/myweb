@@ -1,8 +1,13 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
+header('Cache-Control: no-cache, no-store, must-revalidate');
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
-requireApiPermission(['mixer.view', 'api.mixer.get']);
+
+// Hỗ trợ truy cập nhanh tra cứu dữ liệu không cần đăng nhập
+if (isset($_SESSION['user_id']) || isset($_SESSION['user'])) {
+    syncUserAuth();
+}
 
 $page = max(1, intval($_GET['page'] ?? 1));
 $limit = max(1, intval($_GET['limit'] ?? 15));

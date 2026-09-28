@@ -203,10 +203,14 @@ function renderPermissionScript() {
     $role = $_SESSION['user']['role'] ?? 'viewer';
     $jsonPermissions = json_encode($permissions, JSON_UNESCAPED_UNICODE);
     $jsonRole = json_encode($role, JSON_UNESCAPED_UNICODE);
+    global $is_public_route;
+    $isPublic = !empty($is_public_route);
+    $jsonIsPublic = $isPublic ? 'true' : 'false';
     echo "
     <script>
         window.CURRENT_USER_ROLE = {$jsonRole};
         window.CURRENT_USER_PERMISSIONS = {$jsonPermissions};
+        window.IS_PUBLIC_ROUTE = {$jsonIsPublic};
         function hasPermission(codes) {
             if (window.CURRENT_USER_ROLE === 'admin') return true;
             if (!Array.isArray(window.CURRENT_USER_PERMISSIONS)) return false;

@@ -1219,6 +1219,17 @@ div.app-page-title > .material-icons,
   border-color: var(--dx-border) !important;
 }
 
+/* Đảm bảo Stacking Context chuẩn cho Modal và Backdrop không bị đen màn hình */
+.modal-backdrop {
+  z-index: 1050 !important;
+}
+.modal {
+  z-index: 1055 !important;
+}
+.modal.modal-top {
+  z-index: 1070 !important;
+}
+
 [data-theme="dark"] .modal-content {
   background-color: var(--dx-bg-card);
   color: var(--dx-text-main);
