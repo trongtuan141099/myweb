@@ -88,5 +88,32 @@
         "file_path": "documents\/PE-PM-T-EQ-0654 Tiu chu?n 5S cho trang ph?c.pdf",
         "status": "Active",
         "updated_at": "2026-08-27"
+    },
+    {
+        "id": "doc_1790659946_535",
+        "doc_code": "FAC 2 - BLD 2 - FLOOR 1 (Inventory)",
+        "title": "Layout KK Xưởng 2 - Tầng 1",
+        "folder_id": "layout-kk-9-2026_bcb5",
+        "file_path": "documents\/29092026_FAC 2 - BLD 2 - FLOOR 1 (Inventory).pdf",
+        "status": "Active",
+        "updated_at": "2026-09-29"
+    },
+    {
+        "id": "doc_1790660052_567",
+        "doc_code": "FAC 2 - BLD 2 - FLOOR 2 (Inventory)",
+        "title": "Layout KK Xưởng 2 - Tầng 2",
+        "folder_id": "layout-kk-9-2026_bcb5",
+        "file_path": "documents\/29092026_FAC 2 - BLD 2 - FLOOR 2 (Inventory).pdf",
+        "status": "Active",
+        "updated_at": "2026-09-29"
+    },
+    {
+        "id": "doc_1790660113_659",
+        "doc_code": "FAC 2 - BLD 3 - FLOOR 1 (Inventory)",
+        "title": "Layout KK Xưởng 3 - Tầng 1",
+        "folder_id": "layout-kk-9-2026_bcb5",
+        "file_path": "documents\/29092026_FAC 2 - BLD 3 - FLOOR 1 (Inventory).pdf",
+        "status": "Active",
+        "updated_at": "2026-09-29"
     }
 ]

@@ -1183,7 +1183,7 @@ checkAuth();
             <div class="d-flex justify-content-between align-items-center border-bottom pb-2 mb-3">
               <div>
                 <div class="fw-bold text-uppercase" style="font-size: 14px; letter-spacing: 0.5px; color: #1e3a8a;">
-                  CÔNG TY CỔ PHẦN SX-TM NHỰA ĐẠI XUÂN (DX PLASTIC GROUP)
+                  DX PLASTIC GROUP
                 </div>
                 <div class="small text-muted">Hệ Thống Quản Lý Sản Xuất & Kiểm Kê Định Kỳ Nhà Máy</div>
               </div>
