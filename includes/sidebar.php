@@ -100,6 +100,23 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
     </div>
     <?php endif; ?>
 
+    <!-- 2.1. Quản lý chất lượng -->
+    <?php if (hasPermission(['quality.view', 'quality.manage', 'quality.investigate', 'admin'])): ?>
+    <div class="has-submenu <?= ($current_main === 'quality') ? 'open' : '' ?>">
+      <div class="menu-item menu-parent <?= ($current_main === 'quality') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
+        <span class="material-icons">verified_user</span>
+        <span class="label">Quản lý chất lượng</span>
+        <span class="material-icons arrow-icon">expand_more</span>
+      </div>
+      <div class="submenu">
+        <a href="index.php?mainpage=quality&subpage=yield_tracking" class="submenu-item <?= ($current_main === 'quality' && $current_sub === 'yield_tracking') ? 'active' : '' ?>">
+          <span class="material-icons">query_stats</span>
+          <span class="label">Theo dõi tỉ lệ thành phẩm</span>
+        </a>
+      </div>
+    </div>
+    <?php endif; ?>
+
     <!-- 3. Quản lý nhân sự -->
     <?php 
     $canHrmView = hasPermission('hrm.view');

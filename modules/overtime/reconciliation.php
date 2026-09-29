@@ -78,6 +78,16 @@ $canSyncHrm = ($userRole !== 'viewer') && hasPermission('api.overtime.hrm_sync')
   border-left: 3px solid #f59e0b !important;
 }
 
+/* Hàng đã yêu cầu giải trình */
+.row-exp-requested {
+  background-color: rgba(239, 68, 68, 0.04) !important;
+  border-left: 3px solid #f43f5e !important;
+}
+[data-theme="dark"] .row-exp-requested {
+  background-color: rgba(239, 68, 68, 0.08) !important;
+  border-left: 3px solid #f43f5e !important;
+}
+
 .rec-filter-tab {
   cursor: pointer;
   padding: 8px 14px;
@@ -817,11 +827,12 @@ async function loadReconciliations(page = 1) {
     let html = '';
     data.data.forEach((r) => {
       const isFullyCompleted = r.is_fully_completed;
-      const isUncompletedActual = !r.step2_done || r.reconcile_status === 'plan_only';
-      const isOverdue3Days = r.is_overdue_3days;
       const isDismissed = (r.is_dismissed == 1);
       const isExplained = (r.is_explained == 1);
       const isExpRequested = (r.explanation_requested == 1);
+      const isOverdue3Days = r.is_overdue_3days;
+      // Nếu đã yêu cầu giải trình hoặc đã hủy hoặc đã giải trình, không còn là ca chờ nhắc hoàn thành thực tế nữa
+      const isUncompletedActual = (!r.step2_done || r.reconcile_status === 'plan_only') && !isExpRequested && !isDismissed && !isExplained;
 
       // Định hình class hàng
       let rowClass = '';
@@ -829,6 +840,8 @@ async function loadReconciliations(page = 1) {
         rowClass = 'row-dismissed';
       } else if (isExplained) {
         rowClass = 'row-explained';
+      } else if (isExpRequested) {
+        rowClass = 'row-exp-requested';
       } else if (isFullyCompleted) {
         rowClass = 'row-completed';
       } else if (isOverdue3Days) {
@@ -847,10 +860,16 @@ async function loadReconciliations(page = 1) {
         diffBadge = `<span class="badge bg-success">0p</span>`;
       }
 
-      // Trạng thái 2 bước
+      // Trạng thái 2 bước: Nếu đã yêu cầu giải trình (GT) hoặc đã hủy, ẩn mục nhắc "Chờ Bước 2 (TT)"
       let stepProgressBadge = '';
       if (isFullyCompleted) {
         stepProgressBadge = '<span class="badge bg-success-subtle text-success border border-success-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">check_circle</span> Đủ 2 bước</span>';
+      } else if (isDismissed) {
+        stepProgressBadge = '<span class="badge bg-secondary-subtle text-muted border border-secondary-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">block</span> Đã hủy</span>';
+      } else if (isExpRequested) {
+        stepProgressBadge = '<span class="badge bg-danger-subtle text-danger border border-danger-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">campaign</span> Đã yêu cầu GT</span>';
+      } else if (isExplained) {
+        stepProgressBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">done_all</span> Đã giải trình</span>';
       } else if (r.step1_done && !r.step2_done) {
         stepProgressBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">pending</span> Chờ Bước 2 (TT)</span>';
       } else {

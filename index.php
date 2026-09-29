@@ -98,6 +98,9 @@ $route_permissions = [
         'reorder_tracking' => 'warehouse.view',
         'dashboard'        => 'warehouse.view',
         'settings'         => 'warehouse.settings'
+    ],
+    'quality' => [
+        'yield_tracking'   => 'quality.view'
     ]
 ];
 

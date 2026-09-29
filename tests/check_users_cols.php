@@ -2,9 +2,9 @@
 require_once __DIR__ . '/../config/db.php';
 global $conn;
 
-$res = $conn->query("DESCRIBE users");
+$res = $conn->query("DESCRIBE employees");
 if ($res) {
-    echo "users columns:\n";
+    echo "employees columns:\n";
     while ($r = $res->fetch_assoc()) {
         echo " - {$r['Field']} ({$r['Type']})\n";
     }

@@ -1132,7 +1132,8 @@ function getHrmLeavesSummaryData($conn, $year, $month = 0, $group = '', $shift =
             a.*,
             COALESCE(NULLIF(e.work_group, ''), a.work_group, 'Khác') as final_work_group,
             COALESCE(NULLIF(e.work_shift, ''), a.work_shift, 'Ca 1') as final_work_shift,
-            COALESCE(e.cost_center, '') as cost_center
+            COALESCE(e.cost_center, '') as cost_center,
+            COALESCE(e.resignation_date, '') as resignation_date
         FROM leave_actuals a
         LEFT JOIN employees e ON a.employee_code = e.employee_code
         {$where}
@@ -1192,7 +1193,8 @@ function getMonthlyLeaveMatrixByEmployee($conn, $year, $group = '', $shift = '',
             e.full_name,
             COALESCE(NULLIF(e.work_group, ''), l.work_group, 'Khác') as work_group,
             COALESCE(NULLIF(e.work_shift, ''), l.work_shift, 'Ca 1') as work_shift,
-            COALESCE(e.cost_center, '') as cost_center
+            COALESCE(e.cost_center, '') as cost_center,
+            COALESCE(e.resignation_date, '') as resignation_date
         FROM employees e
         LEFT JOIN (
             SELECT employee_code, work_group, work_shift 
@@ -1207,14 +1209,17 @@ function getMonthlyLeaveMatrixByEmployee($conn, $year, $group = '', $shift = '',
     $employees = [];
     if ($resEmps) {
         while ($r = $resEmps->fetch_assoc()) {
+            $hasResigned = (!empty($r['resignation_date']) && $r['resignation_date'] !== '0000-00-00');
             $employees[$r['employee_code']] = [
-                'employee_code' => $r['employee_code'],
-                'full_name'     => $r['full_name'],
-                'work_group'    => $r['work_group'],
-                'work_shift'    => $r['work_shift'],
-                'cost_center'   => $r['cost_center'],
-                'months'        => array_fill(1, 12, 0.0),
-                'total_year'    => 0.0
+                'employee_code'    => $r['employee_code'],
+                'full_name'        => $r['full_name'],
+                'work_group'       => $r['work_group'],
+                'work_shift'       => $r['work_shift'],
+                'cost_center'      => $r['cost_center'],
+                'resignation_date' => $hasResigned ? $r['resignation_date'] : '',
+                'has_resigned'     => $hasResigned,
+                'months'           => array_fill(1, 12, 0.0),
+                'total_year'       => 0.0
             ];
         }
     }

@@ -215,10 +215,10 @@ switch ($type) {
         }
         break;
 
-    // 8. Danh sách cảnh báo nhân viên vượt hoặc sắp vượt ngưỡng 200h
+    // 8. Danh sách cảnh báo nhân viên vượt hoặc sắp vượt ngưỡng 200h/năm hoặc > 36h/tháng
     case 'warning_200h':
-        sendCsvHeaders("DanhSachCanhBaoVuot200H_{$year}.csv");
-        fputcsv($out, ['STT', 'Mã NV', 'Họ và Tên', 'Phòng Ban', 'Tổng Giờ OT Đã Làm', 'Số Giờ Vượt Quá 200h', '% Giới Hạn', 'Mức Cảnh Báo']);
+        sendCsvHeaders("DanhSachCanhBaoTangCa_{$year}.csv");
+        fputcsv($out, ['STT', 'Mã NV', 'Họ và Tên', 'Phòng Ban', 'Tổng Giờ OT Đã Làm', 'Số Giờ Vượt Quá 200h', '% Giới Hạn Năm', 'Mức Cảnh Báo Năm', 'Cảnh Báo Giới Hạn Tháng (>36h/40h)']);
         $sql = "
             SELECT 
                 y.*,
@@ -226,17 +226,34 @@ switch ($type) {
                 COALESCE(e.cost_center, '-') AS cost_center
             FROM ot_yearly_accumulations y
             LEFT JOIN employees e ON y.employee_code = e.employee_code
-            WHERE y.year = {$year} AND y.warning_level IN ('yellow', 'red')
+            WHERE y.year = {$year} AND (
+                y.warning_level IN ('yellow', 'red') 
+                OR y.total_hours_m1 > 36 OR y.total_hours_m2 > 36 OR y.total_hours_m3 > 36 OR y.total_hours_m4 > 36
+                OR y.total_hours_m5 > 36 OR y.total_hours_m6 > 36 OR y.total_hours_m7 > 36 OR y.total_hours_m8 > 36
+                OR y.total_hours_m9 > 36 OR y.total_hours_m10 > 36 OR y.total_hours_m11 > 36 OR y.total_hours_m12 > 36
+            )
             ORDER BY y.total_hours_year DESC
         ";
         $res = $conn->query($sql);
         $stt = 1;
         while ($r = $res->fetch_assoc()) {
             $overHours = max(0, $r['total_hours_year'] - 200.00);
-            $wText = ($r['warning_level'] === 'red') ? 'ĐÃ VƯỢT QUY ĐỊNH (>=200H)' : 'SẮP VƯỢT NGƯỠNG (160-199H)';
+            $wText = ($r['warning_level'] === 'red') ? 'ĐÃ VƯỢT QUY ĐỊNH (>=200H)' : (($r['warning_level'] === 'yellow') ? 'SẮP VƯỢT NGƯỠNG (160-199H)' : 'An toàn năm (<160h)');
+            
+            $monthWarns = [];
+            for ($m = 1; $m <= 12; $m++) {
+                $h = floatval($r["total_hours_m{$m}"]);
+                if ($h > 40.0) {
+                    $monthWarns[] = "T{$m}: {$h}h (Vượt trần 40h)";
+                } else if ($h > 36.0) {
+                    $monthWarns[] = "T{$m}: {$h}h (>36h)";
+                }
+            }
+            $monthWarnText = !empty($monthWarns) ? implode('; ', $monthWarns) : 'An toàn';
+
             fputcsv($out, [
                 $stt++, $r['employee_code'], $r['full_name'], $r['cost_center'],
-                $r['total_hours_year'], $overHours > 0 ? $overHours : 0, $r['usage_percent'] . '%', $wText
+                $r['total_hours_year'], $overHours > 0 ? $overHours : 0, $r['usage_percent'] . '%', $wText, $monthWarnText
             ]);
         }
         break;

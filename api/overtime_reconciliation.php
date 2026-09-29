@@ -117,8 +117,8 @@ try {
                     // Đã hoàn thành đủ 2 bước
                     $where .= " AND r.plan_id IS NOT NULL AND r.actual_id IS NOT NULL";
                 } else if ($status === 'uncompleted_actual') {
-                    // Ca chưa hoàn thành Bước 2 (Thực tế)
-                    $where .= " AND (r.actual_id IS NULL OR r.reconcile_status = 'plan_only')";
+                    // Ca chưa hoàn thành Bước 2 (Thực tế) - loại trừ các ca đã yêu cầu giải trình, đã giải trình hoặc đã hủy
+                    $where .= " AND (r.actual_id IS NULL OR r.reconcile_status = 'plan_only') AND (r.explanation_requested = 0 OR r.explanation_requested IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) AND (r.is_explained = 0 OR r.is_explained IS NULL)";
                 } else if ($status === 'overdue_3days') {
                     // Thiếu 1 trong 2 bước và quá 3 ngày
                     $where .= " AND (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3";
@@ -166,7 +166,7 @@ try {
                 SELECT 
                     COUNT(*) as total,
                     SUM(CASE WHEN r.plan_id IS NOT NULL AND r.actual_id IS NOT NULL THEN 1 ELSE 0 END) as completed,
-                    SUM(CASE WHEN r.actual_id IS NULL OR r.reconcile_status = 'plan_only' THEN 1 ELSE 0 END) as uncompleted_actual,
+                    SUM(CASE WHEN (r.actual_id IS NULL OR r.reconcile_status = 'plan_only') AND (r.explanation_requested = 0 OR r.explanation_requested IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) AND (r.is_explained = 0 OR r.is_explained IS NULL) THEN 1 ELSE 0 END) as uncompleted_actual,
                     SUM(CASE WHEN (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 1 ELSE 0 END) as overdue_3days,
                     SUM(CASE WHEN (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) THEN 1 ELSE 0 END) as needs_explanation,
                     SUM(CASE WHEN r.is_dismissed = 1 THEN 1 ELSE 0 END) as dismissed_count,

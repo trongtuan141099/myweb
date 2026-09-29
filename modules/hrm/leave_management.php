@@ -631,6 +631,24 @@ $canSyncLeave   = hasPermission(['hrm.leave_sync', 'hrm.leave_manage', 'admin'])
 .sync-terminal .log-success { color: #4ade80; }
 .sync-terminal .log-warning { color: #fbbf24; }
 .sync-terminal .log-error   { color: #f87171; }
+
+/* Tô xám toàn bộ thông tin nhân sự đã có ngày nghỉ việc */
+.row-resigned {
+  background-color: rgba(148, 163, 184, 0.15) !important;
+  color: #64748b !important;
+  opacity: 0.65;
+}
+.row-resigned td {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+.row-resigned .font-monospace {
+  color: #64748b !important;
+}
+.row-resigned:hover {
+  background-color: rgba(148, 163, 184, 0.25) !important;
+  opacity: 0.9;
+}
 </style>
 
 <div class="app-page-wrapper leave-container">
@@ -2512,10 +2530,14 @@ async function loadHrmSummaryList(page = 1) {
     let html = '';
     const startIndex = (data.pagination.current_page - 1) * data.pagination.limit + 1;
     data.data.forEach((r, idx) => {
-      html += `<tr>
+      const isResigned = r.resignation_date && r.resignation_date !== '-' && r.resignation_date !== '0000-00-00';
+      html += `<tr class="${isResigned ? 'row-resigned' : ''}">
         <td class="text-center">${startIndex + idx}</td>
         <td class="font-monospace fw-bold text-primary">${escapeHtml(r.employee_code)}</td>
-        <td><strong>${escapeHtml(r.full_name)}</strong></td>
+        <td>
+          <strong>${escapeHtml(r.full_name)}</strong>
+          ${isResigned ? `<span class="badge bg-secondary text-white ms-1" style="font-size:10px;" title="Ngày nghỉ việc: ${escapeHtml(r.resignation_date)}">Đã nghỉ (${escapeHtml(r.resignation_date)})</span>` : ''}
+        </td>
         <td><span class="badge-wg badge-wg-dun_tu">${escapeHtml(r.final_work_group || 'Khác')}</span></td>
         <td><span class="badge-shift badge-shift-${sanitizeShift(r.final_work_shift)}">${escapeHtml(r.final_work_shift || 'Ca 1')}</span></td>
         <td>${escapeHtml(r.leave_type || 'Phép năm')}</td>
@@ -2577,20 +2599,24 @@ async function loadMonthlyMatrixData() {
 
     let html = '';
     data.employees.forEach((e, idx) => {
-      html += `<tr>
+      const isResigned = e.resignation_date && e.resignation_date !== '-' && e.resignation_date !== '0000-00-00';
+      html += `<tr class="${isResigned ? 'row-resigned' : ''}">
         <td class="text-center">${idx + 1}</td>
         <td class="font-monospace fw-bold text-primary">${escapeHtml(e.employee_code)}</td>
-        <td><strong>${escapeHtml(e.full_name)}</strong></td>
+        <td>
+          <strong>${escapeHtml(e.full_name)}</strong>
+          ${isResigned ? `<span class="badge bg-secondary text-white ms-1" style="font-size:10px;" title="Ngày nghỉ việc: ${escapeHtml(e.resignation_date)}">Đã nghỉ (${escapeHtml(e.resignation_date)})</span>` : ''}
+        </td>
         <td><span class="badge-wg badge-wg-dun_tu">${escapeHtml(e.work_group)}</span></td>
         <td class="text-center"><span class="badge-shift badge-shift-${sanitizeShift(e.work_shift)}">${escapeHtml(e.work_shift)}</span></td>`;
 
       for (let m = 1; m <= 12; m++) {
         const val = e.months[m] || 0;
-        const cellStyle = (val > 0) ? 'font-weight:700; color: #dc2626; background: rgba(239, 68, 68, 0.05);' : 'color:#94a3b8;';
+        const cellStyle = (val > 0) ? (isResigned ? 'font-weight:700; color: #94a3b8;' : 'font-weight:700; color: #dc2626; background: rgba(239, 68, 68, 0.05);') : 'color:#94a3b8;';
         html += `<td class="text-center" style="${cellStyle}">${val > 0 ? val : '-'}</td>`;
       }
 
-      html += `<td class="text-center fw-bold text-primary" style="background: rgba(59, 130, 246, 0.08);">${e.total_year} d</td>`;
+      html += `<td class="text-center fw-bold ${isResigned ? 'text-muted' : 'text-primary'}" style="background: rgba(59, 130, 246, 0.08);">${e.total_year} d</td>`;
       html += `</tr>`;
     });
     tbody.innerHTML = html;

@@ -298,33 +298,63 @@ function logAuditTrail($conn, $batchId, $empCode, $otDate, $recType, $action, $b
     $stmt->close();
 }
 
-function recalculateYearlyAccumulations($conn) {
-    $yearsRes = $conn->query("SELECT DISTINCT YEAR(ot_date) as y FROM ot_actuals WHERE ot_date IS NOT NULL ORDER BY y DESC");
-    $years = [];
-    while ($r = $yearsRes->fetch_assoc()) {
-        $years[] = intval($r['y']);
+function recalculateYearlyAccumulations($conn, $targetYear = null) {
+    if ($targetYear !== null && intval($targetYear) > 0) {
+        $years = [intval($targetYear)];
+    } else {
+        $yearsRes = $conn->query("
+            SELECT DISTINCT y FROM (
+                SELECT DISTINCT YEAR(ot_date) as y FROM ot_actuals WHERE ot_date IS NOT NULL
+                UNION
+                SELECT DISTINCT YEAR(ot_date) as y FROM ot_explanations WHERE ot_date IS NOT NULL AND is_manual = 1 AND approval_status = 'approved'
+            ) t ORDER BY y DESC
+        ");
+        $years = [];
+        if ($yearsRes) {
+            while ($r = $yearsRes->fetch_assoc()) {
+                if (!empty($r['y'])) $years[] = intval($r['y']);
+            }
+        }
+        if (empty($years)) $years[] = intval(date('Y'));
     }
-    if (empty($years)) $years[] = intval(date('Y'));
 
     foreach ($years as $year) {
+        // Reset tạm về 0 cho năm này để đảm bảo xóa hoặc giảm giờ được phản ánh chính xác
+        $conn->query("UPDATE ot_yearly_accumulations SET total_hours_m1=0, total_hours_m2=0, total_hours_m3=0, total_hours_m4=0, total_hours_m5=0, total_hours_m6=0, total_hours_m7=0, total_hours_m8=0, total_hours_m9=0, total_hours_m10=0, total_hours_m11=0, total_hours_m12=0, total_hours_year=0, warning_level='green' WHERE year = {$year}");
+
+        // Gộp dữ liệu từ 2 nguồn: Thực tế trên hệ thống (ot_actuals) + Giải trình thủ công quên kế hoạch đã được phê duyệt (ot_explanations)
         $sqlAgg = "
             SELECT 
                 employee_code,
-                SUM(CASE WHEN MONTH(ot_date) = 1 THEN total_hours_actual ELSE 0 END) AS m1,
-                SUM(CASE WHEN MONTH(ot_date) = 2 THEN total_hours_actual ELSE 0 END) AS m2,
-                SUM(CASE WHEN MONTH(ot_date) = 3 THEN total_hours_actual ELSE 0 END) AS m3,
-                SUM(CASE WHEN MONTH(ot_date) = 4 THEN total_hours_actual ELSE 0 END) AS m4,
-                SUM(CASE WHEN MONTH(ot_date) = 5 THEN total_hours_actual ELSE 0 END) AS m5,
-                SUM(CASE WHEN MONTH(ot_date) = 6 THEN total_hours_actual ELSE 0 END) AS m6,
-                SUM(CASE WHEN MONTH(ot_date) = 7 THEN total_hours_actual ELSE 0 END) AS m7,
-                SUM(CASE WHEN MONTH(ot_date) = 8 THEN total_hours_actual ELSE 0 END) AS m8,
-                SUM(CASE WHEN MONTH(ot_date) = 9 THEN total_hours_actual ELSE 0 END) AS m9,
-                SUM(CASE WHEN MONTH(ot_date) = 10 THEN total_hours_actual ELSE 0 END) AS m10,
-                SUM(CASE WHEN MONTH(ot_date) = 11 THEN total_hours_actual ELSE 0 END) AS m11,
-                SUM(CASE WHEN MONTH(ot_date) = 12 THEN total_hours_actual ELSE 0 END) AS m12,
-                SUM(total_hours_actual) AS total_year
-            FROM ot_actuals
-            WHERE YEAR(ot_date) = {$year}
+                SUM(CASE WHEN MONTH(ot_date) = 1 THEN hours ELSE 0 END) AS m1,
+                SUM(CASE WHEN MONTH(ot_date) = 2 THEN hours ELSE 0 END) AS m2,
+                SUM(CASE WHEN MONTH(ot_date) = 3 THEN hours ELSE 0 END) AS m3,
+                SUM(CASE WHEN MONTH(ot_date) = 4 THEN hours ELSE 0 END) AS m4,
+                SUM(CASE WHEN MONTH(ot_date) = 5 THEN hours ELSE 0 END) AS m5,
+                SUM(CASE WHEN MONTH(ot_date) = 6 THEN hours ELSE 0 END) AS m6,
+                SUM(CASE WHEN MONTH(ot_date) = 7 THEN hours ELSE 0 END) AS m7,
+                SUM(CASE WHEN MONTH(ot_date) = 8 THEN hours ELSE 0 END) AS m8,
+                SUM(CASE WHEN MONTH(ot_date) = 9 THEN hours ELSE 0 END) AS m9,
+                SUM(CASE WHEN MONTH(ot_date) = 10 THEN hours ELSE 0 END) AS m10,
+                SUM(CASE WHEN MONTH(ot_date) = 11 THEN hours ELSE 0 END) AS m11,
+                SUM(CASE WHEN MONTH(ot_date) = 12 THEN hours ELSE 0 END) AS m12,
+                SUM(hours) AS total_year
+            FROM (
+                -- 1. Giờ tăng ca thực tế từ máy quét vân tay / HRM
+                SELECT employee_code, ot_date, total_hours_actual AS hours
+                FROM ot_actuals
+                WHERE YEAR(ot_date) = {$year} AND total_hours_actual > 0
+
+                UNION ALL
+
+                -- 2. Giờ tăng ca từ giải trình thủ công (quên kế hoạch) đã được phê duyệt
+                SELECT employee_code, ot_date, total_hours AS hours
+                FROM ot_explanations
+                WHERE YEAR(ot_date) = {$year}
+                  AND is_manual = 1
+                  AND approval_status = 'approved'
+                  AND total_hours > 0
+            ) combined_ot
             GROUP BY employee_code
         ";
         $aggRes = $conn->query($sqlAgg);

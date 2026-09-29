@@ -40,6 +40,24 @@ $currentYear = intval(date('Y'));
   border-color: #dc2626;
   color: #fff;
 }
+
+/* Tô xám toàn bộ thông tin nhân sự đã có ngày nghỉ việc */
+.row-resigned {
+  background-color: rgba(148, 163, 184, 0.15) !important;
+  color: #64748b !important;
+  opacity: 0.65;
+}
+.row-resigned td {
+  background-color: transparent !important;
+  color: inherit !important;
+}
+.row-resigned .font-monospace {
+  color: #64748b !important;
+}
+.row-resigned:hover {
+  background-color: rgba(148, 163, 184, 0.25) !important;
+  opacity: 0.9;
+}
 </style>
 
 <div class="app-page-wrapper">
@@ -66,8 +84,8 @@ $currentYear = intval(date('Y'));
   </div>
 
   <!-- 2. Thẻ Chỉ Số KPI Kiểm Soát Ngưỡng -->
-  <div class="row g-3 mb-3">
-    <div class="col-md-3">
+  <div class="row g-2 mb-3">
+    <div class="col-md" style="flex: 1 1 190px;">
       <div class="app-card p-3 d-flex align-items-center gap-3">
         <div class="ot-kpi-icon" style="background: var(--dx-primary-light); color: var(--dx-primary);">
           <span class="material-icons">groups</span>
@@ -79,7 +97,7 @@ $currentYear = intval(date('Y'));
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md" style="flex: 1 1 190px;">
       <div class="app-card p-3 d-flex align-items-center gap-3">
         <div class="ot-kpi-icon" style="background: #f0fdf4; color: #16a34a;">
           <span class="material-icons">verified_user</span>
@@ -91,26 +109,39 @@ $currentYear = intval(date('Y'));
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md" style="flex: 1 1 190px;">
       <div class="app-card p-3 d-flex align-items-center gap-3">
         <div class="ot-kpi-icon" style="background: #fffbeb; color: #d97706;">
           <span class="material-icons">warning</span>
         </div>
         <div>
           <div class="ot-kpi-val text-warning" id="ycYellowCount">0</div>
-          <div class="ot-kpi-lbl">Cảnh báo (160h - 199.9h)</div>
+          <div class="ot-kpi-lbl">Cảnh báo năm (160 - 199h)</div>
         </div>
       </div>
     </div>
 
-    <div class="col-md-3">
+    <div class="col-md" style="flex: 1 1 190px;">
       <div class="app-card p-3 d-flex align-items-center gap-3">
         <div class="ot-kpi-icon" style="background: #fef2f2; color: #dc2626;">
           <span class="material-icons">error</span>
         </div>
         <div>
           <div class="ot-kpi-val text-danger" id="ycRedCount">0</div>
-          <div class="ot-kpi-lbl">Vượt quy định (&ge; 200h)</div>
+          <div class="ot-kpi-lbl">Vượt trần năm (&ge; 200h)</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thẻ KPI Cảnh báo Tháng > 36h / tháng 40h -->
+    <div class="col-md" style="flex: 1 1 210px;">
+      <div class="app-card p-3 d-flex align-items-center gap-3" style="border-left: 3px solid #f59e0b;">
+        <div class="ot-kpi-icon" style="background: #fffbeb; color: #d97706;">
+          <span class="material-icons">alarm</span>
+        </div>
+        <div>
+          <div class="ot-kpi-val text-warning" id="ycMonthWarningCount">0</div>
+          <div class="ot-kpi-lbl">Cảnh báo tháng (&gt; 36h/40h)</div>
         </div>
       </div>
     </div>
@@ -118,12 +149,15 @@ $currentYear = intval(date('Y'));
 
   <!-- 3. Tabs Phân Loại Mức Cảnh Báo & Tìm Kiếm -->
   <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
-    <div class="d-flex align-items-center gap-2">
+    <div class="d-flex align-items-center gap-2 flex-wrap">
       <div class="tab-pill-btn active" onclick="setWarningFilter('', this)">
         Tất cả nhân sự
       </div>
+      <div class="tab-pill-btn btn-warning-tab" onclick="setWarningFilter('month_warning_36h', this)" title="Lọc các nhân viên có tháng vượt trên 36 giờ (ngưỡng 90% giới hạn tháng)">
+        <span class="material-icons fs-6">alarm</span> Cảnh báo tháng (&gt; 36h)
+      </div>
       <div class="tab-pill-btn btn-warning-tab" onclick="setWarningFilter('yellow', this)">
-        <span class="material-icons fs-6">warning</span> Cảnh báo Vàng (160 - 199.9h)
+        <span class="material-icons fs-6">warning</span> Cảnh báo năm (160 - 199.9h)
       </div>
       <div class="tab-pill-btn btn-danger-tab" onclick="setWarningFilter('red', this)">
         <span class="material-icons fs-6">error</span> Báo động Đỏ (&ge; 200h)
@@ -176,6 +210,14 @@ $currentYear = intval(date('Y'));
         </tbody>
       </table>
     </div>
+    <!-- Chú thích quy định Điều 107 BLLĐ -->
+    <div class="p-3 border-top bg-light-subtle d-flex align-items-center gap-2 small text-muted">
+      <span class="material-icons text-primary fs-5">info</span>
+      <div>
+        <strong>Quy định Điều 107 Bộ luật Lao động:</strong> Giới hạn làm thêm tối đa <strong>40 giờ/tháng</strong> và <strong>200 giờ/năm</strong>.
+        Hệ thống tự động kích hoạt <span class="badge bg-warning text-dark border border-warning">Cảnh báo tháng &gt; 36h</span> khi đạt từ 36.1 giờ (ngưỡng 90% giới hạn tháng) nhằm giúp quản trị viên chủ động điều chuyển nhân sự, ngăn chặn vượt trần 40h/tháng.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -199,6 +241,18 @@ function handleYcSearch(val) {
   ycSearchTimeout = setTimeout(() => {
     loadYearlyControl();
   }, 300);
+}
+
+function renderMonthCell(hours) {
+  const h = parseFloat(hours) || 0;
+  if (h <= 0) return '<small class="text-muted">-</small>';
+  if (h > 40.0) {
+    return `<span class="badge bg-danger text-white py-1 px-1 font-monospace fw-bold" style="font-size: 11px;" title="VƯỢT TRẦN THÁNG QUY ĐỊNH (>40h/tháng: ${h}h)">${h}h ⛔</span>`;
+  }
+  if (h > 36.0) {
+    return `<span class="badge bg-warning text-dark border border-warning py-1 px-1 font-monospace fw-bold" style="font-size: 11px;" title="CẢNH BÁO: Tăng ca tháng vượt 36h/40h (${h}h)">${h}h ⚠️</span>`;
+  }
+  return `<small class="fw-bold">${h}h</small>`;
 }
 
 async function loadYearlyControl() {
@@ -226,6 +280,9 @@ async function loadYearlyControl() {
     document.getElementById('ycGreenCount').textContent = st.count_green || 0;
     document.getElementById('ycYellowCount').textContent = st.count_yellow || 0;
     document.getElementById('ycRedCount').textContent = st.count_red || 0;
+    if (document.getElementById('ycMonthWarningCount')) {
+      document.getElementById('ycMonthWarningCount').textContent = st.count_month_warning_36h || 0;
+    }
 
     // Đổ danh sách phòng ban nếu chưa có
     const deptSel = document.getElementById('ycDeptSelect');
@@ -244,32 +301,48 @@ async function loadYearlyControl() {
     data.data.forEach((r, idx) => {
       const isRed = r.warning_level === 'red';
       const isYellow = r.warning_level === 'yellow';
-      const badgeText = isRed ? '🔴 VƯỢT TRẦN' : (isYellow ? '🟡 CẢNH BÁO' : '🟢 An toàn');
+      const badgeText = isRed ? '🔴 VƯỢT TRẦN NĂM' : (isYellow ? '🟡 CẢNH BÁO NĂM' : '🟢 An toàn năm');
       const badgeClass = isRed ? 'badge-danger-red' : (isYellow ? 'badge-warning-yellow' : 'badge-success-green');
       const barColor = isRed ? '#dc2626' : (isYellow ? '#d97706' : '#16a34a');
       const pct = Math.min(100, parseFloat(r.usage_percent)).toFixed(1);
 
+      // Nhãn cảnh báo các tháng vượt 36h hoặc 40h
+      let monthWarningBadges = '';
+      if (r.month_warnings && r.month_warnings.length > 0) {
+        monthWarningBadges = '<div class="mt-1 d-flex flex-wrap gap-1 justify-content-center">';
+        r.month_warnings.forEach(mw => {
+          const bClass = mw.level === 'red' ? 'bg-danger text-white' : 'bg-warning text-dark border border-warning';
+          monthWarningBadges += `<span class="badge ${bClass}" style="font-size: 9px;" title="${escapeHtml(mw.title)}">⚠️ ${mw.label}: ${mw.hours}h</span>`;
+        });
+        monthWarningBadges += '</div>';
+      }
+
+      const isResigned = r.has_resigned || (r.resignation_date && r.resignation_date !== '-' && r.resignation_date !== '0000-00-00');
+
       html += `
-        <tr>
+        <tr class="${isResigned ? 'row-resigned' : ''}">
           <td class="text-muted fw-bold">#${idx + 1}</td>
           <td><strong class="font-monospace text-primary">${r.employee_code}</strong></td>
-          <td><strong>${escapeHtml(r.full_name)}</strong></td>
+          <td>
+            <strong>${escapeHtml(r.full_name)}</strong>
+            ${isResigned ? `<span class="badge bg-secondary text-white ms-1" style="font-size: 10px;" title="Ngày nghỉ việc">Đã nghỉ (${escapeHtml(r.resignation_date)})</span>` : ''}
+          </td>
           <td><small>${escapeHtml(r.department)}</small></td>
           <td><span class="badge bg-secondary-subtle text-secondary" style="font-size: 10px;">${r.job_level}</span></td>
 
-          <!-- 12 Tháng -->
-          <td style="text-align: right;"><small class="${r.total_hours_m1 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m1 > 0 ? r.total_hours_m1 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m2 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m2 > 0 ? r.total_hours_m2 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m3 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m3 > 0 ? r.total_hours_m3 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m4 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m4 > 0 ? r.total_hours_m4 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m5 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m5 > 0 ? r.total_hours_m5 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m6 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m6 > 0 ? r.total_hours_m6 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m7 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m7 > 0 ? r.total_hours_m7 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m8 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m8 > 0 ? r.total_hours_m8 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m9 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m9 > 0 ? r.total_hours_m9 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m10 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m10 > 0 ? r.total_hours_m10 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m11 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m11 > 0 ? r.total_hours_m11 : '-'}</small></td>
-          <td style="text-align: right;"><small class="${r.total_hours_m12 > 0 ? 'fw-bold' : 'text-muted'}">${r.total_hours_m12 > 0 ? r.total_hours_m12 : '-'}</small></td>
+          <!-- 12 Tháng: Hiển thị cảnh báo vàng khi > 36h và đỏ khi > 40h -->
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m1)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m2)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m3)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m4)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m5)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m6)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m7)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m8)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m9)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m10)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m11)}</td>
+          <td style="text-align: right;">${renderMonthCell(r.total_hours_m12)}</td>
 
           <!-- Tổng & Tiến độ -->
           <td style="text-align: right; background: rgba(30, 64, 175, 0.05);"><strong class="${isRed ? 'text-danger' : (isYellow ? 'text-warning' : 'text-primary')}">${r.total_hours_year}h</strong></td>
@@ -284,6 +357,7 @@ async function loadYearlyControl() {
           </td>
           <td style="text-align: center;">
             <span class="badge ${badgeClass} px-2 py-1 small">${badgeText}</span>
+            ${monthWarningBadges}
           </td>
           <td style="text-align: center;">
             <button class="btn btn-sm btn-outline-primary py-0 px-2" onclick="openEmpHistoryModal('${r.employee_code}', ${r.year})">
