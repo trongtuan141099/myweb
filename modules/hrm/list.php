@@ -302,6 +302,18 @@ if ($resCc) {
               <input type="date" id="modalEmpHireDate" name="hire_date" class="form-control form-control-sm">
             </div>
 
+            <!-- Xe đưa rước (Sắp xe) -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold small d-flex align-items-center gap-1">
+                <span class="material-icons fs-6 text-primary">directions_bus</span>
+                Sắp xe (Xe đưa rước)
+              </label>
+              <select id="modalEmpShuttleBus" name="use_shuttle_bus" class="form-select form-select-sm">
+                <option value="0">Không sử dụng xe đưa rước</option>
+                <option value="1">Có sử dụng xe đưa rước</option>
+              </select>
+            </div>
+
             <!-- Ngày nghỉ việc -->
             <div class="col-md-6">
               <label class="form-label fw-bold small text-danger d-flex align-items-center gap-1">
@@ -490,6 +502,7 @@ function openAddEmployeeModal() {
     document.getElementById('modalEmpHireDate').value = new Date().toISOString().split('T')[0];
     document.getElementById('modalEmpWorkShift').value = 'Ca 1';
     document.getElementById('modalEmpWorkGroup').value = 'Khác';
+    document.getElementById('modalEmpShuttleBus').value = '0';
     document.getElementById('modalFullPageEditBtn').style.display = 'none';
     getEmpModal().show();
 }
@@ -523,6 +536,7 @@ async function openEditEmployeeModal(empCode) {
             document.getElementById('modalEmpCostCenter').value = d.cost_center || '';
             document.getElementById('modalEmpWorkGroup').value = d.work_group || 'Khác';
             document.getElementById('modalEmpWorkShift').value = d.work_shift || 'Ca 1';
+            document.getElementById('modalEmpShuttleBus').value = (d.use_shuttle_bus == 1) ? '1' : '0';
             document.getElementById('modalEmpHireDate').value = d.hire_date || '';
             document.getElementById('modalEmpResignationDate').value = d.resignation_date || '';
         } else {

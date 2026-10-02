@@ -42,7 +42,7 @@ try {
 
     $conn->begin_transaction();
 
-    // SQL INSERT 41 cột dữ liệu chi tiết
+    // SQL INSERT 43 cột dữ liệu chi tiết kèm UPSERT
     $sqlInsertLog = "INSERT INTO extrusion_actual_logs (
         import_date, production_date, employee_code, employee_name, shift, 
         mfg_order_code, product_code, pipe_size, cost_center, process_name, 
@@ -52,13 +52,33 @@ try {
         spider_code, production_order_code, is_test, material_type, material_ng_qty, 
         lot_material_ng, hdpe_qty, lio_clean_qty, ti_clean_qty, bobbin_pl7_3_count, 
         bobbin_pl7_3_meters, bobbin_pl4_7_count, bobbin_pl4_7_meters, printer_type, ink_type, 
-        waiting_machine_count
-    ) VALUES (" . implode(',', array_fill(0, 41, '?')) . ")";
+        waiting_machine_count, data_source, record_hash
+    ) VALUES (" . implode(',', array_fill(0, 43, '?')) . ")
+    ON DUPLICATE KEY UPDATE
+        import_date         = VALUES(import_date),
+        employee_code       = VALUES(employee_code),
+        employee_name       = VALUES(employee_name),
+        finished_qty_m      = VALUES(finished_qty_m),
+        finished_qty_kg     = VALUES(finished_qty_kg),
+        ng_qty_kg           = VALUES(ng_qty_kg),
+        hard_waste_qty_kg   = VALUES(hard_waste_qty_kg),
+        total_weight_kg     = VALUES(total_weight_kg),
+        total_downtime      = VALUES(total_downtime),
+        total_runtime       = VALUES(total_runtime),
+        cycle_time          = VALUES(cycle_time),
+        machine_efficiency  = VALUES(machine_efficiency),
+        bobbin_pl7_3_count  = VALUES(bobbin_pl7_3_count),
+        bobbin_pl7_3_meters = VALUES(bobbin_pl7_3_meters),
+        bobbin_pl4_7_count  = VALUES(bobbin_pl4_7_count),
+        bobbin_pl4_7_meters = VALUES(bobbin_pl4_7_meters),
+        data_source         = VALUES(data_source),
+        updated_at          = CURRENT_TIMESTAMP";
 
     $stmtLog = $conn->prepare($sqlInsertLog);
     if (!$stmtLog) throw new Exception('Lỗi SQL Prepare: ' . $conn->error);
 
     $dailyTotals = [];
+    $insertedCount = 0;
 
     foreach ($rows as $index => $row) {
         if ($index === 0 || empty($row[1])) continue;
@@ -105,8 +125,13 @@ try {
         $inkType        = (string)($row[38] ?? '');
         $waitingMchCnt  = (int)($row[39] ?? 0);
 
-        // Chuỗi mã hóa 41 tham số chính xác tuyệt đối
-        $types = "sssssssssssdddddsissddidsssisdsdddididssi";
+        // Sinh khóa định danh chống trùng lặp
+        $recordKey = "{$productionDate}|{$shift}|{$mfgOrderCode}|{$productCode}|{$deviceCode}|" . (!empty($prodOrderCode) ? $prodOrderCode : $employeeCode);
+        $recordHash = md5($recordKey);
+        $dataSource = 'EXCEL';
+
+        // Chuỗi mã hóa 43 tham số chính xác tuyệt đối
+        $types = "sssssssssssdddddsissddidsssisdsdddididssiss";
 
         $stmtLog->bind_param($types,
             $importDate, $productionDate, $employeeCode, $employeeName, $shift,
@@ -117,9 +142,10 @@ try {
             $spiderCode, $prodOrderCode, $isTest, $materialType, $materialNgQty,
             $lotMaterialNg, $hdpeQty, $lioCleanQty, $tiCleanQty, $bobbinPl73Cnt,
             $bobbinPl73M, $bobbinPl47Cnt, $bobbinPl47M, $printerType, $inkType,
-            $waitingMchCnt
+            $waitingMchCnt, $dataSource, $recordHash
         );
         $stmtLog->execute();
+        $insertedCount++;
 
         // Tích lũy theo Tháng & Size ống
         $yearMonth = date('Y-m', strtotime($productionDate));
@@ -128,8 +154,8 @@ try {
     }
 
     // Cập nhật bảng tổng hợp `production_actuals`
-    $stmtAct = $conn->prepare("INSERT INTO production_actuals (year_month, pipe_size, day, actual_qty) 
-        VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE actual_qty = VALUES(actual_qty)");
+    $stmtAct = $conn->prepare("INSERT INTO `production_actuals` (`year_month`, `pipe_size`, `day`, `actual_qty`) 
+        VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `actual_qty` = VALUES(`actual_qty`)");
 
     if ($stmtAct) {
         foreach ($dailyTotals as $ym => $sizeGroup) {
@@ -144,7 +170,7 @@ try {
 
     $conn->commit();
     ob_clean();
-    echo json_encode(['success' => true, 'message' => 'Upload thành công trọn vẹn dữ liệu từ Excel!']);
+    echo json_encode(['success' => true, 'message' => "Đã xử lý thành công {$insertedCount} dòng dữ liệu từ Excel (Cơ chế UPSERT chống trùng lặp)!"]);
 
 } catch (Exception $e) {
     if (isset($conn)) $conn->rollback();

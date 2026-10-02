@@ -9,12 +9,12 @@
     "auto_sync_enabled": true,
     "sync_date_from": "",
     "sync_date_to": "",
-    "last_sync_time": "2026-09-29 21:56:36",
+    "last_sync_time": "2026-10-02 13:21:34",
     "last_sync_status": "success",
-    "last_sync_message": "Đồng bộ hoàn tất (3\/3 tài khoản): +603 bản ghi mới, 144 cập nhật.",
+    "last_sync_message": "Tự động đồng bộ (3\/3 tài khoản): +1 bản ghi mới, 9 cập nhật.",
     "last_sync_stats": {
-        "inserted": 603,
-        "updated": 144,
+        "inserted": 1,
+        "updated": 9,
         "errors": 0
     }
 }

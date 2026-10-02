@@ -33,17 +33,39 @@ function parseDateTimeCustom($dateStr) {
  */
 function processExcelImport($conn, $filePath, $originalFileName, $fileType, $currentUser = 'SYSTEM') {
     if (!file_exists($filePath)) {
-        return ['success' => false, 'message' => 'Không tìm thấy tập tin cần nạp: ' . htmlspecialchars($filePath)];
+        return [
+            'success' => false,
+            'inserted_rows' => 0,
+            'updated_rows' => 0,
+            'error_rows' => 0,
+            'total_rows' => 0,
+            'message' => 'Không tìm thấy tập tin cần nạp: ' . htmlspecialchars($filePath)
+        ];
     }
 
     $xlsx = SimpleXLSX::parse($filePath);
     if (!$xlsx) {
-        return ['success' => false, 'message' => 'Không thể đọc file Excel: ' . SimpleXLSX::parseError()];
+        return [
+            'success' => false,
+            'inserted_rows' => 0,
+            'updated_rows' => 0,
+            'error_rows' => 0,
+            'total_rows' => 0,
+            'message' => 'Không thể đọc file Excel: ' . SimpleXLSX::parseError()
+        ];
     }
 
     $rows = $xlsx->rows();
     if (count($rows) < 3) {
-        return ['success' => false, 'message' => 'File Excel không có dữ liệu (ít hơn 3 dòng).'];
+        return [
+            'success' => true,
+            'inserted_rows' => 0,
+            'updated_rows' => 0,
+            'error_rows' => 0,
+            'total_rows' => 0,
+            'batch_id' => null,
+            'message' => 'File Excel không có dữ liệu tăng ca mới (chỉ chứa dòng tiêu đề).'
+        ];
     }
 
     // Tạo Batch Code
@@ -277,7 +299,14 @@ function processExcelImport($conn, $filePath, $originalFileName, $fileType, $cur
     } catch (Exception $e) {
         $conn->rollback();
         $conn->query("UPDATE ot_import_batches SET status = 'failed', error_message = '" . $conn->real_escape_string($e->getMessage()) . "' WHERE id = {$batchId}");
-        return ['success' => false, 'message' => 'Lỗi trong quá trình xử lý: ' . $e->getMessage()];
+        return [
+            'success' => false,
+            'inserted_rows' => 0,
+            'updated_rows' => 0,
+            'error_rows' => 0,
+            'total_rows' => 0,
+            'message' => 'Lỗi trong quá trình xử lý: ' . $e->getMessage()
+        ];
     }
 }
 

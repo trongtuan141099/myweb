@@ -383,6 +383,54 @@ document.addEventListener('DOMContentLoaded', () => {
 // =========================================================================
 let currentHrmAccounts = [];
 
+/**
+ * Hàm gọi API an toàn: kiểm tra Content-Type, mã lỗi HTTP và chặn hoàn toàn lỗi parse HTML thô
+ */
+async function safeFetchJson(url, options = {}) {
+  let res;
+  try {
+    res = await fetch(url, options);
+  } catch (netErr) {
+    throw new Error('Không thể kết nối đến máy chủ. Vui lòng kiểm tra mạng hoặc kết nối server.');
+  }
+
+  const contentType = (res.headers.get('content-type') || '').toLowerCase();
+  const rawText = await res.text();
+  const trimmed = rawText.trim();
+
+  // Kiểm tra mã trạng thái HTTP
+  if (res.status === 401) {
+    throw new Error('Phiên làm việc đã hết hạn hoặc chưa đăng nhập. Vui lòng đăng nhập lại.');
+  }
+  if (res.status === 403) {
+    throw new Error('Bạn không có quyền thực hiện thao tác này trên hệ thống.');
+  }
+  if (res.status === 404) {
+    throw new Error('Không tìm thấy tài nguyên API yêu cầu (404 Not Found).');
+  }
+  if (res.status >= 500) {
+    let detail = '';
+    try {
+      const parsed = JSON.parse(trimmed);
+      if (parsed.message) detail = ': ' + parsed.message;
+    } catch(e) {}
+    throw new Error(`Máy chủ gặp sự cố (HTTP ${res.status})${detail}. Vui lòng thử lại sau.`);
+  }
+
+  // Chặn trường hợp phản hồi là trang HTML hoặc leak PHP Warning/Notice
+  if (trimmed.startsWith('<') || (!contentType.includes('application/json') && trimmed.includes('<html'))) {
+    console.error('[API Non-JSON Response Detected]:', trimmed.substring(0, 400));
+    throw new Error('Máy chủ phản hồi trang web thay vì dữ liệu JSON hợp lệ. Vui lòng kiểm tra log hệ thống.');
+  }
+
+  try {
+    return JSON.parse(trimmed);
+  } catch (parseErr) {
+    console.error('[JSON Parse Error]:', trimmed.substring(0, 400));
+    throw new Error('Dữ liệu phản hồi từ máy chủ không đúng định dạng JSON.');
+  }
+}
+
 function formatVnDateTimeClient(dtStr) {
   if (!dtStr) return '-';
   if (/^\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}$/.test(dtStr)) return dtStr;
@@ -394,8 +442,7 @@ function formatVnDateTimeClient(dtStr) {
 
 async function loadHrmSyncConfig() {
   try {
-    const res = await fetch('api/overtime_hrm_sync.php?action=get_config');
-    const data = await res.json();
+    const data = await safeFetchJson('api/overtime_hrm_sync.php?action=get_config');
     if (!data.success) return;
 
     currentHrmAccounts = data.accounts || [];
@@ -426,13 +473,19 @@ async function loadHrmSyncConfig() {
     }
 
     // 2. Điền cấu hình chu kỳ & ngày
+    const now = new Date();
+    const curYear = now.getFullYear();
+    const curMonth = String(now.getMonth() + 1).padStart(2, '0');
+    const lastDayOfMonth = new Date(curYear, now.getMonth() + 1, 0).getDate();
+    const defaultDateFrom = `${curYear}-${curMonth}-01`;
+    const defaultDateTo = `${curYear}-${curMonth}-${String(lastDayOfMonth).padStart(2, '0')}`;
+
     if (document.getElementById('hrmSyncInterval')) document.getElementById('hrmSyncInterval').value = gc.sync_interval_hours || 3;
     if (document.getElementById('hrmAutoSyncEnabled')) document.getElementById('hrmAutoSyncEnabled').checked = !!gc.auto_sync_enabled;
-    if (document.getElementById('hrmSyncDateFrom') && gc.sync_date_from) document.getElementById('hrmSyncDateFrom').value = gc.sync_date_from;
-    if (document.getElementById('hrmSyncDateTo') && gc.sync_date_to) document.getElementById('hrmSyncDateTo').value = gc.sync_date_to;
+    if (document.getElementById('hrmSyncDateFrom')) document.getElementById('hrmSyncDateFrom').value = gc.sync_date_from || defaultDateFrom;
+    if (document.getElementById('hrmSyncDateTo')) document.getElementById('hrmSyncDateTo').value = gc.sync_date_to || defaultDateTo;
 
-    fetch('api/overtime_hrm_sync.php?action=check_schedule')
-      .then(r => r.json())
+    safeFetchJson('api/overtime_hrm_sync.php?action=check_schedule')
       .then(d => {
         if (d.seconds_remaining !== undefined && d.auto_sync_enabled) {
           startImportCountdown(d.seconds_remaining);
@@ -441,7 +494,9 @@ async function loadHrmSyncConfig() {
           if (cdText) cdText.textContent = 'Đã tắt';
         }
       })
-      .catch(console.error);
+      .catch(err => {
+        console.warn('Lỗi kiểm tra lịch trình tự động:', err.message);
+      });
 
     // 3. Render bảng danh sách tài khoản
     const tbody = document.getElementById('hrmAccountsTableBody');
@@ -578,12 +633,11 @@ async function handleSaveAccountForm(e) {
   };
 
   try {
-    const res = await fetch('api/overtime_hrm_sync.php?action=save_account', {
+    const data = await safeFetchJson('api/overtime_hrm_sync.php?action=save_account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const data = await res.json();
 
     if (data.success) {
       const modalEl = document.getElementById('hrmAccountModal');
@@ -595,7 +649,7 @@ async function handleSaveAccountForm(e) {
     }
   } catch (err) {
     console.error('Lỗi handleSaveAccountForm:', err);
-    alert('Có lỗi xảy ra khi lưu tài khoản.');
+    alert('Lỗi lưu tài khoản: ' + err.message);
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-icons fs-6">save</span> Lưu Tài Khoản';
@@ -608,12 +662,11 @@ async function handleDeleteAccount(id, name) {
   }
 
   try {
-    const res = await fetch('api/overtime_hrm_sync.php?action=delete_account', {
+    const data = await safeFetchJson('api/overtime_hrm_sync.php?action=delete_account', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id })
     });
-    const data = await res.json();
     if (data.success) {
       await loadHrmSyncConfig();
     } else {
@@ -621,12 +674,13 @@ async function handleDeleteAccount(id, name) {
     }
   } catch (err) {
     console.error('Lỗi handleDeleteAccount:', err);
+    alert('Lỗi xóa tài khoản: ' + err.message);
   }
 }
 
 async function handleToggleAccount(id, isChecked) {
   try {
-    await fetch('api/overtime_hrm_sync.php?action=toggle_account_status', {
+    await safeFetchJson('api/overtime_hrm_sync.php?action=toggle_account_status', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ id, is_active: isChecked })
@@ -643,6 +697,11 @@ async function handleSaveGlobalHrmConfig(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang lưu...';
 
+  const alertBox = document.getElementById('hrmSyncAlert');
+  alertBox.style.display = 'block';
+  alertBox.className = 'mt-3 p-3 rounded border bg-info-subtle border-info text-info';
+  alertBox.innerHTML = '<div class="d-flex align-items-center gap-2"><div class="spinner-border spinner-border-sm text-info"></div><span>Đang lưu cấu hình chu kỳ và chuẩn hóa ngày tháng...</span></div>';
+
   const payload = {
     sync_interval_hours: parseInt(document.getElementById('hrmSyncInterval').value),
     auto_sync_enabled: document.getElementById('hrmAutoSyncEnabled').checked,
@@ -651,26 +710,24 @@ async function handleSaveGlobalHrmConfig(e) {
   };
 
   try {
-    const res = await fetch('api/overtime_hrm_sync.php?action=save_global_config', {
+    const data = await safeFetchJson('api/overtime_hrm_sync.php?action=save_global_config', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    const data = await res.json();
-
-    const alertBox = document.getElementById('hrmSyncAlert');
-    alertBox.style.display = 'block';
 
     if (data.success) {
       alertBox.className = 'mt-3 p-3 rounded border bg-success-subtle border-success text-success';
-      alertBox.innerHTML = `<span class="material-icons align-middle fs-5 me-1">check_circle</span> ${data.message}`;
+      alertBox.innerHTML = `<span class="material-icons align-middle fs-5 me-1">check_circle</span> ${escapeHtml(data.message)}`;
       await loadHrmSyncConfig();
     } else {
       alertBox.className = 'mt-3 p-3 rounded border bg-danger-subtle border-danger text-danger';
-      alertBox.innerHTML = `<strong>Lỗi:</strong> ${data.message}`;
+      alertBox.innerHTML = `<strong>Lỗi lưu cấu hình:</strong> ${escapeHtml(data.message || 'Không thể lưu cấu hình.')}`;
     }
   } catch (err) {
     console.error('Lỗi handleSaveGlobalHrmConfig:', err);
+    alertBox.className = 'mt-3 p-3 rounded border bg-danger-subtle border-danger text-danger';
+    alertBox.innerHTML = `<strong>Lỗi kết nối / Máy chủ:</strong> ${escapeHtml(err.message)}`;
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<span class="material-icons fs-6">save</span> Lưu Chu Kỳ';
@@ -699,11 +756,10 @@ async function triggerHrmSyncNow(accountId = null) {
     if (df && df.value) formData.append('TuNgay', df.value);
     if (dt && dt.value) formData.append('DenNgay', dt.value);
 
-    const res = await fetch('api/overtime_hrm_sync.php?action=trigger_sync', {
+    const data = await safeFetchJson('api/overtime_hrm_sync.php?action=trigger_sync', {
       method: 'POST',
       body: formData
     });
-    const data = await res.json();
 
     // In log chi tiết ra console
     console.group('%c[HRM SYNC] KẾT QUẢ ĐỒNG BỘ ĐA TÀI KHOẢN HRM', 'color: #0d6efd; font-weight: bold; font-size: 14px; padding: 4px;');
@@ -787,7 +843,7 @@ async function triggerHrmSyncNow(accountId = null) {
   } catch (err) {
     console.error('Lỗi triggerHrmSyncNow:', err);
     alertBox.className = 'mt-3 p-3 rounded border bg-danger-subtle border-danger text-danger';
-    alertBox.innerHTML = `<strong>Lỗi kết nối:</strong> ${err.message}`;
+    alertBox.innerHTML = `<strong>Lỗi kết nối hoặc xử lý:</strong> ${escapeHtml(err.message)}`;
   } finally {
     if (btn) {
       btn.disabled = false;
@@ -804,8 +860,7 @@ async function loadBatchesList() {
   tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted p-3"><div class="spinner-border spinner-border-sm text-primary me-2"></div> Đang tải lịch sử import...</td></tr>';
 
   try {
-    const res = await fetch('api/overtime_import.php?action=get_batches');
-    const data = await res.json();
+    const data = await safeFetchJson('api/overtime_import.php?action=get_batches');
 
     if (!data.success || !data.batches || data.batches.length === 0) {
       tbody.innerHTML = '<tr><td colspan="12" class="text-center text-muted p-4">Chưa có lịch sử đợt import nào.</td></tr>';
@@ -870,11 +925,10 @@ async function handleUploadSubmit(e) {
   formData.append('action', 'upload');
 
   try {
-    const res = await fetch('api/overtime_import.php', {
+    const data = await safeFetchJson('api/overtime_import.php', {
       method: 'POST',
       body: formData
     });
-    const data = await res.json();
 
     alertBox.style.display = 'block';
     if (data.success) {
@@ -899,7 +953,7 @@ async function handleUploadSubmit(e) {
     console.error('Lỗi handleUploadSubmit:', err);
     alertBox.style.display = 'block';
     alertBox.className = 'mt-3 p-3 rounded border bg-danger-subtle border-danger text-danger';
-    alertBox.innerHTML = `<strong>Lỗi kết nối:</strong> ${err.message}`;
+    alertBox.innerHTML = `<strong>Lỗi kết nối / Tải file:</strong> ${escapeHtml(err.message)}`;
   } finally {
     btn.disabled = false;
     spinner.style.display = 'none';
@@ -915,10 +969,9 @@ async function autoImportDataFolderFiles() {
   alertBox.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang nạp 2 file từ thư mục Data...';
 
   try {
-    const res = await fetch('api/overtime_import.php?action=import_data_files', {
+    const data = await safeFetchJson('api/overtime_import.php?action=import_data_files', {
       method: 'POST'
     });
-    const data = await res.json();
 
     if (data.success) {
       alertBox.className = 'mt-3 p-3 rounded border bg-success-subtle border-success text-success';
@@ -949,8 +1002,7 @@ async function openBatchErrors(batchId, batchCode) {
   tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted p-2">Đang tải danh sách lỗi...</td></tr>';
 
   try {
-    const res = await fetch(`api/overtime_import.php?action=get_batch_errors&batch_id=${batchId}`);
-    const data = await res.json();
+    const data = await safeFetchJson(`api/overtime_import.php?action=get_batch_errors&batch_id=${batchId}`);
     if (!data.success || !data.errors || data.errors.length === 0) {
       tbody.innerHTML = '<tr><td colspan="3" class="text-center text-muted p-2">Không có dòng lỗi nào.</td></tr>';
     } else {
@@ -969,6 +1021,7 @@ async function openBatchErrors(batchId, batchCode) {
     new bootstrap.Modal(document.getElementById('batchErrorsModal')).show();
   } catch (err) {
     console.error('Lỗi openBatchErrors:', err);
+    tbody.innerHTML = `<tr><td colspan="3" class="text-center text-danger p-2">${escapeHtml(err.message)}</td></tr>`;
   }
 }
 
@@ -978,8 +1031,7 @@ async function openBatchLogs(batchId, batchCode) {
   tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-2">Đang tải audit log...</td></tr>';
 
   try {
-    const res = await fetch(`api/overtime_import.php?action=get_batch_logs&batch_id=${batchId}`);
-    const data = await res.json();
+    const data = await safeFetchJson(`api/overtime_import.php?action=get_batch_logs&batch_id=${batchId}`);
     if (!data.success || !data.logs || data.logs.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted p-2">Chưa có lịch sử audit log cho đợt này.</td></tr>';
     } else {

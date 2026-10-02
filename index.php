@@ -47,7 +47,8 @@ $route_permissions = [
     ],
     'production' => [
         'production_planing' => 'production.plan',
-        'production_data'    => 'production.data'
+        'production_data'    => 'production.data',
+        'extrusion_summary'  => 'production.data'
     ],
     'hrm' => [
         'list'                => 'hrm.view',

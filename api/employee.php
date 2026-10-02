@@ -44,7 +44,7 @@ try {
                 exit;
             }
 
-            $stmt = $conn->prepare("SELECT employee_code, full_name, gender, job_level, cost_center, work_group, work_shift, hire_date, resignation_date FROM employees WHERE employee_code = ? LIMIT 1");
+            $stmt = $conn->prepare("SELECT employee_code, full_name, gender, job_level, cost_center, work_group, work_shift, hire_date, resignation_date, use_shuttle_bus FROM employees WHERE employee_code = ? LIMIT 1");
             if (!$stmt) {
                 throw new Exception($conn->error);
             }
@@ -84,6 +84,7 @@ try {
             $dept   = trim($_POST['cost_center'] ?? '');
             $group  = trim($_POST['work_group'] ?? '');
             $shift  = trim($_POST['work_shift'] ?? 'Ca 1');
+            $useShuttleBus = isset($_POST['use_shuttle_bus']) ? intval($_POST['use_shuttle_bus']) : 0;
             $hireDate = !empty($_POST['hire_date']) ? trim($_POST['hire_date']) : NULL;
             $resigDate = !empty($_POST['resignation_date']) ? trim($_POST['resignation_date']) : NULL;
 
@@ -117,11 +118,12 @@ try {
                             work_group = ?, 
                             work_shift = ?, 
                             hire_date = ?, 
-                            resignation_date = ? 
+                            resignation_date = ?,
+                            use_shuttle_bus = ? 
                         WHERE employee_code = ?";
                 $stmt = $conn->prepare($sql);
                 if (!$stmt) throw new Exception($conn->error);
-                $stmt->bind_param("sssssssss", $name, $gender, $job, $dept, $group, $shift, $hireDate, $resigDate, $code);
+                $stmt->bind_param("ssssssssis", $name, $gender, $job, $dept, $group, $shift, $hireDate, $resigDate, $useShuttleBus, $code);
                 $ok = $stmt->execute();
                 $stmt->close();
 
@@ -136,11 +138,11 @@ try {
                 }
             } else {
                 // INSERT NHÂN VIÊN MỚI
-                $sql = "INSERT INTO employees (employee_code, full_name, gender, job_level, cost_center, work_group, work_shift, hire_date, resignation_date) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                $sql = "INSERT INTO employees (employee_code, full_name, gender, job_level, cost_center, work_group, work_shift, hire_date, resignation_date, use_shuttle_bus) 
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                 $stmt = $conn->prepare($sql);
                 if (!$stmt) throw new Exception($conn->error);
-                $stmt->bind_param("sssssssss", $code, $name, $gender, $job, $dept, $group, $shift, $hireDate, $resigDate);
+                $stmt->bind_param("sssssssssi", $code, $name, $gender, $job, $dept, $group, $shift, $hireDate, $resigDate, $useShuttleBus);
                 $ok = $stmt->execute();
                 $stmt->close();
 

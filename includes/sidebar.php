@@ -95,6 +95,10 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
           <span class="material-icons">tune</span>
           <span class="label">Dữ liệu thực tích</span>
         </a>
+        <a href="index.php?mainpage=production&subpage=extrusion_summary" class="submenu-item <?= ($current_main === 'production' && $current_sub === 'extrusion_summary') ? 'active' : '' ?>">
+          <span class="material-icons">stacked_bar_chart</span>
+          <span class="label">Tổng hợp sản lượng đùn ép</span>
+        </a>
         <?php endif; ?>
       </div>
     </div>

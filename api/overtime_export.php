@@ -38,6 +38,11 @@ function sendCsvHeaders($filename) {
     echo "\xEF\xBB\xBF";
 }
 
+if ($type === 'plan_template' || $type === 'plan_excel') {
+    require_once __DIR__ . '/overtime_export_plan_template.php';
+    exit;
+}
+
 $out = fopen('php://output', 'w');
 
 switch ($type) {

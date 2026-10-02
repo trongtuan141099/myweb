@@ -51,7 +51,7 @@ try {
     $totalRecords = (int)$stmtCount->get_result()->fetch_assoc()['total'];
 
     // Query lấy danh sách
-    $sqlData = "SELECT id, production_date, employee_code, employee_name, shift, 
+    $sqlData = "SELECT id, data_source, production_date, employee_code, employee_name, shift, 
                        mfg_order_code, product_code, pipe_size, device_code, 
                        finished_qty_m, finished_qty_kg, ng_qty_kg, hard_waste_qty_kg, 
                        total_downtime, total_runtime, machine_efficiency 

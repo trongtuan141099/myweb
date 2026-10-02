@@ -117,9 +117,9 @@ try {
     $newTotalM = (float)($resRecalc['total_m'] ?? 0);
 
     // Cập nhật lại sản lượng thực tích tích lũy
-    $sqlUpdAct = "INSERT INTO production_actuals (year_month, pipe_size, day, actual_qty) 
+    $sqlUpdAct = "INSERT INTO `production_actuals` (`year_month`, `pipe_size`, `day`, `actual_qty`) 
                   VALUES (?, ?, ?, ?) 
-                  ON DUPLICATE KEY UPDATE actual_qty = VALUES(actual_qty)";
+                  ON DUPLICATE KEY UPDATE `actual_qty` = VALUES(`actual_qty`)";
     $stmtUpdAct = $conn->prepare($sqlUpdAct);
     $stmtUpdAct->bind_param("ssid", $yearMonth, $pipeSize, $day, $newTotalM);
     $stmtUpdAct->execute();

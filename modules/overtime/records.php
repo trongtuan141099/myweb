@@ -8,6 +8,26 @@ checkAuth();
 
 $currentMonth = intval(date('m'));
 $currentYear = intval(date('Y'));
+$defaultDateFrom = date('Y-m-01');
+$defaultDateTo = date('Y-m-d');
+
+// Lấy danh sách Cost Center từ CSDL
+$costCenters = [];
+$resCc = $conn->query("SELECT DISTINCT cost_center FROM employees WHERE cost_center IS NOT NULL AND cost_center != '' ORDER BY cost_center ASC");
+if ($resCc) {
+    while ($r = $resCc->fetch_assoc()) {
+        $costCenters[] = $r['cost_center'];
+    }
+}
+
+// Lấy danh sách Tổ / Đội từ ot_plans
+$teams = [];
+$resTeams = $conn->query("SELECT DISTINCT team_name FROM ot_plans WHERE team_name IS NOT NULL AND team_name != '' ORDER BY team_name ASC");
+if ($resTeams) {
+    while ($r = $resTeams->fetch_assoc()) {
+        $teams[] = $r['team_name'];
+    }
+}
 ?>
 
 <div class="app-page-wrapper">
@@ -21,6 +41,12 @@ $currentYear = intval(date('Y'));
       </div>
     </div>
     <div class="app-page-actions d-flex align-items-center gap-2">
+      <!-- Nút Xuất OT Kế Hoạch -->
+      <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="openExportPlanModal()" title="Xuất dữ liệu tăng ca kế hoạch theo mẫu chuẩn Excel overtime.xlsx">
+        <span class="material-icons fs-6">file_download</span>
+        <span class="fw-bold">Xuất OT Kế Hoạch</span>
+      </button>
+
       <!-- Chọn Tháng & Năm -->
       <select class="app-form-select app-form-select-sm" id="recFilterMonth" style="width: 120px;" onchange="loadRecordsData()">
         <option value="">-- Cả năm --</option>
@@ -60,8 +86,11 @@ $currentYear = intval(date('Y'));
           <input type="text" class="app-form-control border-start-0" id="recSearchInput" placeholder="Tìm theo tên, mã NV, cấp trên duyệt..." oninput="handleRecordsSearch(this.value)">
         </div>
       </div>
-      <div class="col-md-7 text-end small text-muted">
-        Tổng số bản ghi: <strong id="recordCountLabel">0</strong> ca tăng ca
+      <div class="col-md-7 d-flex align-items-center justify-content-end gap-3 small text-muted">
+        <div>Tổng số bản ghi: <strong id="recordCountLabel" class="text-primary">0</strong> ca tăng ca</div>
+        <button type="button" class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-1" onclick="openExportPlanModal()">
+          <span class="material-icons fs-6">file_download</span> Xuất OT Kế Hoạch
+        </button>
       </div>
     </div>
   </div>
@@ -73,6 +102,146 @@ $currentYear = intval(date('Y'));
         <thead id="recordsThead"></thead>
         <tbody id="recordsTbody"></tbody>
       </table>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Xuất OT Kế Hoạch Theo Mẫu Chuẩn overtime.xlsx -->
+<div class="modal fade" id="modalExportPlan" tabindex="-1" aria-labelledby="modalExportPlanTitle" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content shadow border-0">
+      <div class="modal-header bg-success text-white py-3 px-4">
+        <h5 class="modal-title d-flex align-items-center gap-2 fw-bold" id="modalExportPlanTitle">
+          <span class="material-icons">file_download</span>
+          Xuất Dữ Liệu Tăng Ca Kế Hoạch (Mẫu Chuẩn overtime.xlsx)
+        </h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        <!-- Chú thích quy định mẫu -->
+        <div class="alert alert-light border d-flex align-items-start gap-2 mb-3 py-2 px-3 small text-muted">
+          <span class="material-icons text-success fs-5">verified</span>
+          <div>
+            File xuất giữ nguyên <strong>100% cấu trúc, màu sắc, dropdown danh sách</strong> từ mẫu gốc <code>Data/overtime.xlsx</code>.<br>
+            Cột <em>"Lý do"</em> để trống ô dữ liệu & giữ dropdown; Cột <em>"Cần điện - khí"</em>: <code>SMC2 - B2 - F1</code>; Cột <em>"Nhà máy"</em>: <code>SMC2</code>.
+          </div>
+        </div>
+
+        <form id="formExportPlan" onsubmit="event.preventDefault(); triggerPlanExport();">
+          <div class="row g-3">
+            <!-- Kiểu chọn ngày -->
+            <div class="col-12">
+              <label class="form-label fw-bold small">Hình thức chọn thời gian tăng ca:</label>
+              <div class="d-flex align-items-center gap-4">
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="exportDateMode" id="modeDateRange" value="range" checked onchange="toggleExportDateMode()">
+                  <label class="form-check-label small fw-semibold" for="modeDateRange">Khoảng ngày (Từ ngày - Đến ngày)</label>
+                </div>
+                <div class="form-check">
+                  <input class="form-check-input" type="radio" name="exportDateMode" id="modeDateSpecific" value="specific" onchange="toggleExportDateMode()">
+                  <label class="form-check-label small fw-semibold" for="modeDateSpecific">Một ngày cụ thể</label>
+                </div>
+              </div>
+            </div>
+
+            <!-- Từ ngày & Đến ngày -->
+            <div class="col-md-6" id="boxDateFrom">
+              <label class="form-label fw-bold small text-muted">Từ ngày <span class="text-danger">*</span></label>
+              <input type="date" class="form-control form-control-sm" id="expDateFrom" value="<?= $defaultDateFrom ?>" onchange="previewExportCount()">
+            </div>
+            <div class="col-md-6" id="boxDateTo">
+              <label class="form-label fw-bold small text-muted">Đến ngày <span class="text-danger">*</span></label>
+              <input type="date" class="form-control form-control-sm" id="expDateTo" value="<?= $defaultDateTo ?>" onchange="previewExportCount()">
+            </div>
+
+            <!-- Một ngày cụ thể -->
+            <div class="col-md-12" id="boxDateSpecific" style="display: none;">
+              <label class="form-label fw-bold small text-muted">Ngày tăng ca cụ thể <span class="text-danger">*</span></label>
+              <input type="date" class="form-control form-control-sm" id="expDateSpecific" value="<?= $defaultDateTo ?>" onchange="previewExportCount()">
+            </div>
+
+            <!-- Phím chọn nhanh thời gian -->
+            <div class="col-12">
+              <div class="d-flex align-items-center gap-1 flex-wrap">
+                <span class="small text-muted me-1">Chọn nhanh:</span>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setExportQuickDate('today')">Hôm nay</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setExportQuickDate('this_month')">Tháng <?= $currentMonth ?>/<?= $currentYear ?> (Mặc định)</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setExportQuickDate('sep_2026')">Tháng 9/2026 (222 bản ghi)</button>
+                <button type="button" class="btn btn-outline-secondary btn-sm py-0 px-2" style="font-size: 11px;" onclick="setExportQuickDate('all_2026')">Cả năm 2026</button>
+              </div>
+            </div>
+
+            <hr class="my-2 text-muted">
+
+            <!-- Bộ lọc: Bộ phận / CostCenter -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-muted">Bộ phận / CostCenter</label>
+              <select class="form-select form-select-sm" id="expCostCenter" onchange="previewExportCount()">
+                <option value="">-- Tất cả Bộ Phận / Cost Center --</option>
+                <?php foreach ($costCenters as $cc): ?>
+                  <option value="<?= htmlspecialchars($cc) ?>"><?= htmlspecialchars($cc) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <!-- Bộ lọc: Tổ / Đội / Nhóm -->
+            <div class="col-md-6">
+              <label class="form-label fw-bold small text-muted">Tổ / Đội / Nhóm</label>
+              <select class="form-select form-select-sm" id="expTeamName" onchange="previewExportCount()">
+                <option value="">-- Tất cả Tổ / Đội / Nhóm --</option>
+                <?php foreach ($teams as $t): ?>
+                  <option value="<?= htmlspecialchars($t) ?>"><?= htmlspecialchars($t) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+
+            <!-- Bộ lọc: Nhà máy -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold small text-muted">Nhà máy</label>
+              <select class="form-select form-select-sm" id="expFactory" onchange="previewExportCount()">
+                <option value="SMC2" selected>SMC2 (Mặc định)</option>
+                <option value="SMC1">SMC1</option>
+                <option value="SMC3">SMC3</option>
+                <option value="SMC4">SMC4</option>
+              </select>
+            </div>
+
+            <!-- Bộ lọc: Mã nhân viên -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold small text-muted">Mã nhân viên</label>
+              <input type="text" class="form-control form-control-sm" id="expEmployeeCode" placeholder="VD: 02021788" oninput="debouncePreviewCount()">
+            </div>
+
+            <!-- Bộ lọc: Họ tên nhân viên -->
+            <div class="col-md-4">
+              <label class="form-label fw-bold small text-muted">Tên nhân viên</label>
+              <input type="text" class="form-control form-control-sm" id="expFullName" placeholder="VD: Nguyễn Văn..." oninput="debouncePreviewCount()">
+            </div>
+          </div>
+
+          <!-- Khối thống kê & Preview trước khi tải -->
+          <div class="card bg-light border-0 mt-3 p-3" id="expPreviewCard">
+            <div class="d-flex align-items-center justify-content-between">
+              <div class="d-flex align-items-center gap-2">
+                <span class="material-icons text-primary fs-3" id="expPreviewIcon">query_stats</span>
+                <div>
+                  <div class="small text-muted">Số lượng bản ghi kế hoạch được duyệt dự kiến xuất:</div>
+                  <div class="fw-bold fs-6 text-dark" id="expPreviewCountText">Đang kiểm tra dữ liệu...</div>
+                </div>
+              </div>
+              <span class="badge bg-primary px-3 py-2 fs-6" id="expPreviewBadge">0 bản ghi</span>
+            </div>
+          </div>
+        </form>
+      </div>
+
+      <div class="modal-footer bg-light py-2 px-4 d-flex justify-content-between">
+        <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
+        <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" id="btnDoExportPlan" onclick="triggerPlanExport()">
+          <span class="material-icons fs-6">download</span>
+          <span id="btnExportText">Tải File Excel (.xlsx)</span>
+        </button>
+      </div>
     </div>
   </div>
 </div>
@@ -247,6 +416,197 @@ function parseCsvLine(text) {
 function escapeHtml(str) {
   if (!str) return '';
   return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// =========================================================================
+// CÁC HÀM XỬ LÝ XUẤT DỮ LIỆU TĂNG CA KẾ HOẠCH THEO MẪU OVERTIME.XLSX
+// =========================================================================
+let exportPlanModalInstance = null;
+let previewCountTimeout = null;
+let currentPreviewCount = 0;
+
+function getExportPlanModal() {
+  if (!exportPlanModalInstance) {
+    const modalEl = document.getElementById('modalExportPlan');
+    exportPlanModalInstance = bootstrap.Modal.getOrCreateInstance(modalEl);
+  }
+  return exportPlanModalInstance;
+}
+
+function openExportPlanModal() {
+  getExportPlanModal().show();
+  previewExportCount();
+}
+
+function toggleExportDateMode() {
+  const isSpecific = document.getElementById('modeDateSpecific').checked;
+  document.getElementById('boxDateFrom').style.display = isSpecific ? 'none' : 'block';
+  document.getElementById('boxDateTo').style.display = isSpecific ? 'none' : 'block';
+  document.getElementById('boxDateSpecific').style.display = isSpecific ? 'block' : 'none';
+  previewExportCount();
+}
+
+function setExportQuickDate(type) {
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  const todayStr = `${yyyy}-${mm}-${dd}`;
+
+  document.getElementById('modeDateRange').checked = true;
+  toggleExportDateMode();
+
+  if (type === 'today') {
+    document.getElementById('expDateFrom').value = todayStr;
+    document.getElementById('expDateTo').value = todayStr;
+    document.getElementById('expDateSpecific').value = todayStr;
+  } else if (type === 'this_month') {
+    document.getElementById('expDateFrom').value = `${yyyy}-${mm}-01`;
+    document.getElementById('expDateTo').value = todayStr;
+  } else if (type === 'sep_2026') {
+    document.getElementById('expDateFrom').value = '2026-09-01';
+    document.getElementById('expDateTo').value = '2026-09-30';
+  } else if (type === 'all_2026') {
+    document.getElementById('expDateFrom').value = '2026-01-01';
+    document.getElementById('expDateTo').value = '2026-12-31';
+  }
+
+  previewExportCount();
+}
+
+function debouncePreviewCount() {
+  clearTimeout(previewCountTimeout);
+  previewCountTimeout = setTimeout(() => {
+    previewExportCount();
+  }, 350);
+}
+
+function getExportParams(action = 'preview') {
+  const isSpecific = document.getElementById('modeDateSpecific').checked;
+  const params = new URLSearchParams();
+  params.set('action', action);
+
+  if (isSpecific) {
+    params.set('date_specific', document.getElementById('expDateSpecific').value || '');
+  } else {
+    params.set('date_from', document.getElementById('expDateFrom').value || '');
+    params.set('date_to', document.getElementById('expDateTo').value || '');
+  }
+
+  const costCenter = document.getElementById('expCostCenter').value;
+  if (costCenter) params.set('cost_center', costCenter);
+
+  const teamName = document.getElementById('expTeamName').value;
+  if (teamName) params.set('team_name', teamName);
+
+  const factory = document.getElementById('expFactory').value;
+  if (factory) params.set('factory', factory);
+
+  const empCode = document.getElementById('expEmployeeCode').value.trim();
+  if (empCode) params.set('employee_code', empCode);
+
+  const fullName = document.getElementById('expFullName').value.trim();
+  if (fullName) params.set('full_name', fullName);
+
+  return params;
+}
+
+async function previewExportCount() {
+  const badge = document.getElementById('expPreviewBadge');
+  const countText = document.getElementById('expPreviewCountText');
+  const icon = document.getElementById('expPreviewIcon');
+  const btn = document.getElementById('btnDoExportPlan');
+
+  badge.className = 'badge bg-secondary px-3 py-2 fs-6';
+  badge.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Đang kiểm tra...';
+  countText.textContent = 'Đang truy vấn số lượng bản ghi thỏa điều kiện...';
+
+  try {
+    const params = getExportParams('preview');
+    const res = await fetch(`api/overtime_export_plan_template.php?${params.toString()}`);
+    const json = await res.json();
+
+    if (json.success) {
+      currentPreviewCount = parseInt(json.count || 0);
+      if (currentPreviewCount > 0) {
+        badge.className = 'badge bg-success px-3 py-2 fs-6';
+        badge.textContent = `${currentPreviewCount} bản ghi`;
+        countText.innerHTML = `Sẵn sàng xuất <strong>${currentPreviewCount}</strong> bản ghi tăng ca kế hoạch đã được phê duyệt.`;
+        icon.textContent = 'check_circle';
+        icon.className = 'material-icons text-success fs-3';
+      } else {
+        badge.className = 'badge bg-warning text-dark px-3 py-2 fs-6';
+        badge.textContent = '0 bản ghi';
+        countText.textContent = 'Không có bản ghi tăng ca kế hoạch nào khớp với bộ lọc đã chọn.';
+        icon.textContent = 'warning';
+        icon.className = 'material-icons text-warning fs-3';
+      }
+    } else {
+      badge.className = 'badge bg-danger px-3 py-2 fs-6';
+      badge.textContent = 'Lỗi';
+      countText.textContent = json.message || 'Không thể kiểm tra số lượng bản ghi.';
+    }
+  } catch (err) {
+    console.error('Lỗi previewExportCount:', err);
+    badge.className = 'badge bg-danger px-3 py-2 fs-6';
+    badge.textContent = 'Lỗi kết nối';
+    countText.textContent = 'Lỗi kết nối máy chủ khi đếm số lượng.';
+  }
+}
+
+function triggerPlanExport() {
+  if (currentPreviewCount === 0) {
+    alert('Không có dữ liệu tăng ca kế hoạch nào để xuất trong khoảng thời gian đã chọn! Vui lòng chọn lại khoảng ngày hoặc xóa bớt điều kiện lọc.');
+    return;
+  }
+
+  const btn = document.getElementById('btnDoExportPlan');
+  const oldText = document.getElementById('btnExportText').textContent;
+  btn.disabled = true;
+  document.getElementById('btnExportText').textContent = 'Đang tạo file...';
+
+  const params = getExportParams('export');
+  const exportUrl = `api/overtime_export_plan_template.php?${params.toString()}`;
+
+  // Kích hoạt tải file an toàn
+  const link = document.createElement('a');
+  link.href = exportUrl;
+  link.setAttribute('download', '');
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(() => {
+    btn.disabled = false;
+    document.getElementById('btnExportText').textContent = oldText;
+    getExportPlanModal().hide();
+    showExportToast(`Đã xuất thành công ${currentPreviewCount} bản ghi tăng ca kế hoạch theo mẫu overtime.xlsx!`);
+  }, 1000);
+}
+
+function showExportToast(msg) {
+  let toastContainer = document.getElementById('exportToastContainer');
+  if (!toastContainer) {
+    toastContainer = document.createElement('div');
+    toastContainer.id = 'exportToastContainer';
+    toastContainer.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 99999; max-width: 400px;';
+    document.body.appendChild(toastContainer);
+  }
+
+  const toastEl = document.createElement('div');
+  toastEl.className = 'alert alert-success alert-dismissible shadow-lg fade show border-0 d-flex align-items-center gap-2 py-3 px-4';
+  toastEl.style.cssText = 'background: linear-gradient(135deg, #10b981, #059669); color: #fff; font-weight: 500; border-radius: 8px;';
+  toastEl.innerHTML = `
+    <span class="material-icons fs-5 text-white">task_alt</span>
+    <div>${escapeHtml(msg)}</div>
+    <button type="button" class="btn-close btn-close-white ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
+  `;
+
+  toastContainer.appendChild(toastEl);
+  setTimeout(() => {
+    toastEl.classList.remove('show');
+    setTimeout(() => toastEl.remove(), 300);
+  }, 4500);
 }
 </script>
 
