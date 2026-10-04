@@ -20,17 +20,17 @@
     <!-- 1. BAR LỌC VÀ THAO TÁC MAIN -->
     <div class="app-page-header">
         <div>
-            <h1 class="app-page-title">
+            <h1 class="app-page-title" data-i18n="production.ext_progress">
                 <span class="material-icons">precision_manufacturing</span>
-                Báo Cáo Tiến Độ Sản Xuất (押出)
+                <?= __('production.ext_progress', 'Báo Cáo Tiến Độ Sản Xuất (押出)') ?>
             </h1>
-            <p class="app-page-subtitle">Theo dõi kế hoạch, thực tích và tỷ lệ hoàn thành hằng ngày</p>
+            <p class="app-page-subtitle" data-i18n="production.daily_tracking"><?= __('production.daily_tracking', 'Theo dõi kế hoạch, thực tích và tỷ lệ hoàn thành hằng ngày') ?></p>
         </div>
 
         <div class="app-page-actions">
             <select id="filterMode" class="app-form-select" onchange="toggleFilterMode()">
-                <option value="month">Theo Tháng</option>
-                <option value="range">Theo Khoảng Ngày</option>
+                <option value="month" data-i18n="production.by_month"><?= __('production.by_month', 'Theo Tháng') ?></option>
+                <option value="range" data-i18n="production.by_date_range"><?= __('production.by_date_range', 'Theo Khoảng Ngày') ?></option>
             </select>
 
             <div id="monthFilterContainer">
@@ -44,17 +44,17 @@
             </div>
 
             <select id="pipeSizeSelect" class="app-form-select" onchange="loadReportData()">
-                <option value="ALL">Tất cả Size (全サイズ)</option>
-                <option value="TU04">TU04</option><option value="TU06">TU06</option>
-                <option value="TU08">TU08</option><option value="TU10">TU10</option>
-                <option value="TU12">TU12</option><option value="TU16">TU16</option>
+                <option value="ALL" data-i18n="production.all_sizes"><?= __('production.all_sizes', 'Tất cả Size (全サイズ)') ?></option>
+                <option value="TU0425">TU0425</option><option value="TU0604">TU0604</option>
+                <option value="TU0805">TU0805</option><option value="TU1065">TU1065</option>
+                <option value="TU1208">TU1208</option><option value="TU1610">TU1610</option>
                 <option value="TIUB01">TIUB01</option><option value="TIUB05">TIUB05</option>
                 <option value="TIUB07">TIUB07</option><option value="TIUB11">TIUB11</option>
                 <option value="TIUB13">TIUB13</option>
             </select>
 
             <button onclick="openPlanModal()" class="app-btn app-btn-warning">
-                <span class="material-icons">edit_calendar</span> Kế Hoạch Tháng
+                <span class="material-icons">edit_calendar</span> <span data-i18n="production.month_plan"><?= __('production.month_plan', 'Kế Hoạch Tháng') ?></span>
             </button>
         </div>
     </div>
@@ -65,7 +65,7 @@
             <div class="app-card-header">
                 <span class="d-flex align-items-center gap-2">
                     <span class="material-icons text-primary">analytics</span>
-                    Biểu Đồ Tiến Độ Sản Xuất Tổng Thể
+                    <span>Biểu Đồ Tiến Độ Sản Xuất Tổng Thể</span>
                 </span>
                 <span class="small text-muted font-normal">Đơn vị: kM</span>
             </div>
@@ -77,7 +77,7 @@
             <div class="app-card-header">
                 <span class="d-flex align-items-center gap-2">
                     <span class="material-icons text-primary">pie_chart</span>
-                    Tỷ Lệ Hoàn Thành
+                    <span data-i18n="production.rate"><?= __('production.rate', 'Tỷ Lệ Hoàn Thành') ?></span>
                 </span>
             </div>
             <div class="app-card-body p-0" style="max-height:380px; overflow-y:auto;">
@@ -85,10 +85,10 @@
                     <thead>
                         <tr>
                             <th style="padding:8px 4px;">Size</th>
-                            <th style="padding:8px 4px;">TT Lũy Kế</th>
-                            <th style="padding:8px 4px;">KH Lũy Kế</th>
-                            <th style="padding:8px 4px;">TT% / KH%</th>
-                            <th style="padding:8px 4px;">Chênh Lệch</th>
+                            <th style="padding:8px 4px;" data-i18n="production.actual_qty"><?= __('production.actual_qty', 'TT Lũy Kế') ?></th>
+                            <th style="padding:8px 4px;" data-i18n="production.plan_qty"><?= __('production.plan_qty', 'KH Lũy Kế') ?></th>
+                            <th style="padding:8px 4px;" data-i18n="production.rate"><?= __('production.rate', 'TT% / KH%') ?></th>
+                            <th style="padding:8px 4px;" data-i18n="production.diff_qty"><?= __('production.diff_qty', 'Chênh Lệch') ?></th>
                         </tr>
                     </thead>
                     <tbody id="summaryTableBody"></tbody>
@@ -196,6 +196,9 @@ async function loadReportData() {
 
         if (data.success) {
             currentPlanMatrix = data.plan_matrix || [];
+            if (data.all_sizes && Array.isArray(data.all_sizes)) {
+                syncPipeSizeOptions(data.all_sizes);
+            }
             renderMainChart(data.days, data.plan_daily, data.actual_daily, data.plan_cum, data.actual_cum, data.point_plan, data.point_actual);
             renderSummaryTable(data.summary_table);
             renderSubCharts(data.days, data.sizes_data);
@@ -204,6 +207,26 @@ async function loadReportData() {
         }
     } catch (err) {
         console.error("Lỗi tải dữ liệu Dashboard:", err);
+    }
+}
+
+function syncPipeSizeOptions(sizes) {
+    const sel = document.getElementById("pipeSizeSelect");
+    if (!sel) return;
+    const currentVal = sel.value;
+    const existing = Array.from(sel.options).map(o => o.value);
+    let changed = false;
+    sizes.forEach(s => {
+        if (!existing.includes(s)) {
+            const opt = document.createElement("option");
+            opt.value = s;
+            opt.textContent = s;
+            sel.appendChild(opt);
+            changed = true;
+        }
+    });
+    if (changed && currentVal) {
+        sel.value = currentVal;
     }
 }
 

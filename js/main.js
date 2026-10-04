@@ -109,7 +109,11 @@ function displayUserInfo(user) {
 
 // Xử lý Đăng xuất
 async function logout() {
-  if (confirm('Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?')) {
+  const confirmMsg = (typeof window.t === 'function') 
+    ? window.t('header.confirm_logout', 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?') 
+    : 'Bạn có chắc chắn muốn đăng xuất khỏi hệ thống?';
+
+  if (confirm(confirmMsg)) {
     try {
       const response = await fetch('api/logout.php', {
         method: 'POST',
@@ -205,20 +209,28 @@ function renderStandardPagination(container, opts) {
   const startRec = totalRec === 0 ? 0 : (current - 1) * size + 1;
   const endRec = Math.min(current * size, totalRec);
 
+  const txtShowing = (typeof window.t === 'function') ? window.t('pagination.showing', 'Hiển thị') : 'Hiển thị';
+  const txtOf = (typeof window.t === 'function') ? window.t('pagination.of', 'trên tổng số') : 'trên tổng số';
+  const txtRecords = (typeof window.t === 'function') ? window.t('pagination.records', 'bản ghi') : 'bản ghi';
+  const txtFirst = (typeof window.t === 'function') ? window.t('pagination.first', 'Trang đầu') : 'Trang đầu';
+  const txtPrev = (typeof window.t === 'function') ? window.t('pagination.prev', 'Trang trước') : 'Trang trước';
+  const txtNext = (typeof window.t === 'function') ? window.t('pagination.next', 'Trang sau') : 'Trang sau';
+  const txtLast = (typeof window.t === 'function') ? window.t('pagination.last', 'Trang cuối') : 'Trang cuối';
+
   let html = `<div class="app-pagination-wrapper">`;
 
   // Bên trái: Thông tin bản ghi & Chọn kích thước trang
   html += `
     <div class="app-pagination-left">
       <div class="app-pagination-info">
-        Hiển thị <strong>${startRec.toLocaleString()} - ${endRec.toLocaleString()}</strong> trên tổng số <strong>${totalRec.toLocaleString()}</strong> bản ghi
+        ${txtShowing} <strong>${startRec.toLocaleString()} - ${endRec.toLocaleString()}</strong> ${txtOf} <strong>${totalRec.toLocaleString()}</strong> ${txtRecords}
       </div>
   `;
 
   if (opts.onPageSizeChange) {
     html += `
       <div class="app-pagination-size">
-        <span>Hiển thị:</span>
+        <span>${txtShowing}:</span>
         <select class="app-pagination-select" data-role="page-size-select">
           ${sizeOpts.map(s => `<option value="${s}" ${s === size ? 'selected' : ''}>${s} / trang</option>`).join('')}
         </select>
@@ -232,12 +244,12 @@ function renderStandardPagination(container, opts) {
   html += `<div class="app-pagination-controls">`;
 
   // Nút Đầu «
-  html += `<button type="button" class="app-page-btn" data-page="1" ${current === 1 ? 'disabled' : ''} title="Trang đầu">
+  html += `<button type="button" class="app-page-btn" data-page="1" ${current === 1 ? 'disabled' : ''} title="${txtFirst}">
     <span class="material-icons" style="font-size: 16px;">first_page</span>
   </button>`;
 
   // Nút Trước ‹
-  html += `<button type="button" class="app-page-btn" data-page="${current - 1}" ${current === 1 ? 'disabled' : ''} title="Trang trước">
+  html += `<button type="button" class="app-page-btn" data-page="${current - 1}" ${current === 1 ? 'disabled' : ''} title="${txtPrev}">
     <span class="material-icons" style="font-size: 16px;">chevron_left</span>
   </button>`;
 
@@ -269,12 +281,12 @@ function renderStandardPagination(container, opts) {
   }
 
   // Nút Sau ›
-  html += `<button type="button" class="app-page-btn" data-page="${current + 1}" ${current === totalPages ? 'disabled' : ''} title="Trang sau">
+  html += `<button type="button" class="app-page-btn" data-page="${current + 1}" ${current === totalPages ? 'disabled' : ''} title="${txtNext}">
     <span class="material-icons" style="font-size: 16px;">chevron_right</span>
   </button>`;
 
   // Nút Cuối »
-  html += `<button type="button" class="app-page-btn" data-page="${totalPages}" ${current === totalPages ? 'disabled' : ''} title="Trang cuối">
+  html += `<button type="button" class="app-page-btn" data-page="${totalPages}" ${current === totalPages ? 'disabled' : ''} title="${txtLast}">
     <span class="material-icons" style="font-size: 16px;">last_page</span>
   </button>`;
 
@@ -330,7 +342,8 @@ function createClientTablePagination(config) {
     const tbody = typeof config.tbodyId === 'string' ? document.getElementById(config.tbodyId) : config.tbodyId;
     if (tbody) {
       if (pageItems.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="${config.colSpan || 10}" class="text-center py-4 text-muted">${config.emptyMessage || 'Không tìm thấy dữ liệu'}</td></tr>`;
+        const noDataTxt = (typeof window.t === 'function') ? window.t('common.no_data', 'Không tìm thấy dữ liệu') : 'Không tìm thấy dữ liệu';
+        tbody.innerHTML = `<tr><td colspan="${config.colSpan || 10}" class="text-center py-4 text-muted">${config.emptyMessage || noDataTxt}</td></tr>`;
       } else {
         tbody.innerHTML = pageItems.map((item, index) => config.renderRow(item, startIdx + index + 1)).join('');
       }

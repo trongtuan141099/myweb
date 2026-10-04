@@ -57,9 +57,9 @@ $current_month = date('Y-m');
     <!-- Header -->
     <div class="app-page-header">
         <div>
-            <h1 class="app-page-title">
+            <h1 class="app-page-title" data-i18n="nav.five_s_overview">
                 <span class="material-icons">verified</span>
-                Tổng Quan 5S Nhà Máy
+                <?= __('nav.five_s_overview', 'Tổng Quan 5S Nhà Máy') ?>
             </h1>
             <p class="app-page-subtitle">Hiển thị các điểm lỗi 5S phát sinh chưa được xử lý trên sơ đồ trực quan</p>
         </div>

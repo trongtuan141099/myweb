@@ -6,7 +6,7 @@ ini_set('display_errors', 0);
 
 try {
     require_once __DIR__ . '/../config/db.php';
-    require_once __DIR__ . '/../core/check_permission.php';
+    require_once __DIR__ . '/../core/extrusion_service.php';
     requireApiPermission(['production.plan', 'api.production.plan_upload']);
     
     $planMonth = $_POST['plan_month'] ?? '';
@@ -66,7 +66,8 @@ try {
 
     for ($i = 1; $i < count($rows); $i++) {
         $row = $rows[$i];
-        $pipeSize = strtoupper(trim((string)($row[0] ?? '')));
+        $rawSize = strtoupper(trim((string)($row[0] ?? '')));
+        $pipeSize = normalizePlanPipeSize($rawSize);
         if (empty($pipeSize)) continue;
 
         for ($d = 1; $d <= 31; $d++) {

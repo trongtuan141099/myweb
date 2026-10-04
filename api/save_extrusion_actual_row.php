@@ -11,6 +11,7 @@ try {
     }
     require_once $configPath;
     require_once __DIR__ . '/../core/check_permission.php';
+    require_once __DIR__ . '/../core/extrusion_service.php';
     requireApiPermission(['production.data', 'api.production.extrusion_save_row']);
 
     if (!$conn) {
@@ -43,14 +44,9 @@ try {
         throw new Exception('Ngày sản xuất không được để rỗng!');
     }
 
-    // Hàm tự động trích xuất Pipe Size từ Product Code
+    // Hàm tự động trích xuất Pipe Size từ Product Code theo quy chuẩn
     function extractPipeSize($productCode) {
-        $p = strtoupper(trim((string)$productCode));
-        $sizes = ['TIUB13', 'TIUB11', 'TIUB07', 'TIUB05', 'TIUB01', 'TU16', 'TU12', 'TU10', 'TU08', 'TU06', 'TU04'];
-        foreach ($sizes as $s) {
-            if (strpos($p, $s) === 0) return $s;
-        }
-        return 'OTHER';
+        return calculateExtrusionPipeSize($productCode);
     }
 
     $pipeSize = extractPipeSize($productCode);
@@ -125,6 +121,9 @@ try {
     $stmtUpdAct->execute();
 
     $conn->commit();
+
+    // Đồng bộ bản ghi đã cập nhật sang extrusion_productions
+    syncExtrusionLogsToProductions($conn, $id);
 
     ob_clean();
     echo json_encode([

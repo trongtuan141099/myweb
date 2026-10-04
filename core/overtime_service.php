@@ -241,6 +241,13 @@ function processExcelImport($conn, $filePath, $originalFileName, $fileType, $cur
                 $endTimeKH = parseDateTimeCustom($endTimeKHStr);
                 $otDate = date('Y-m-d', strtotime($startTimeTT));
 
+                // Chuẩn hóa: Nếu nhân viên không có đăng ký kế hoạch tăng ca (hoặc thời gian KH rỗng):
+                // Bỏ qua / xử lý riêng biệt ca ngoài kế hoạch: không tính chênh lệch (diff_minutes = 0), diff_status = 'Ngoài kế hoạch'
+                if (empty($startTimeKH)) {
+                    $diffMin = 0;
+                    $diffStatus = 'Ngoài kế hoạch';
+                }
+
                 // Kiểm tra xem đã tồn tại trước đó chưa
                 $stmtCheck = $conn->prepare("SELECT id, full_name, total_minutes_actual, reason FROM ot_actuals WHERE employee_code = ? AND ot_date = ? AND start_time_actual = ?");
                 $stmtCheck->bind_param("sss", $empCode, $otDate, $startTimeTT);
@@ -352,23 +359,35 @@ function recalculateYearlyAccumulations($conn, $targetYear = null) {
         $conn->query("UPDATE ot_yearly_accumulations SET total_hours_m1=0, total_hours_m2=0, total_hours_m3=0, total_hours_m4=0, total_hours_m5=0, total_hours_m6=0, total_hours_m7=0, total_hours_m8=0, total_hours_m9=0, total_hours_m10=0, total_hours_m11=0, total_hours_m12=0, total_hours_year=0, warning_level='green' WHERE year = {$year}");
 
         // Gộp dữ liệu từ 2 nguồn: Thực tế trên hệ thống (ot_actuals) + Giải trình thủ công quên kế hoạch đã được phê duyệt (ot_explanations)
+        // VÉT CẠN TOÀN BỘ NHÂN VIÊN (từ bảng employees và các bảng OT) để không bị sót bất kỳ ai
         $sqlAgg = "
             SELECT 
-                employee_code,
-                SUM(CASE WHEN MONTH(ot_date) = 1 THEN hours ELSE 0 END) AS m1,
-                SUM(CASE WHEN MONTH(ot_date) = 2 THEN hours ELSE 0 END) AS m2,
-                SUM(CASE WHEN MONTH(ot_date) = 3 THEN hours ELSE 0 END) AS m3,
-                SUM(CASE WHEN MONTH(ot_date) = 4 THEN hours ELSE 0 END) AS m4,
-                SUM(CASE WHEN MONTH(ot_date) = 5 THEN hours ELSE 0 END) AS m5,
-                SUM(CASE WHEN MONTH(ot_date) = 6 THEN hours ELSE 0 END) AS m6,
-                SUM(CASE WHEN MONTH(ot_date) = 7 THEN hours ELSE 0 END) AS m7,
-                SUM(CASE WHEN MONTH(ot_date) = 8 THEN hours ELSE 0 END) AS m8,
-                SUM(CASE WHEN MONTH(ot_date) = 9 THEN hours ELSE 0 END) AS m9,
-                SUM(CASE WHEN MONTH(ot_date) = 10 THEN hours ELSE 0 END) AS m10,
-                SUM(CASE WHEN MONTH(ot_date) = 11 THEN hours ELSE 0 END) AS m11,
-                SUM(CASE WHEN MONTH(ot_date) = 12 THEN hours ELSE 0 END) AS m12,
-                SUM(hours) AS total_year
+                emp.employee_code,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 1 THEN combined_ot.hours ELSE 0 END), 0) AS m1,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 2 THEN combined_ot.hours ELSE 0 END), 0) AS m2,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 3 THEN combined_ot.hours ELSE 0 END), 0) AS m3,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 4 THEN combined_ot.hours ELSE 0 END), 0) AS m4,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 5 THEN combined_ot.hours ELSE 0 END), 0) AS m5,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 6 THEN combined_ot.hours ELSE 0 END), 0) AS m6,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 7 THEN combined_ot.hours ELSE 0 END), 0) AS m7,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 8 THEN combined_ot.hours ELSE 0 END), 0) AS m8,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 9 THEN combined_ot.hours ELSE 0 END), 0) AS m9,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 10 THEN combined_ot.hours ELSE 0 END), 0) AS m10,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 11 THEN combined_ot.hours ELSE 0 END), 0) AS m11,
+                COALESCE(SUM(CASE WHEN MONTH(combined_ot.ot_date) = 12 THEN combined_ot.hours ELSE 0 END), 0) AS m12,
+                COALESCE(SUM(combined_ot.hours), 0) AS total_year
             FROM (
+                SELECT DISTINCT employee_code FROM (
+                    SELECT employee_code FROM employees WHERE employee_code IS NOT NULL AND employee_code != ''
+                    UNION
+                    SELECT employee_code FROM ot_actuals WHERE employee_code IS NOT NULL AND employee_code != ''
+                    UNION
+                    SELECT employee_code FROM ot_plans WHERE employee_code IS NOT NULL AND employee_code != ''
+                    UNION
+                    SELECT employee_code FROM ot_explanations WHERE employee_code IS NOT NULL AND employee_code != ''
+                ) u_emp
+            ) emp
+            LEFT JOIN (
                 -- 1. Giờ tăng ca thực tế từ máy quét vân tay / HRM
                 SELECT employee_code, ot_date, total_hours_actual AS hours
                 FROM ot_actuals
@@ -383,8 +402,8 @@ function recalculateYearlyAccumulations($conn, $targetYear = null) {
                   AND is_manual = 1
                   AND approval_status = 'approved'
                   AND total_hours > 0
-            ) combined_ot
-            GROUP BY employee_code
+            ) combined_ot ON emp.employee_code = combined_ot.employee_code
+            GROUP BY emp.employee_code
         ";
         $aggRes = $conn->query($sqlAgg);
         if ($aggRes) {
@@ -447,17 +466,17 @@ function runReconciliationInternal($conn, $filterMonth = null, $filterYear = nul
         $whereActual .= " AND MONTH(ot_date) = " . intval($filterMonth);
     }
 
-    $resPlans = $conn->query("SELECT * FROM ot_plans {$wherePlan} ORDER BY ot_date ASC, employee_code ASC");
+    $resPlans = $conn->query("SELECT * FROM ot_plans {$wherePlan} AND approval_status NOT IN ('Từ chối', 'Không duyệt') ORDER BY ot_date ASC, employee_code ASC");
     $plansByEmpDate = [];
     while ($p = $resPlans->fetch_assoc()) {
-        $key = $p['employee_code'] . '_' . $p['ot_date'];
+        $key = $p['employee_code'] . '###' . $p['ot_date'];
         $plansByEmpDate[$key][] = $p;
     }
 
     $resActuals = $conn->query("SELECT * FROM ot_actuals {$whereActual} ORDER BY ot_date ASC, employee_code ASC");
     $actualsByEmpDate = [];
     while ($a = $resActuals->fetch_assoc()) {
-        $key = $a['employee_code'] . '_' . $a['ot_date'];
+        $key = $a['employee_code'] . '###' . $a['ot_date'];
         $actualsByEmpDate[$key][] = $a;
     }
 
@@ -467,6 +486,7 @@ function runReconciliationInternal($conn, $filterMonth = null, $filterYear = nul
     $matchedCount = 0;
     $planOnlyCount = 0;
     $actualOnlyCount = 0;
+    $unplannedCount = 0;
     $diffCount = 0;
     $overdueCount = 0;
 
@@ -476,9 +496,9 @@ function runReconciliationInternal($conn, $filterMonth = null, $filterYear = nul
         $plans = $plansByEmpDate[$key] ?? [];
         $actuals = $actualsByEmpDate[$key] ?? [];
 
-        list($empCode, $otDate) = explode('_', $key);
+        list($empCode, $otDate) = explode('###', $key);
 
-        // TH1: Có Kế hoạch nhưng KHÔNG CÓ Thực tế
+        // TH1: Có Kế hoạch nhưng KHÔNG CÓ Thực tế (kế hoạch hợp lệ nhưng không đi làm)
         if (!empty($plans) && empty($actuals)) {
             foreach ($plans as $p) {
                 $orderKey = $empCode . '_' . $otDate . '_' . date('H:i:s', strtotime($p['start_time']));
@@ -497,22 +517,24 @@ function runReconciliationInternal($conn, $filterMonth = null, $filterYear = nul
                 $reconciledCount++;
             }
         }
-        // TH2: Có Thực tế nhưng KHÔNG CÓ Kế hoạch
+        // TH2: Có Thực tế nhưng KHÔNG CÓ Kế hoạch hợp lệ (phát sinh ngoài kế hoạch)
+        // Yêu cầu: Không tính chênh lệch, không ghi nhận vi phạm chênh lệch kế hoạch để tránh lệch số liệu
         else if (empty($plans) && !empty($actuals)) {
             foreach ($actuals as $a) {
                 $timeStr = !empty($a['start_time_plan']) ? $a['start_time_plan'] : $a['start_time_actual'];
                 $orderKey = $empCode . '_' . $otDate . '_' . date('H:i:s', strtotime($timeStr));
-                $reconcileStatus = 'actual_only';
+                $reconcileStatus = 'unplanned';
                 $planMinutes = 0;
                 $actualMinutes = intval($a['total_minutes_actual']);
-                $diffMinutes = $actualMinutes;
-                $needsExplanation = 1;
-                $violationType = 'Có thực tế nhưng không có kế hoạch';
+                $diffMinutes = 0; // KHÔNG tính chênh lệch khi không có kế hoạch
+                $needsExplanation = 0; // Không tự động bắt giải trình sai lệch kế hoạch
+                $violationType = 'Phát sinh ngoài kế hoạch';
 
                 saveReconciliationRecordInternal(
                     $conn, $orderKey, $empCode, $otDate, null, $a['id'], $reconcileStatus,
                     $planMinutes, $actualMinutes, $diffMinutes, 0, 0, $needsExplanation, $violationType
                 );
+                $unplannedCount++;
                 $actualOnlyCount++;
                 $reconciledCount++;
             }
@@ -600,16 +622,18 @@ function runReconciliationInternal($conn, $filterMonth = null, $filterYear = nul
                 }
             }
 
-            // Các actual còn sót lại
+            // Các actual còn sót lại (phát sinh ngoài kế hoạch)
             foreach ($actuals as $a) {
                 if (!in_array($a['id'], $usedActualIds)) {
                     $timeStr = !empty($a['start_time_plan']) ? $a['start_time_plan'] : $a['start_time_actual'];
                     $orderKey = $empCode . '_' . $otDate . '_' . date('H:i:s', strtotime($timeStr));
                     $actMin = intval($a['total_minutes_actual']);
+                    // Ca ngoài kế hoạch: diff_minutes = 0, needs_explanation = 0
                     saveReconciliationRecordInternal(
-                        $conn, $orderKey, $empCode, $otDate, null, $a['id'], 'actual_only',
-                        0, $actMin, $actMin, 0, 0, 1, 'Có thực tế nhưng không có kế hoạch'
+                        $conn, $orderKey, $empCode, $otDate, null, $a['id'], 'unplanned',
+                        0, $actMin, 0, 0, 0, 0, 'Phát sinh ngoài kế hoạch'
                     );
+                    $unplannedCount++;
                     $actualOnlyCount++;
                     $reconciledCount++;
                 }
@@ -623,10 +647,11 @@ function runReconciliationInternal($conn, $filterMonth = null, $filterYear = nul
         'total' => $reconciledCount,
         'matched' => $matchedCount,
         'plan_only' => $planOnlyCount,
-        'actual_only' => $actualOnlyCount,
+        'actual_only' => $unplannedCount,
+        'unplanned' => $unplannedCount,
         'time_diff' => $diffCount,
         'overdue' => $overdueCount,
-        'needs_explanation' => ($planOnlyCount + $actualOnlyCount + $diffCount + $overdueCount)
+        'needs_explanation' => ($planOnlyCount + $diffCount + $overdueCount)
     ];
 }
 
@@ -641,8 +666,8 @@ function saveReconciliationRecordInternal(
             is_overdue, needs_explanation
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON DUPLICATE KEY UPDATE
-            plan_id = COALESCE(VALUES(plan_id), plan_id),
-            actual_id = COALESCE(VALUES(actual_id), actual_id),
+            plan_id = VALUES(plan_id),
+            actual_id = VALUES(actual_id),
             reconcile_status = VALUES(reconcile_status),
             plan_minutes = VALUES(plan_minutes),
             actual_minutes = VALUES(actual_minutes),

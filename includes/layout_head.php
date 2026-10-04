@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html lang="<?= function_exists('getCurrentLanguage') ? getCurrentLanguage() : 'vi' ?>">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><?= isset($page_title) ? htmlspecialchars($page_title) . ' - DX Plastic Group' : 'DX Plastic Group - Quản Lý Sản Xuất' ?></title>
+  <title><?= isset($page_title) ? htmlspecialchars($page_title) . ' - DX Plastic Group' : 'DX Plastic Group - ' . (function_exists('__') ? __('nav.brand_sub', 'Quản Lý Sản Xuất') : 'Quản Lý Sản Xuất') ?></title>
 
   <!-- Local Icon & CSS Libraries -->
   <link rel="stylesheet" href="resources/icon.css">
@@ -11,7 +11,7 @@
   <link rel="stylesheet" href="resources/css/bootstrap.min.css">
 
   <!-- Thư Viện CSS Chung Duy Nhất (Industrial Design System) -->
-  <link rel="stylesheet" href="css/main.css?v=2.0">
+  <link rel="stylesheet" href="css/main.css?v=<?= file_exists(__DIR__ . '/../css/main.css') ? filemtime(__DIR__ . '/../css/main.css') : '2.2' ?>">
 
   <!-- Khởi tạo Theme ngay lập tức để tránh hiện tượng chớp sáng (Zero-Flicker) -->
   <script>
@@ -28,6 +28,9 @@
 
   <!-- Global Permission System for Frontend JS -->
   <?php renderPermissionScript(); ?>
+
+  <!-- Global Multi-Language (i18n) System for Frontend JS -->
+  <?php if (function_exists('renderI18nScript')) { renderI18nScript(); } ?>
 </head>
 <body>
   <div class="app-container">

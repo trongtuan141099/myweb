@@ -39,8 +39,8 @@ try {
     $resHoursYear = $conn->query("SELECT COALESCE(SUM(total_hours_actual), 0) FROM ot_actuals WHERE YEAR(ot_date) = {$year}");
     $hoursYear = $resHoursYear ? floatval($resHoursYear->fetch_row()[0]) : 0;
 
-    // d) Số ca cần giải trình (chưa giải trình)
-    $resExpCount = $conn->query("SELECT COUNT(*) FROM ot_reconciliations r WHERE r.needs_explanation = 1 AND (r.is_explained = 0 OR r.is_explained IS NULL)");
+    // d) Số ca cần giải trình (chưa giải trình - chỉ tính các ca có kế hoạch hợp lệ)
+    $resExpCount = $conn->query("SELECT COUNT(*) FROM ot_reconciliations r WHERE r.needs_explanation = 1 AND (r.is_explained = 0 OR r.is_explained IS NULL) AND r.plan_id IS NOT NULL");
     $pendingExpCount = $resExpCount ? intval($resExpCount->fetch_row()[0]) : 0;
 
     // e) Số nhân sự Mức Vàng (160 - 199.9h) và Mức Đỏ (>= 200h)
@@ -123,14 +123,16 @@ try {
         'matched' => 0,
         'plan_only' => 0,
         'actual_only' => 0,
+        'unplanned' => 0,
         'time_diff' => 0,
         'overdue' => 0
     ];
     if ($resRecPie) {
         while ($rp = $resRecPie->fetch_assoc()) {
             $st = $rp['reconcile_status'];
+            if ($st === 'actual_only') $st = 'unplanned';
             if (isset($recBreakdown[$st])) {
-                $recBreakdown[$st] = intval($rp['count']);
+                $recBreakdown[$st] += intval($rp['count']);
             }
         }
     }

@@ -316,22 +316,22 @@ $grandTotal = $totalUiPerms + $totalApiPerms;
     <!-- Header Section -->
     <div class="app-page-header">
         <div>
-            <h1 class="app-page-title">
+            <h1 class="app-page-title" data-i18n="roles.title">
                 <span class="material-icons">admin_panel_settings</span>
-                Quản Lý Phân Quyền Hệ Thống
+                <?= __('roles.title', 'Quản Lý Phân Quyền Hệ Thống') ?>
             </h1>
-            <p class="app-page-subtitle">Thiết lập quyền truy cập giao diện & toàn bộ API endpoints cho từng vai trò người dùng trong nhà máy</p>
+            <p class="app-page-subtitle" data-i18n="roles.subtitle"><?= __('roles.subtitle', 'Thiết lập quyền truy cập giao diện & toàn bộ API endpoints cho từng vai trò người dùng trong nhà máy') ?></p>
         </div>
         <div class="app-page-actions">
             <!-- Search Filter Box -->
             <div class="perm-search-box">
                 <span class="material-icons">search</span>
-                <input type="text" id="permSearchInput" class="app-form-control" placeholder="Tìm quyền, mã, endpoint API..." oninput="filterPermissions(this.value)">
+                <input type="text" id="permSearchInput" class="app-form-control" data-i18n-placeholder="roles.search_placeholder" placeholder="<?= __('roles.search_placeholder', 'Tìm kiếm quyền hạn, mô tả...') ?>" oninput="filterPermissions(this.value)">
             </div>
             <!-- Global Save Button -->
             <button type="button" id="saveRoleBtn" class="app-btn app-btn-primary" onclick="saveRolePermissions()">
                 <span class="material-icons">save</span>
-                <span id="saveRoleBtnText">Lưu Cấu Hình Vai Trò</span>
+                <span id="saveRoleBtnText" data-i18n="roles.btn_save_permissions"><?= __('roles.btn_save_permissions', 'Lưu Cấu Hình Vai Trò') ?></span>
             </button>
         </div>
     </div>

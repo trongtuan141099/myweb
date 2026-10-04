@@ -43,7 +43,7 @@ class Mpdf extends Pdf
         $restoreHandler = false;
         if (PHP_VERSION_ID >= self::$temporaryVersionCheck) {
             // @codeCoverageIgnoreStart
-            set_error_handler(self::specialErrorHandler(...));
+            set_error_handler(fn(...$args) => self::specialErrorHandler(...$args));
             $restoreHandler = true;
             // @codeCoverageIgnoreEnd
         }

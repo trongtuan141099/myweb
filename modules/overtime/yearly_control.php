@@ -92,7 +92,7 @@ $currentYear = intval(date('Y'));
         </div>
         <div>
           <div class="ot-kpi-val" id="ycTotalEmp">0</div>
-          <div class="ot-kpi-lbl">Tổng nhân sự có OT năm</div>
+          <div class="ot-kpi-lbl">Tổng nhân sự theo dõi</div>
         </div>
       </div>
     </div>

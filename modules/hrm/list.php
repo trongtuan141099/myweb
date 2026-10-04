@@ -126,22 +126,22 @@ if ($resCc) {
     <!-- Header -->
     <div class="app-page-header">
         <div>
-            <h1 class="app-page-title">
+            <h1 class="app-page-title" data-i18n="nav.hrm_list">
                 <span class="material-icons">people</span>
-                Danh Sách Nhân Viên
+                <?= __('nav.hrm_list', 'Danh Sách Nhân Viên') ?>
             </h1>
             <p class="app-page-subtitle">Quản lý hồ sơ lao động, vị trí làm việc, trạng thái ngày nghỉ việc và phân bổ nhân sự</p>
         </div>
         <div class="app-page-actions d-flex align-items-center gap-2">
             <!-- Nút Xuất Excel -->
             <a href="api/employee_export.php" id="btnExportExcel" class="app-btn app-btn-secondary" title="Xuất toàn bộ danh sách nhân sự ra file Excel/CSV (UTF-8 BOM)">
-                <span class="material-icons">file_download</span> Xuất Excel
+                <span class="material-icons">file_download</span> <span data-i18n="common.btn_export"><?= __('common.btn_export', 'Xuất Excel') ?></span>
             </a>
 
             <?php if (hasPermission(['hrm.manage', 'admin'])): ?>
             <!-- Nút Thêm Mới Nhân Viên -->
             <button type="button" class="app-btn app-btn-primary" onclick="openAddEmployeeModal()">
-                <span class="material-icons">person_add</span> Thêm Mới Nhân Viên
+                <span class="material-icons">person_add</span> <span data-i18n="nav.hrm_add"><?= __('nav.hrm_add', 'Thêm Mới Nhân Viên') ?></span>
             </button>
             <?php endif; ?>
         </div>

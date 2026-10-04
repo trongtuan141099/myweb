@@ -16,7 +16,7 @@ $canManage    = hasPermission(['warehouse.manage', 'admin']);
     <div>
       <h1 class="app-page-title">
         <span class="material-icons text-primary" style="font-size: 28px;">insights</span>
-        <span>TỔNG QUAN XUẤT VẬT TƯ & CẢNH BÁO TỒN KHO</span>
+        <span data-i18n="nav.wh_dashboard"><?= __('nav.wh_dashboard', 'TỔNG QUAN XUẤT VẬT TƯ & CẢNH BÁO TỒN KHO') ?></span>
       </h1>
       <p class="app-page-subtitle">Thống kê xu hướng xuất kho hằng tháng, cơ cấu nhóm, danh sách mặt hàng tiêu hao nhiều nhất và kiểm soát điểm đặt hàng lại (ROP)</p>
     </div>
@@ -37,11 +37,11 @@ $canManage    = hasPermission(['warehouse.manage', 'admin']);
 
       <a href="index.php?mainpage=warehouse&subpage=issue_request" class="app-btn app-btn-outline">
         <span class="material-icons">post_add</span>
-        <span class="d-none d-sm-inline">Tạo Phiếu</span>
+        <span class="d-none d-sm-inline" data-i18n="common.btn_add"><?= __('common.btn_add', 'Tạo Phiếu') ?></span>
       </a>
       <a href="index.php?mainpage=warehouse&subpage=approval" class="app-btn app-btn-secondary">
         <span class="material-icons">verified_user</span>
-        <span class="d-none d-sm-inline">Xét Duyệt</span>
+        <span class="d-none d-sm-inline" data-i18n="common.btn_approve"><?= __('common.btn_approve', 'Xét Duyệt') ?></span>
       </a>
       <a href="index.php?mainpage=warehouse&subpage=materials" class="app-btn app-btn-primary">
         <span class="material-icons">category</span>

@@ -37,6 +37,14 @@ try {
             $search = trim($_GET['search'] ?? '');
             $department = trim($_GET['department'] ?? '');
 
+            // Đảm bảo dữ liệu tích lũy năm được vét cạn toàn bộ danh sách nhân viên hiện tại
+            require_once __DIR__ . '/../core/overtime_service.php';
+            $checkEmpCount = $conn->query("SELECT COUNT(DISTINCT employee_code) FROM employees WHERE employee_code IS NOT NULL AND employee_code != ''")->fetch_row()[0];
+            $checkYcCount = $conn->query("SELECT COUNT(*) FROM ot_yearly_accumulations WHERE year = {$year}")->fetch_row()[0];
+            if ($checkYcCount < $checkEmpCount) {
+                recalculateYearlyAccumulations($conn, $year);
+            }
+
             $where = "WHERE y.year = {$year}";
             if (!empty($warningLevel)) {
                 if (in_array($warningLevel, ['green', 'yellow', 'red'])) {
@@ -59,17 +67,19 @@ try {
             }
 
             // Đếm số lượng theo mức cảnh báo năm và cảnh báo tháng (> 36h)
+            $deptFilterCount = !empty($department) ? " AND COALESCE(e.cost_center, '') = '" . $conn->real_escape_string($department) . "'" : "";
             $sqlCounts = "
                 SELECT 
                     COUNT(*) as total_employees,
-                    SUM(CASE WHEN warning_level = 'green' THEN 1 ELSE 0 END) as count_green,
-                    SUM(CASE WHEN warning_level = 'yellow' THEN 1 ELSE 0 END) as count_yellow,
-                    SUM(CASE WHEN warning_level = 'red' THEN 1 ELSE 0 END) as count_red,
-                    SUM(CASE WHEN (total_hours_m1 > 36 OR total_hours_m2 > 36 OR total_hours_m3 > 36 OR total_hours_m4 > 36 OR total_hours_m5 > 36 OR total_hours_m6 > 36 OR total_hours_m7 > 36 OR total_hours_m8 > 36 OR total_hours_m9 > 36 OR total_hours_m10 > 36 OR total_hours_m11 > 36 OR total_hours_m12 > 36) THEN 1 ELSE 0 END) as count_month_warning_36h,
-                    SUM(CASE WHEN (total_hours_m1 > 40 OR total_hours_m2 > 40 OR total_hours_m3 > 40 OR total_hours_m4 > 40 OR total_hours_m5 > 40 OR total_hours_m6 > 40 OR total_hours_m7 > 40 OR total_hours_m8 > 40 OR total_hours_m9 > 40 OR total_hours_m10 > 40 OR total_hours_m11 > 40 OR total_hours_m12 > 40) THEN 1 ELSE 0 END) as count_month_exceeded_40h,
-                    COALESCE(SUM(total_hours_year), 0) as grand_total_hours
+                    SUM(CASE WHEN y.warning_level = 'green' THEN 1 ELSE 0 END) as count_green,
+                    SUM(CASE WHEN y.warning_level = 'yellow' THEN 1 ELSE 0 END) as count_yellow,
+                    SUM(CASE WHEN y.warning_level = 'red' THEN 1 ELSE 0 END) as count_red,
+                    SUM(CASE WHEN (y.total_hours_m1 > 36 OR y.total_hours_m2 > 36 OR y.total_hours_m3 > 36 OR y.total_hours_m4 > 36 OR y.total_hours_m5 > 36 OR y.total_hours_m6 > 36 OR y.total_hours_m7 > 36 OR y.total_hours_m8 > 36 OR y.total_hours_m9 > 36 OR y.total_hours_m10 > 36 OR y.total_hours_m11 > 36 OR y.total_hours_m12 > 36) THEN 1 ELSE 0 END) as count_month_warning_36h,
+                    SUM(CASE WHEN (y.total_hours_m1 > 40 OR y.total_hours_m2 > 40 OR y.total_hours_m3 > 40 OR y.total_hours_m4 > 40 OR y.total_hours_m5 > 40 OR y.total_hours_m6 > 40 OR y.total_hours_m7 > 40 OR y.total_hours_m8 > 40 OR y.total_hours_m9 > 40 OR y.total_hours_m10 > 40 OR y.total_hours_m11 > 40 OR y.total_hours_m12 > 40) THEN 1 ELSE 0 END) as count_month_exceeded_40h,
+                    COALESCE(SUM(y.total_hours_year), 0) as grand_total_hours
                 FROM ot_yearly_accumulations y
-                WHERE y.year = {$year}
+                LEFT JOIN employees e ON y.employee_code = e.employee_code
+                WHERE y.year = {$year}{$deptFilterCount}
             ";
             $resCounts = $conn->query($sqlCounts);
             $stats = $resCounts ? $resCounts->fetch_assoc() : [];

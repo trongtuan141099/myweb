@@ -326,7 +326,7 @@ class StringHelper
      */
     public static function controlCharacterOOXML2PHP(string $textValue): string
     {
-        return Preg::replaceCallback('/_x[0-9A-F]{4}_(_xD[CDEF][0-9A-F]{2}_)?/', self::toOutChar(...), $textValue);
+        return Preg::replaceCallback('/_x[0-9A-F]{4}_(_xD[CDEF][0-9A-F]{2}_)?/', fn($m) => self::toOutChar($m), $textValue);
     }
 
     private static function toHexVal(string $char): int

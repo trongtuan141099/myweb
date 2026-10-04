@@ -72,14 +72,14 @@ class ArrayArgumentProcessor
 
         /** @var non-empty-array<int> */
         $matrix12 = [$matrix1, $matrix2];
-        $rows = min(array_map(self::$arrayArgumentHelper->rowCount(...), $matrix12));
-        $columns = min(array_map(self::$arrayArgumentHelper->columnCount(...), $matrix12));
+        $rows = min(array_map(fn($m) => self::$arrayArgumentHelper->rowCount($m), $matrix12));
+        $columns = min(array_map(fn($m) => self::$arrayArgumentHelper->columnCount($m), $matrix12));
 
         if ($rows === 1) {
-            $rows = max(array_map(self::$arrayArgumentHelper->rowCount(...), $matrix12));
+            $rows = max(array_map(fn($m) => self::$arrayArgumentHelper->rowCount($m), $matrix12));
         }
         if ($columns === 1) {
-            $columns = max(array_map(self::$arrayArgumentHelper->columnCount(...), $matrix12));
+            $columns = max(array_map(fn($m) => self::$arrayArgumentHelper->columnCount($m), $matrix12));
         }
 
         $result = [];

@@ -11,6 +11,7 @@ try {
     }
     require_once $configPath;
     require_once __DIR__ . '/../core/check_permission.php';
+    require_once __DIR__ . '/../core/extrusion_service.php';
     requireApiPermission(['production.view', 'api.production.report']);
 
     if (!$conn) {
@@ -43,8 +44,31 @@ try {
         $current   = strtotime('+1 day', $current);
     }
 
-    $allSizes = ['TU04', 'TU06', 'TU08', 'TU10', 'TU12', 'TU16', 'TIUB01', 'TIUB05', 'TIUB07', 'TIUB11', 'TIUB13'];
-    $targetSizes = ($pipeSize !== 'ALL') ? [$pipeSize] : $allSizes;
+    // Chuẩn hóa quy tắc bóc tách Size ống đồng bộ toàn hệ thống
+    $defaultSizes = getExtrusionStandardSizes();
+    $dbSizes = [];
+    $szRes = $conn->query("
+        SELECT DISTINCT pipe_size FROM (
+            SELECT TRIM(UPPER(pipe_size)) as pipe_size FROM extrusion_actual_logs 
+            WHERE pipe_size NOT IN ('OTHER', 'PRODUCT CODE', '品番', '') AND pipe_size IS NOT NULL
+            UNION
+            SELECT TRIM(UPPER(pipe_size)) as pipe_size FROM production_plans 
+            WHERE pipe_size NOT IN ('OTHER', '') AND pipe_size IS NOT NULL
+        ) t ORDER BY pipe_size ASC
+    ");
+    if ($szRes) {
+        while ($r = $szRes->fetch_assoc()) {
+            if (!empty($r['pipe_size'])) $dbSizes[] = $r['pipe_size'];
+        }
+    }
+    $allSizes = array_values(array_unique(array_merge($defaultSizes, $dbSizes)));
+
+    if ($pipeSize !== 'ALL') {
+        $pipeSize = normalizePlanPipeSize($pipeSize);
+        $targetSizes = [$pipeSize];
+    } else {
+        $targetSizes = $allSizes;
+    }
 
     // LOGIC THỜI GIAN: Kiểm tra ngày hiện tại có nằm trong khoảng thời gian lựa chọn không
     $todayStr = date('Y-m-d');
@@ -271,7 +295,8 @@ try {
         'point_actual'       => ['index' => $pointActualIndex, 'value' => $pointActualVal],
         'summary_table'      => $summaryTable,
         'sizes_data'         => $sizesData,
-        'plan_matrix'        => $planMatrix
+        'plan_matrix'        => $planMatrix,
+        'all_sizes'          => $allSizes
     ]);
 
 } catch (Exception $e) {

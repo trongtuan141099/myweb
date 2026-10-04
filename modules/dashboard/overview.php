@@ -2,11 +2,11 @@
   <!-- TIÊU ĐỀ TRANG TỔNG QUAN -->
   <div class="app-page-header">
     <div>
-      <h1 class="app-page-title">
+      <h1 class="app-page-title" data-i18n="dashboard.title">
         <span class="material-icons">dashboard</span>
-        Tổng Quan Bộ Phận
+        <?= __('dashboard.title', 'Tổng Quan Bộ Phận') ?>
       </h1>
-      <p class="app-page-subtitle">Theo dõi các mục tiêu trọng tâm năm 2026 và chỉ số nhà máy DX Plastic</p>
+      <p class="app-page-subtitle" data-i18n="dashboard.subtitle"><?= __('dashboard.subtitle', 'Theo dõi các mục tiêu trọng tâm năm 2026 và chỉ số nhà máy DX Plastic') ?></p>
     </div>
   </div>
 
@@ -18,12 +18,12 @@
         <span class="material-icons">verified</span>
       </div>
       <div class="target-info">
-        <span class="target-label">MỤC TIÊU NĂM</span>
-        <h5 class="target-title">Mục tiêu Chất lượng</h5>
+        <span class="target-label" data-i18n="dashboard.yearly_target"><?= __('dashboard.yearly_target', 'MỤC TIÊU NĂM') ?></span>
+        <h5 class="target-title" data-i18n="dashboard.target_quality"><?= __('dashboard.target_quality', 'Mục tiêu Chất lượng') ?></h5>
         <p class="target-sub">Quality Objectives 2026</p>
       </div>
       <button type="button" class="btn-view-target" onclick="openPdfModal('Mục tiêu Chất lượng 2026', 'documents/QAR-00344-01 2026 mục tiêu chất lượng.pdf')">
-        <span class="material-icons">visibility</span> Xem PDF
+        <span class="material-icons">visibility</span> <span data-i18n="dashboard.view_pdf"><?= __('dashboard.view_pdf', 'Xem PDF') ?></span>
       </button>
     </div>
 
@@ -33,12 +33,12 @@
         <span class="material-icons">eco</span>
       </div>
       <div class="target-info">
-        <span class="target-label">MỤC TIÊU NĂM</span>
-        <h5 class="target-title">Mục tiêu Môi trường</h5>
+        <span class="target-label" data-i18n="dashboard.yearly_target"><?= __('dashboard.yearly_target', 'MỤC TIÊU NĂM') ?></span>
+        <h5 class="target-title" data-i18n="dashboard.target_env"><?= __('dashboard.target_env', 'Mục tiêu Môi trường') ?></h5>
         <p class="target-sub">Environmental Objectives</p>
       </div>
       <button type="button" class="btn-view-target" onclick="openPdfModal('Mục tiêu Môi trường 2026', 'documents/ISO_Environmental Target_Plastic Extrusion_24 Jun 2026.pdf')">
-        <span class="material-icons">visibility</span> Xem PDF
+        <span class="material-icons">visibility</span> <span data-i18n="dashboard.view_pdf"><?= __('dashboard.view_pdf', 'Xem PDF') ?></span>
       </button>
     </div>
 
@@ -48,12 +48,12 @@
         <span class="material-icons">health_and_safety</span>
       </div>
       <div class="target-info">
-        <span class="target-label">MỤC TIÊU NĂM</span>
-        <h5 class="target-title">Mục tiêu An toàn</h5>
+        <span class="target-label" data-i18n="dashboard.yearly_target"><?= __('dashboard.yearly_target', 'MỤC TIÊU NĂM') ?></span>
+        <h5 class="target-title" data-i18n="dashboard.target_safety"><?= __('dashboard.target_safety', 'Mục tiêu An toàn') ?></h5>
         <p class="target-sub">Safety Objectives (ISO 45001)</p>
       </div>
       <button type="button" class="btn-view-target" onclick="openPdfModal('Mục tiêu An toàn 2026', 'documents/HIRAC - PLASTIC_EXTRUSION_2026.pdf')">
-        <span class="material-icons">visibility</span> Xem PDF
+        <span class="material-icons">visibility</span> <span data-i18n="dashboard.view_pdf"><?= __('dashboard.view_pdf', 'Xem PDF') ?></span>
       </button>
     </div>
   </div>

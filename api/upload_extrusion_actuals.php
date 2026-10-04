@@ -10,6 +10,7 @@ try {
     require_once __DIR__ . '/../core/check_permission.php';
     requireApiPermission(['production.data', 'api.production.extrusion_upload']);
     require_once __DIR__ . '/../vendor/SimpleXLSX.php';
+    require_once __DIR__ . '/../core/extrusion_service.php';
 
     if (!isset($_FILES['excel_file']) || $_FILES['excel_file']['error'] !== UPLOAD_ERR_OK) {
         throw new Exception('Vui lòng chọn file Excel hợp lệ!');
@@ -25,12 +26,7 @@ try {
     }
 
     function extractPipeSize($productCode) {
-        $p = strtoupper(trim((string)$productCode));
-        $sizes = ['TIUB13', 'TIUB11', 'TIUB07', 'TIUB05', 'TIUB01', 'TU16', 'TU12', 'TU10', 'TU08', 'TU06', 'TU04'];
-        foreach ($sizes as $s) {
-            if (strpos($p, $s) === 0) return $s;
-        }
-        return 'OTHER';
+        return calculateExtrusionPipeSize($productCode);
     }
 
     function parseExcelDate($val) {
@@ -82,6 +78,7 @@ try {
 
     foreach ($rows as $index => $row) {
         if ($index === 0 || empty($row[1])) continue;
+        if (in_array(trim((string)($row[6] ?? '')), ['Product Code', '品番'])) continue;
 
         $importDate     = parseExcelDate($row[0]);
         $productionDate = parseExcelDate($row[1]);
@@ -169,6 +166,10 @@ try {
     }
 
     $conn->commit();
+
+    // Đồng bộ sang extrusion_productions (lấy extrusion_actual_logs làm Single Source of Truth)
+    syncExtrusionLogsToProductions($conn);
+
     ob_clean();
     echo json_encode(['success' => true, 'message' => "Đã xử lý thành công {$insertedCount} dòng dữ liệu từ Excel (Cơ chế UPSERT chống trùng lặp)!"]);
 

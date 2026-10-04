@@ -35,7 +35,7 @@ class StudentT
      */
     public static function distribution(mixed $value, mixed $degrees, mixed $tails)
     {
-        return self::calcDistribution($value, $degrees, $tails, self::distribution(...));
+        return self::calcDistribution($value, $degrees, $tails, fn(...$args) => self::distribution(...$args));
     }
 
     /**
@@ -46,7 +46,7 @@ class StudentT
      */
     public static function tDotDistDot2T(mixed $value, mixed $degrees)
     {
-        return self::calcDistribution($value, $degrees, 2, self::distribution(...));
+        return self::calcDistribution($value, $degrees, 2, fn(...$args) => self::distribution(...$args));
     }
 
     /**
@@ -57,7 +57,7 @@ class StudentT
      */
     public static function tDotDistDotRT(mixed $value, mixed $degrees)
     {
-        return self::calcDistribution($value, $degrees, 1, self::distribution(...));
+        return self::calcDistribution($value, $degrees, 1, fn(...$args) => self::distribution(...$args));
     }
 
     /**
@@ -127,7 +127,7 @@ class StudentT
     public static function tDotDist(mixed $value, mixed $degrees, mixed $cumulative)
     {
         if (is_array($value) || is_array($degrees) || is_array($cumulative)) {
-            return self::evaluateArrayArguments(self::tDotDist(...), $value, $degrees, $cumulative);
+            return self::evaluateArrayArguments(fn(...$args) => self::tDotDist(...$args), $value, $degrees, $cumulative);
         }
 
         try {
@@ -192,7 +192,7 @@ class StudentT
      */
     public static function inverse(mixed $probability, mixed $degrees)
     {
-        return self::calcInverse($probability, $degrees, 2, self::inverse(...));
+        return self::calcInverse($probability, $degrees, 2, fn(...$args) => self::inverse(...$args));
     }
 
     /**
@@ -238,7 +238,7 @@ class StudentT
     public static function tDotInv(mixed $probability, mixed $degrees)
     {
         if (is_array($probability) || is_array($degrees)) {
-            return self::evaluateArrayArguments(self::tDotInv(...), $probability, $degrees);
+            return self::evaluateArrayArguments(fn(...$args) => self::tDotInv(...$args), $probability, $degrees);
         }
 
         try {

@@ -108,7 +108,7 @@ $currentYear = intval(date('Y'));
     <div class="app-page-title">
       <span class="material-icons text-primary" style="font-size: 28px;">more_time</span>
       <div>
-        <h1 style="font-size: 19px; font-weight: 800; margin: 0;">TỔNG QUAN QUẢN LÝ TĂNG CA (OVERTIME DASHBOARD)</h1>
+        <h1 style="font-size: 19px; font-weight: 800; margin: 0;" data-i18n="nav.ot_dashboard"><?= __('nav.ot_dashboard', 'TỔNG QUAN QUẢN LÝ TĂNG CA (OVERTIME DASHBOARD)') ?></h1>
         <p class="text-muted small mb-0">Theo dõi tăng ca thực tế, đối soát kế hoạch và kiểm soát giới hạn 200 giờ/năm theo luật lao động</p>
       </div>
     </div>
@@ -125,10 +125,10 @@ $currentYear = intval(date('Y'));
       </select>
 
       <a href="index.php?mainpage=overtime&subpage=import" class="app-btn app-btn-secondary btn-sm">
-        <span class="material-icons fs-6">upload_file</span> Import Excel
+        <span class="material-icons fs-6">upload_file</span> <span data-i18n="common.btn_import"><?= __('common.btn_import', 'Import Excel') ?></span>
       </a>
       <a href="index.php?mainpage=overtime&subpage=reconciliation" class="app-btn app-btn-primary btn-sm">
-        <span class="material-icons fs-6">fact_check</span> Đối Soát
+        <span class="material-icons fs-6">fact_check</span> <span data-i18n="nav.ot_reconcile"><?= __('nav.ot_reconcile', 'Đối Soát') ?></span>
       </a>
     </div>
   </div>

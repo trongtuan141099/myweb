@@ -227,6 +227,9 @@ $currentYear = intval(date('Y'));
       <button class="app-btn app-btn-secondary btn-sm" onclick="reloadCurrentTab()">
         <span class="material-icons fs-6">refresh</span> Làm mới
       </button>
+      <button class="app-btn app-btn-secondary btn-sm text-primary" id="btnSyncExtrusion" onclick="triggerSyncData()" title="Đồng bộ dữ liệu từ bảng chuẩn Actual Logs sang Productions">
+        <span class="material-icons fs-6">sync</span> Đồng bộ dữ liệu
+      </button>
       <button class="app-btn app-btn-primary btn-sm" onclick="switchExtTab('import')">
         <span class="material-icons fs-6">cloud_upload</span> Import Excel
       </button>
@@ -835,6 +838,56 @@ function reloadCurrentTab() {
     loadDetailsData(1);
   } else if (currentTab === 'import') {
     loadImportHistory();
+  }
+}
+
+async function triggerSyncData() {
+  const btn = document.getElementById('btnSyncExtrusion');
+  const originalHtml = btn ? btn.innerHTML : '';
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Đang đồng bộ...';
+  }
+
+  try {
+    const res = await fetch('api/extrusion_production.php?action=sync_now');
+    const data = await res.json();
+    if (data.success) {
+      const msg = `ĐỒNG BỘ DỮ LIỆU THÀNH CÔNG!\n- Bảng chuẩn (SSOT Actual Logs): ${(data.count_actual_logs || 0).toLocaleString()} bản ghi\n- Bảng đích (Productions): ${(data.count_productions || 0).toLocaleString()} bản ghi`;
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'success',
+          title: 'Đồng bộ thành công',
+          html: `<p>Đã đồng bộ dữ liệu từ bảng chuẩn <code>extrusion_actual_logs</code> sang <code>extrusion_productions</code>.</p>
+                 <ul class="text-start mb-0">
+                   <li>Số dòng bảng chuẩn: <b>${(data.count_actual_logs || 0).toLocaleString()}</b></li>
+                   <li>Số dòng bảng đích: <b>${(data.count_productions || 0).toLocaleString()}</b></li>
+                 </ul>`,
+          timer: 3500
+        });
+      } else {
+        alert(msg);
+      }
+      reloadCurrentTab();
+    } else {
+      if (typeof Swal !== 'undefined') {
+        Swal.fire({
+          icon: 'error',
+          title: 'Lỗi đồng bộ',
+          text: data.message || 'Không thể đồng bộ dữ liệu!'
+        });
+      } else {
+        alert('Lỗi đồng bộ: ' + (data.message || 'Không thể đồng bộ dữ liệu!'));
+      }
+    }
+  } catch (err) {
+    console.error('Lỗi triggerSyncData:', err);
+    alert('Lỗi kết nối máy chủ khi thực hiện đồng bộ dữ liệu!');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
   }
 }
 

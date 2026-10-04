@@ -26,14 +26,11 @@ $action = $_GET['action'] ?? $_POST['action'] ?? 'get_last_sync';
 $currentUser = $_SESSION['user']['username'] ?? 'SYSTEM';
 $userIp = $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1';
 
+require_once __DIR__ . '/../core/extrusion_service.php';
+
 // Helper: Phân loại Size ống (Đồng bộ quy chuẩn toàn hệ thống)
 function extractPipeSize($productCode) {
-    $p = strtoupper(trim((string)$productCode));
-    $sizes = ['TIUB13', 'TIUB11', 'TIUB07', 'TIUB05', 'TIUB01', 'TU16', 'TU12', 'TU10', 'TU08', 'TU06', 'TU04'];
-    foreach ($sizes as $s) {
-        if (strpos($p, $s) === 0) return $s;
-    }
-    return 'OTHER';
+    return calculateExtrusionPipeSize($productCode);
 }
 
 // Helper: Parse ngày từ Excel
@@ -477,6 +474,7 @@ try {
             for ($i = $headerRowIdx + 1; $i < count($rows); $i++) {
                 $r = $rows[$i];
                 if (empty($r[1]) && empty($r[5]) && empty($r[6])) continue;
+                if (in_array(trim((string)($r[6] ?? '')), ['Product Code', '品番']) || in_array(trim((string)($r[25] ?? '')), ['Production Code', '生産コード'])) continue;
 
                 $productionDate = parseExcelDate($r[1] ?? '');
                 
@@ -582,6 +580,9 @@ try {
             }
 
             $conn->commit();
+
+            // Đồng bộ dữ liệu sang extrusion_productions (lấy extrusion_actual_logs làm Single Source of Truth)
+            syncExtrusionLogsToProductions($conn);
 
             // Xóa file tạm
             if (file_exists($tempFile)) @unlink($tempFile);

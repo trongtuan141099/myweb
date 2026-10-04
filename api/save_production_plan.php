@@ -10,7 +10,7 @@ try {
         throw new Exception('Không tìm thấy file config/db.php!');
     }
     require_once $configPath;
-    require_once __DIR__ . '/../core/check_permission.php';
+    require_once __DIR__ . '/../core/extrusion_service.php';
     requireApiPermission(['production.plan', 'api.production.plan_save']);
 
     if (!$conn) {
@@ -30,9 +30,6 @@ try {
     $conn->begin_transaction();
 
     // Chuẩn bị câu lệnh UPSERT
-    // $stmt = $conn->prepare("INSERT INTO production_plans (year_month, pipe_size, day, plan_qty) 
-    //     VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE plan_qty = VALUES(plan_qty)");
-
     $stmt = $conn->prepare("INSERT INTO `production_plans` (`year_month`, `pipe_size`, `day`, `plan_qty`) 
     VALUES (?, ?, ?, ?) ON DUPLICATE KEY UPDATE `plan_qty` = VALUES(`plan_qty`)");
 
@@ -41,7 +38,7 @@ try {
     }
 
     foreach ($matrix as $row) {
-        $size = $row['pipe_size'] ?? '';
+        $size = normalizePlanPipeSize($row['pipe_size'] ?? '');
         if (empty($size)) continue;
 
         if (isset($row['days']) && is_array($row['days'])) {

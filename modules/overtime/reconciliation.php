@@ -204,6 +204,11 @@ $canSyncHrm = ($userRole !== 'viewer') && hasPermission('api.overtime.hrm_sync')
       <span class="material-icons fs-6 text-success">check_circle</span> Hoàn thành (Đủ 2 bước) 
       <span class="badge bg-light text-dark rounded-pill" id="badgeCompleted">0</span>
     </div>
+    <!-- Tab Phát sinh ngoài kế hoạch -->
+    <div class="rec-filter-tab" onclick="setRecStatusFilter('unplanned', this)" style="border-color: #a855f7;">
+      <span class="material-icons fs-6" style="color: #9333ea;">playlist_add</span> Ngoài kế hoạch 
+      <span class="badge rounded-pill text-white" style="background: #9333ea;" id="badgeUnplanned">0</span>
+    </div>
     <div class="rec-filter-tab" onclick="setRecStatusFilter('needs_explanation', this)">
       <span class="material-icons fs-6 text-danger">campaign</span> Cần giải trình 
       <span class="badge bg-danger rounded-pill text-white" id="badgeNeedsExp">0</span>
@@ -817,6 +822,9 @@ async function loadReconciliations(page = 1) {
     document.getElementById('badgeNeedsExp').textContent = b.needs_explanation || 0;
     document.getElementById('badgeDismissed').textContent = b.dismissed_count || 0;
     document.getElementById('badgeExplained').textContent = b.explained_count || 0;
+    if (document.getElementById('badgeUnplanned')) {
+      document.getElementById('badgeUnplanned').textContent = b.unplanned_count || 0;
+    }
 
     if (!data.data || data.data.length === 0) {
       tbody.innerHTML = '<tr><td colspan="11" class="text-center text-muted p-4"><span class="material-icons text-muted d-block fs-3 mb-1">filter_alt_off</span>Không tìm thấy lệnh tăng ca nào khớp với bộ lọc.</td></tr>';
@@ -852,7 +860,10 @@ async function loadReconciliations(page = 1) {
 
       // Độ lệch
       let diffBadge = '-';
-      if (r.diff_minutes > 0) {
+      const isUnplanned = (!r.plan_id || r.reconcile_status === 'unplanned');
+      if (isUnplanned) {
+        diffBadge = `<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1" style="font-size: 11px;">Ngoài KH</span>`;
+      } else if (r.diff_minutes > 0) {
         diffBadge = `<span class="badge bg-warning text-dark">+${r.diff_minutes}p</span>`;
       } else if (r.diff_minutes < 0) {
         diffBadge = `<span class="badge bg-danger">${r.diff_minutes}p</span>`;
@@ -872,6 +883,8 @@ async function loadReconciliations(page = 1) {
         stepProgressBadge = '<span class="badge bg-info-subtle text-info border border-info-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">done_all</span> Đã giải trình</span>';
       } else if (r.step1_done && !r.step2_done) {
         stepProgressBadge = '<span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">pending</span> Chờ Bước 2 (TT)</span>';
+      } else if (!r.step1_done && r.step2_done) {
+        stepProgressBadge = '<span class="badge border py-1" style="font-size: 11px; background:#f3e8ff; color:#7e22ce; border-color:#d8b4fe;"><span class="material-icons align-middle" style="font-size: 13px;">playlist_add</span> Ngoài KH</span>';
       } else {
         stepProgressBadge = '<span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle py-1" style="font-size: 11px;"><span class="material-icons align-middle" style="font-size: 13px;">warning</span> Thiếu Bước 1 (KH)</span>';
       }
@@ -921,8 +934,8 @@ async function loadReconciliations(page = 1) {
         `;
       } else {
         statusHtml = `
-          <span class="badge badge-rec-actual_only py-1 px-2">
-            <span class="material-icons align-middle" style="font-size: 13px;">warning</span> Thiếu Bước 1 (KH)
+          <span class="badge py-1 px-2" style="background:#f3e8ff; color:#7e22ce; border:1px solid #d8b4fe;" title="Ca tăng ca phát sinh ngoài kế hoạch (không có đăng ký kế hoạch)">
+            <span class="material-icons align-middle" style="font-size: 13px;">playlist_add</span> Ngoài kế hoạch
           </span>
         `;
       }

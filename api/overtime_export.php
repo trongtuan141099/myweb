@@ -26,8 +26,62 @@ $year = !empty($_GET['year']) ? intval($_GET['year']) : intval(date('Y'));
 $month = !empty($_GET['month']) ? intval($_GET['month']) : 0;
 $department = trim($_GET['department'] ?? '');
 
-$filterMonthSql = $month > 0 ? " AND MONTH(ot_date) = {$month}" : "";
-$filterYearSql = " AND YEAR(ot_date) = {$year}";
+$startDate = trim($_GET['start_date'] ?? $_GET['date_from'] ?? $_GET['from_date'] ?? '');
+$endDate = trim($_GET['end_date'] ?? $_GET['date_to'] ?? $_GET['to_date'] ?? '');
+$specificDate = trim($_GET['date_specific'] ?? $_GET['specific_date'] ?? $_GET['ot_date'] ?? '');
+
+if (!function_exists('normalizeDateStr')) {
+    function normalizeDateStr($d) {
+        $d = trim((string)$d);
+        if (empty($d)) return '';
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $d, $m)) {
+            return sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+        }
+        if (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $d, $m)) {
+            return sprintf('%04d-%02d-%02d', (int)$m[1], (int)$m[2], (int)$m[3]);
+        }
+        $ts = strtotime($d);
+        return $ts ? date('Y-m-d', $ts) : $d;
+    }
+}
+
+$startDate = normalizeDateStr($startDate);
+$endDate = normalizeDateStr($endDate);
+$specificDate = normalizeDateStr($specificDate);
+
+if (!empty($specificDate)) {
+    $startDate = $specificDate;
+    $endDate = $specificDate;
+}
+
+$dateFilterSql = '';
+$fileDateLabel = '';
+
+if (!empty($startDate) && !empty($endDate)) {
+    if ($startDate > $endDate) {
+        $temp = $startDate;
+        $startDate = $endDate;
+        $endDate = $temp;
+    }
+    if ($startDate === $endDate) {
+        $dateFilterSql = " AND ot_date = '{$startDate}'";
+        $fileDateLabel = $startDate;
+    } else {
+        $dateFilterSql = " AND ot_date >= '{$startDate}' AND ot_date <= '{$endDate}'";
+        $fileDateLabel = "{$startDate}_den_{$endDate}";
+    }
+} else if (!empty($startDate)) {
+    $dateFilterSql = " AND ot_date >= '{$startDate}'";
+    $fileDateLabel = "tu_{$startDate}";
+} else if (!empty($endDate)) {
+    $dateFilterSql = " AND ot_date <= '{$endDate}'";
+    $fileDateLabel = "den_{$endDate}";
+} else {
+    $filterMonthSql = $month > 0 ? " AND MONTH(ot_date) = {$month}" : "";
+    $filterYearSql = $year > 0 ? " AND YEAR(ot_date) = {$year}" : "";
+    $dateFilterSql = "{$filterYearSql} {$filterMonthSql}";
+    $fileDateLabel = "{$year}_" . ($month ?: 'All');
+}
 
 function sendCsvHeaders($filename) {
     header('Content-Type: text/csv; charset=utf-8');
@@ -48,9 +102,9 @@ $out = fopen('php://output', 'w');
 switch ($type) {
     // 1. Danh sách tăng ca kế hoạch
     case 'plan':
-        sendCsvHeaders("DanhSachTangCaKeHoach_{$year}_" . ($month ?: 'All') . ".csv");
+        sendCsvHeaders("DanhSachTangCaKeHoach_{$fileDateLabel}.csv");
         fputcsv($out, ['STT', 'Mã Nhân Viên', 'Họ và Tên', 'Nhóm', 'Tổ Đội', 'Ngày Tăng Ca', 'Bắt Đầu KH', 'Kết Thúc KH', 'Số Phút', 'Số Giờ', 'Cấp Trên Trực Tiếp', 'Cấp Trên Gián Tiếp', 'Lý Do Tăng Ca', 'Trạng Thái']);
-        $sql = "SELECT * FROM ot_plans WHERE 1=1 {$filterYearSql} {$filterMonthSql} ORDER BY ot_date ASC, employee_code ASC";
+        $sql = "SELECT * FROM ot_plans WHERE 1=1 {$dateFilterSql} ORDER BY ot_date ASC, employee_code ASC";
         $res = $conn->query($sql);
         $stt = 1;
         while ($r = $res->fetch_assoc()) {
@@ -64,24 +118,28 @@ switch ($type) {
 
     // 2. Danh sách tăng ca thực tế
     case 'actual':
-        sendCsvHeaders("DanhSachTangCaThucTe_{$year}_" . ($month ?: 'All') . ".csv");
+        sendCsvHeaders("DanhSachTangCaThucTe_{$fileDateLabel}.csv");
         fputcsv($out, ['STT', 'Mã Nhân Viên', 'Họ và Tên', 'Nhóm', 'Tổ Đội', 'Ngày Tăng Ca', 'Bắt Đầu TT', 'Kết Thúc TT', 'Số Phút TT', 'Số Giờ TT', 'Chênh Lệch (Phút)', 'Trạng Thái Lệch', 'Cấp Trên Trực Tiếp', 'Lý Do', 'Trạng Thái Duyệt']);
-        $sql = "SELECT * FROM ot_actuals WHERE 1=1 {$filterYearSql} {$filterMonthSql} ORDER BY ot_date ASC, employee_code ASC";
+        $sql = "SELECT * FROM ot_actuals WHERE 1=1 {$dateFilterSql} ORDER BY ot_date ASC, employee_code ASC";
         $res = $conn->query($sql);
         $stt = 1;
         while ($r = $res->fetch_assoc()) {
+            $isUnplanned = empty($r['start_time_plan']) || $r['diff_status'] === 'Ngoài kế hoạch';
+            $diffMin = $isUnplanned ? 0 : $r['diff_minutes'];
+            $diffSt = $isUnplanned ? 'Ngoài kế hoạch' : ($r['diff_status'] ?: 'Khớp');
             fputcsv($out, [
                 $stt++, $r['employee_code'], $r['full_name'], $r['group_name'], $r['team_name'],
                 $r['ot_date'], $r['start_time_actual'], $r['end_time_actual'], $r['total_minutes_actual'],
-                $r['total_hours_actual'], $r['diff_minutes'], $r['diff_status'], $r['direct_manager'], $r['reason'], $r['approval_status']
+                $r['total_hours_actual'], $diffMin, $diffSt, $r['direct_manager'], $r['reason'], $r['approval_status']
             ]);
         }
         break;
 
     // 3. Bảng đối soát tăng ca tổng hợp
     case 'reconciliation':
-        sendCsvHeaders("BangDoiSoatTangCa_{$year}_" . ($month ?: 'All') . ".csv");
+        sendCsvHeaders("BangDoiSoatTangCa_{$fileDateLabel}.csv");
         fputcsv($out, ['STT', 'Mã Nhân Viên', 'Họ và Tên', 'Bộ Phận', 'Ngày Tăng Ca', 'Bắt Đầu KH', 'Kết Thúc KH', 'Số Phút KH', 'Bắt Đầu TT', 'Kết Thúc TT', 'Số Phút TT', 'Chênh Lệch', 'Trạng Thái Đối Soát', 'Cần Giải Trình']);
+        $recDateFilterSql = str_replace('ot_date', 'r.ot_date', $dateFilterSql);
         $sql = "
             SELECT 
                 r.*,
@@ -93,25 +151,30 @@ switch ($type) {
             LEFT JOIN ot_plans p ON r.plan_id = p.id
             LEFT JOIN ot_actuals a ON r.actual_id = a.id
             LEFT JOIN employees e ON r.employee_code = e.employee_code
-            WHERE 1=1 " . ($month > 0 ? "AND MONTH(r.ot_date) = {$month}" : "") . " AND YEAR(r.ot_date) = {$year}
+            WHERE 1=1 {$recDateFilterSql}
             ORDER BY r.ot_date ASC, r.employee_code ASC
         ";
         $res = $conn->query($sql);
         $stt = 1;
         while ($r = $res->fetch_assoc()) {
+            $isUnplanned = empty($r['plan_id']) || $r['reconcile_status'] === 'unplanned' || $r['reconcile_status'] === 'actual_only';
+            $diffMin = $isUnplanned ? 0 : $r['diff_minutes'];
             $statusLabel = [
                 'matched' => 'Hợp lệ (Khớp)',
                 'plan_only' => 'Có KH thiếu TT',
-                'actual_only' => 'Có TT thiếu KH',
+                'actual_only' => 'Ngoài kế hoạch',
+                'unplanned' => 'Ngoài kế hoạch',
                 'time_diff' => 'Lệch giờ/phút',
-                'overdue' => 'Quá hạn duyệt 3 ngày'
-            ][$r['reconcile_status']] ?? $r['reconcile_status'];
+                'overdue' => 'Quá hạn duyệt 3 ngày',
+                'dismissed' => 'Tạm hủy',
+                'explained' => 'Đã giải trình'
+            ][$r['reconcile_status']] ?? ($isUnplanned ? 'Ngoài kế hoạch' : $r['reconcile_status']);
 
             fputcsv($out, [
                 $stt++, $r['employee_code'], $r['full_name'], $r['group_name'], $r['ot_date'],
                 $r['p_start'] ?? '-', $r['p_end'] ?? '-', $r['plan_minutes'],
                 $r['a_start'] ?? '-', $r['a_end'] ?? '-', $r['actual_minutes'],
-                $r['diff_minutes'], $statusLabel, $r['needs_explanation'] ? 'BẮT BUỘC' : 'Không'
+                $diffMin, $statusLabel, ($r['needs_explanation'] && !$isUnplanned) ? 'BẮT BUỘC' : 'Không'
             ]);
         }
         break;

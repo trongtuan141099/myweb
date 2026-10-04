@@ -144,7 +144,7 @@ $currentMonth = intval(date('m'));
     <div>
       <h1 class="app-page-title d-flex align-items-center gap-2">
         <span class="material-icons text-primary" style="font-size: 28px;">query_stats</span>
-        <span>THEO DÕI TỈ LỆ THÀNH PHẨM (良品率)</span>
+        <span data-i18n="quality.yield_title"><?= __('quality.yield_title', 'THEO DÕI TỈ LỆ THÀNH PHẨM (良品率)') ?></span>
       </h1>
       <p class="app-page-subtitle">Quản lý tỉ lệ thành phẩm xưởng ống nhựa TU, phân tích lỗi (A1-A5), đối soát benchmark và xử lý phiếu điều tra bất thường</p>
     </div>
@@ -152,12 +152,12 @@ $currentMonth = intval(date('m'));
       <?php if ($canManageQuality): ?>
       <!-- Nút Thêm mới -->
       <button type="button" class="app-btn app-btn-primary" onclick="openAddRecordModal()">
-        <span class="material-icons">add_circle</span> Thêm Lô Hàng
+        <span class="material-icons">add_circle</span> <span data-i18n="common.btn_add"><?= __('common.btn_add', 'Thêm Lô Hàng') ?></span>
       </button>
 
       <!-- Nút Import Excel -->
       <button type="button" class="app-btn app-btn-secondary" onclick="openImportModal()" title="Import file Excel sản xuất (.xlsx / .xlsm / .csv) với Upsert thông minh">
-        <span class="material-icons">upload_file</span> Import Excel (.xlsm)
+        <span class="material-icons">upload_file</span> <span data-i18n="common.btn_import"><?= __('common.btn_import', 'Import Excel (.xlsm)') ?></span>
       </button>
 
       <!-- Nút Cấu Hình Phân Loại Vật Liệu -->

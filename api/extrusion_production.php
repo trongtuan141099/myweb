@@ -2,12 +2,14 @@
 /**
  * API Quản Lý & Tổng Hợp Sản Lượng Đùn Ép (Extrusion Production Management API)
  * DX Plastic Group - Production MES System
+ * Bảng chuẩn dữ liệu (Single Source of Truth): extrusion_actual_logs
  */
 header('Content-Type: application/json; charset=utf-8');
 date_default_timezone_set('Asia/Ho_Chi_Minh');
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
+require_once __DIR__ . '/../core/extrusion_service.php';
 
 global $conn;
 if (!isset($conn) || !($conn instanceof mysqli)) {
@@ -40,53 +42,6 @@ if (!$isCli && !hasPermission(['production.data', 'production.view', 'production
 $action = $_GET['action'] ?? ($_POST['action'] ?? '');
 
 /**
- * Thuật toán tính Size Ống chuẩn hóa theo đúng logic Cột công thức AO trong Excel mẫu
- * _xlfn.IFS(
- *    LEFT(G,4)="HF2B", MID(G,6,6),
- *    LEFT(G,4)="TIUB", LEFT(G,6),
- *    LEFT(G,3)="TIA",  LEFT(G,5),
- *    LEFT(G,2)="TU",   LEFT(G,6),
- *    LEFT(G,1)="T",    LEFT(G,5)
- * )
- */
-if (!function_exists('calculateExtrusionPipeSize')) {
-    function calculateExtrusionPipeSize($productCode) {
-        $code = strtoupper(trim((string)$productCode));
-        if ($code === '') {
-            return '#N/A';
-        }
-
-        // 1. Tiền tố HF2B: MID(G, 6, 6) trong Excel là 1-based, offset 5 trong PHP
-        if (substr($code, 0, 4) === 'HF2B') {
-            return substr($code, 5, 6);
-        }
-
-        // 2. Tiền tố TIUB: LEFT(G, 6)
-        if (substr($code, 0, 4) === 'TIUB') {
-            return substr($code, 0, 6);
-        }
-
-        // 3. Tiền tố TIA: LEFT(G, 5)
-        if (substr($code, 0, 3) === 'TIA') {
-            return substr($code, 0, 5);
-        }
-
-        // 4. Tiền tố TU: LEFT(G, 6)
-        if (substr($code, 0, 2) === 'TU') {
-            return substr($code, 0, 6);
-        }
-
-        // 5. Tiền tố T: LEFT(G, 5)
-        if (substr($code, 0, 1) === 'T') {
-            return substr($code, 0, 5);
-        }
-
-        // Không khớp các mẫu quy chuẩn
-        return '#N/A';
-    }
-}
-
-/**
  * Xử lý ngày tháng Excel sang định dạng chuẩn YYYY-MM-DD
  */
 if (!function_exists('parseExtrusionDate')) {
@@ -116,11 +71,13 @@ if (!function_exists('parseExtrusionDate')) {
 }
 
 /**
- * Hàm xây dựng mệnh đề WHERE lọc dữ liệu
+ * Hàm xây dựng mệnh đề WHERE lọc dữ liệu trực tiếp trên bảng chuẩn extrusion_actual_logs
  */
 if (!function_exists('buildExtrusionWhereClause')) {
 function buildExtrusionWhereClause($conn, $params) {
     $where = "WHERE 1=1";
+    // Loại trừ các dòng tiêu đề rác và dòng trống
+    $where .= " AND p.product_code NOT IN ('Product Code', '品番') AND p.pipe_size != 'OTHER' AND p.pipe_size != ''";
     
     if (!empty($params['date_from'])) {
         $df = $conn->real_escape_string(trim($params['date_from']));
@@ -132,15 +89,15 @@ function buildExtrusionWhereClause($conn, $params) {
     }
     if (!empty($params['month'])) {
         $m = $conn->real_escape_string(trim($params['month']));
-        $where .= " AND p.production_month = '{$m}'";
+        $where .= " AND DATE_FORMAT(p.production_date, '%Y-%m') = '{$m}'";
     }
     if (!empty($params['year'])) {
         $y = intval($params['year']);
-        $where .= " AND p.production_year = {$y}";
+        $where .= " AND YEAR(p.production_date) = {$y}";
     }
     if (!empty($params['pipe_size']) && $params['pipe_size'] !== 'all') {
         $sz = $conn->real_escape_string(trim($params['pipe_size']));
-        $where .= " AND p.size_calculated = '{$sz}'";
+        $where .= " AND p.pipe_size = '{$sz}'";
     }
     if (!empty($params['product_code'])) {
         $pc = $conn->real_escape_string(trim($params['product_code']));
@@ -148,15 +105,15 @@ function buildExtrusionWhereClause($conn, $params) {
     }
     if (!empty($params['machine_code']) && $params['machine_code'] !== 'all') {
         $mc = $conn->real_escape_string(trim($params['machine_code']));
-        $where .= " AND p.machine_code = '{$mc}'";
+        $where .= " AND p.device_code = '{$mc}'";
     }
     if (!empty($params['workshop']) && $params['workshop'] !== 'all') {
         $ws = $conn->real_escape_string(trim($params['workshop']));
-        $where .= " AND p.workshop = '{$ws}'";
+        $where .= " AND (p.cost_center = '{$ws}' OR 'Xưởng Đùn Nhựa V61' = '{$ws}')";
     }
     if (!empty($params['search'])) {
         $s = $conn->real_escape_string(trim($params['search']));
-        $where .= " AND (p.production_code LIKE '%{$s}%' OR p.directive_code LIKE '%{$s}%' OR p.product_code LIKE '%{$s}%' OR p.employee_name LIKE '%{$s}%' OR p.machine_code LIKE '%{$s}%' OR p.size_calculated LIKE '%{$s}%')";
+        $where .= " AND (p.production_order_code LIKE '%{$s}%' OR p.mfg_order_code LIKE '%{$s}%' OR p.product_code LIKE '%{$s}%' OR p.employee_name LIKE '%{$s}%' OR p.device_code LIKE '%{$s}%' OR p.pipe_size LIKE '%{$s}%')";
     }
     
     return $where;
@@ -166,25 +123,40 @@ function buildExtrusionWhereClause($conn, $params) {
 try {
     switch ($action) {
         // =====================================================================
-        // 1. TÙY CHỌN BỘ LỌC ĐỘNG (FILTER OPTIONS)
+        // 1. TÙY CHỌN BỘ LỌC ĐỘNG (FILTER OPTIONS) - TRUY XUẤT TỪ extrusion_actual_logs
         // =====================================================================
         case 'get_filter_options':
-            // Danh sách Size đã chuẩn hóa
-            $sizesRes = $conn->query("SELECT DISTINCT size_calculated FROM extrusion_productions WHERE size_calculated IS NOT NULL AND size_calculated != '' ORDER BY size_calculated ASC");
+            // Danh sách Size đã chuẩn hóa từ bảng chuẩn extrusion_actual_logs
+            $sizesRes = $conn->query("
+                SELECT DISTINCT pipe_size 
+                FROM extrusion_actual_logs 
+                WHERE pipe_size IS NOT NULL AND pipe_size != '' AND pipe_size NOT IN ('OTHER', 'Product Code', '品番') 
+                ORDER BY pipe_size ASC
+            ");
             $sizes = [];
             while ($r = $sizesRes->fetch_assoc()) {
-                $sizes[] = $r['size_calculated'];
+                $sizes[] = $r['pipe_size'];
             }
 
-            // Danh sách Máy sản xuất
-            $machinesRes = $conn->query("SELECT DISTINCT machine_code FROM extrusion_productions WHERE machine_code IS NOT NULL AND machine_code != '' ORDER BY machine_code ASC");
+            // Danh sách Máy sản xuất từ device_code
+            $machinesRes = $conn->query("
+                SELECT DISTINCT device_code 
+                FROM extrusion_actual_logs 
+                WHERE device_code IS NOT NULL AND device_code != '' AND device_code NOT IN ('Machine Code', '管理№') 
+                ORDER BY device_code ASC
+            ");
             $machines = [];
             while ($r = $machinesRes->fetch_assoc()) {
-                $machines[] = $r['machine_code'];
+                $machines[] = $r['device_code'];
             }
 
             // Danh sách Năm sản xuất
-            $yearsRes = $conn->query("SELECT DISTINCT production_year FROM extrusion_productions WHERE production_year > 0 ORDER BY production_year DESC");
+            $yearsRes = $conn->query("
+                SELECT DISTINCT YEAR(production_date) AS production_year 
+                FROM extrusion_actual_logs 
+                WHERE production_date IS NOT NULL AND YEAR(production_date) > 0 
+                ORDER BY production_year DESC
+            ");
             $years = [];
             while ($r = $yearsRes->fetch_assoc()) {
                 $years[] = intval($r['production_year']);
@@ -192,11 +164,7 @@ try {
             if (empty($years)) $years[] = intval(date('Y'));
 
             // Danh sách Xưởng sản xuất
-            $wsRes = $conn->query("SELECT DISTINCT workshop FROM extrusion_productions WHERE workshop IS NOT NULL AND workshop != '' ORDER BY workshop ASC");
-            $workshops = [];
-            while ($r = $wsRes->fetch_assoc()) {
-                $workshops[] = $r['workshop'];
-            }
+            $workshops = ['Xưởng Đùn Nhựa V61'];
 
             echo json_encode([
                 'success' => true,
@@ -208,7 +176,7 @@ try {
             break;
 
         // =====================================================================
-        // 2. DASHBOARD TỔNG HỢP (KPI & BIỂU ĐỒ)
+        // 2. DASHBOARD TỔNG HỢP (KPI & BIỂU ĐỒ) - TRUY XUẤT TỪ extrusion_actual_logs
         // =====================================================================
         case 'get_dashboard':
             $where = buildExtrusionWhereClause($conn, $_GET);
@@ -217,30 +185,30 @@ try {
             $kpiSql = "
                 SELECT 
                     COUNT(*) AS total_records,
-                    COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                    COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                    COALESCE(SUM(p.total_weight), 0) AS grand_total_weight_kg,
-                    COALESCE(SUM(p.total_coils), 0) AS total_coils,
-                    COUNT(DISTINCT p.size_calculated) AS count_sizes,
+                    COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                    COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                    COALESCE(SUM(p.total_weight_kg), 0) AS grand_total_weight_kg,
+                    COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
+                    COUNT(DISTINCT p.pipe_size) AS count_sizes,
                     COUNT(DISTINCT p.product_code) AS count_products,
-                    COUNT(DISTINCT p.machine_code) AS count_machines
-                FROM extrusion_productions p
+                    COUNT(DISTINCT p.device_code) AS count_machines
+                FROM extrusion_actual_logs p
                 {$where}
             ";
             $kpiRes = $conn->query($kpiSql);
             $kpis = $kpiRes ? $kpiRes->fetch_assoc() : [];
 
-            // 2. Top 10 Size sản xuất nhiều nhất (theo tổng chiều dài m)
+            // 2. Top 10 Size sản xuất nhiều nhất
             $topSizesSql = "
                 SELECT 
-                    p.size_calculated,
-                    COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                    COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                    COALESCE(SUM(p.total_coils), 0) AS total_coils,
+                    p.pipe_size AS size_calculated,
+                    COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                    COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                    COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
                     COUNT(*) AS record_count
-                FROM extrusion_productions p
+                FROM extrusion_actual_logs p
                 {$where}
-                GROUP BY p.size_calculated
+                GROUP BY p.pipe_size
                 ORDER BY total_length_m DESC
                 LIMIT 10
             ";
@@ -254,13 +222,13 @@ try {
             $topProductsSql = "
                 SELECT 
                     p.product_code,
-                    p.size_calculated,
-                    COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                    COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                    COALESCE(SUM(p.total_coils), 0) AS total_coils
-                FROM extrusion_productions p
+                    p.pipe_size AS size_calculated,
+                    COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                    COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                    COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils
+                FROM extrusion_actual_logs p
                 {$where}
-                GROUP BY p.product_code, p.size_calculated
+                GROUP BY p.product_code, p.pipe_size
                 ORDER BY total_length_m DESC
                 LIMIT 10
             ";
@@ -273,14 +241,14 @@ try {
             // 4. Biểu đồ 1: Sản lượng theo tháng (Monthly Trend)
             $monthlySql = "
                 SELECT 
-                    p.production_month,
-                    COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                    COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                    COALESCE(SUM(p.total_coils), 0) AS total_coils
-                FROM extrusion_productions p
+                    DATE_FORMAT(p.production_date, '%Y-%m') AS production_month,
+                    COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                    COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                    COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils
+                FROM extrusion_actual_logs p
                 {$where}
-                GROUP BY p.production_month
-                ORDER BY p.production_month ASC
+                GROUP BY DATE_FORMAT(p.production_date, '%Y-%m')
+                ORDER BY production_month ASC
             ";
             $monthRes = $conn->query($monthlySql);
             $monthlyChart = [
@@ -299,12 +267,12 @@ try {
             // 5. Biểu đồ 2: Sản lượng theo máy đùn (Machine Output)
             $machineSql = "
                 SELECT 
-                    p.machine_code,
-                    COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                    COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg
-                FROM extrusion_productions p
+                    p.device_code AS machine_code,
+                    COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                    COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg
+                FROM extrusion_actual_logs p
                 {$where}
-                GROUP BY p.machine_code
+                GROUP BY p.device_code
                 ORDER BY total_length_m DESC
             ";
             $mcRes = $conn->query($machineSql);
@@ -314,7 +282,6 @@ try {
                 'weight' => []
             ];
             while ($r = $mcRes->fetch_assoc()) {
-                // Rút gọn nhãn máy hiển thị (V61-MAYDUN.PL17 -> PL17)
                 $label = preg_replace('/.*MAYDUN\./', '', $r['machine_code']);
                 $machineChart['labels'][] = $label;
                 $machineChart['length'][] = round(floatval($r['total_length_m']), 2);
@@ -358,17 +325,16 @@ try {
             break;
 
         // =====================================================================
-        // 3. TỔNG HỢP DỮ LIỆU SẢN LƯỢNG (AGGREGATION ENGINE)
+        // 3. TỔNG HỢP DỮ LIỆU SẢN LƯỢNG (AGGREGATION ENGINE) - TRUY XUẤT TỪ extrusion_actual_logs
         // =====================================================================
         case 'get_aggregation':
-            $type = $_GET['type'] ?? 'size'; // 'size', 'month', 'range_size', 'range_product', 'range_machine', 'range_workshop'
-            $sortCol = $_GET['sort_col'] ?? 'output'; // 'output' (length), 'weight', 'coils', 'size'
+            $type = $_GET['type'] ?? 'size';
+            $sortCol = $_GET['sort_col'] ?? 'output';
             $sortOrder = strtoupper($_GET['sort_order'] ?? 'DESC');
             if (!in_array($sortOrder, ['ASC', 'DESC'])) $sortOrder = 'DESC';
 
             $where = buildExtrusionWhereClause($conn, $_GET);
 
-            // Xác định cột ORDER BY
             $orderField = 'total_length_m';
             if ($sortCol === 'weight') $orderField = 'total_weight_kg';
             elseif ($sortCol === 'coils') $orderField = 'total_coils';
@@ -381,17 +347,18 @@ try {
                 case 'range_size':
                     $sql = "
                         SELECT 
-                            p.size_calculated AS group_key,
-                            p.size_calculated AS pipe_size,
+                            p.pipe_size AS group_key,
+                            p.pipe_size,
+                            p.pipe_size AS size_calculated,
                             COUNT(*) AS total_records,
-                            COALESCE(SUM(p.total_coils), 0) AS total_coils,
-                            COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                            COALESCE(SUM(p.finished_length), 0) AS total_length_m,
+                            COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
+                            COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                            COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
                             COUNT(DISTINCT p.product_code) AS count_products,
-                            COUNT(DISTINCT p.machine_code) AS count_machines
-                        FROM extrusion_productions p
+                            COUNT(DISTINCT p.device_code) AS count_machines
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY p.size_calculated
+                        GROUP BY p.pipe_size
                         ORDER BY {$orderField} {$sortOrder}
                     ";
                     break;
@@ -400,18 +367,18 @@ try {
                 case 'month':
                     $sql = "
                         SELECT 
-                            p.production_month AS group_key,
-                            p.production_month,
+                            DATE_FORMAT(p.production_date, '%Y-%m') AS group_key,
+                            DATE_FORMAT(p.production_date, '%Y-%m') AS production_month,
                             COUNT(*) AS total_records,
-                            COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                            COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                            COALESCE(SUM(p.total_coils), 0) AS total_coils,
-                            COUNT(DISTINCT p.size_calculated) AS count_sizes,
+                            COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                            COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                            COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
+                            COUNT(DISTINCT p.pipe_size) AS count_sizes,
                             COUNT(DISTINCT p.product_code) AS count_products
-                        FROM extrusion_productions p
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY p.production_month
-                        ORDER BY p.production_month {$sortOrder}
+                        GROUP BY DATE_FORMAT(p.production_date, '%Y-%m')
+                        ORDER BY production_month {$sortOrder}
                     ";
                     break;
 
@@ -421,54 +388,54 @@ try {
                         SELECT 
                             p.product_code AS group_key,
                             p.product_code,
-                            p.size_calculated,
+                            p.pipe_size AS size_calculated,
                             COUNT(*) AS total_records,
-                            COALESCE(SUM(p.total_coils), 0) AS total_coils,
-                            COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                            COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                            COUNT(DISTINCT p.machine_code) AS count_machines
-                        FROM extrusion_productions p
+                            COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
+                            COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                            COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                            COUNT(DISTINCT p.device_code) AS count_machines
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY p.product_code, p.size_calculated
+                        GROUP BY p.product_code, p.pipe_size
                         ORDER BY {$orderField} {$sortOrder}
                     ";
                     break;
 
-                // C. Tổng hợp theo Máy sản xuất
+                // D. Tổng hợp theo Máy sản xuất
                 case 'range_machine':
                     $sql = "
                         SELECT 
-                            p.machine_code AS group_key,
-                            p.machine_code,
+                            p.device_code AS group_key,
+                            p.device_code AS machine_code,
                             COUNT(*) AS total_records,
-                            COALESCE(SUM(p.total_coils), 0) AS total_coils,
-                            COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                            COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                            COUNT(DISTINCT p.size_calculated) AS count_sizes,
-                            COALESCE(SUM(p.stop_time_total), 0) AS total_stop_time,
-                            COALESCE(SUM(p.run_time), 0) AS total_run_time
-                        FROM extrusion_productions p
+                            COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
+                            COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                            COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                            COUNT(DISTINCT p.pipe_size) AS count_sizes,
+                            COALESCE(SUM(p.total_downtime), 0) AS total_stop_time,
+                            COALESCE(SUM(p.total_runtime), 0) AS total_run_time
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY p.machine_code
+                        GROUP BY p.device_code
                         ORDER BY {$orderField} {$sortOrder}
                     ";
                     break;
 
-                // C. Tổng hợp theo Xưởng
+                // E. Tổng hợp theo Xưởng
                 case 'range_workshop':
                     $sql = "
                         SELECT 
-                            p.workshop AS group_key,
-                            p.workshop,
+                            'Xưởng Đùn Nhựa V61' AS group_key,
+                            'Xưởng Đùn Nhựa V61' AS workshop,
                             COUNT(*) AS total_records,
-                            COALESCE(SUM(p.total_coils), 0) AS total_coils,
-                            COALESCE(SUM(p.finished_weight), 0) AS total_weight_kg,
-                            COALESCE(SUM(p.finished_length), 0) AS total_length_m,
-                            COUNT(DISTINCT p.machine_code) AS count_machines,
-                            COUNT(DISTINCT p.size_calculated) AS count_sizes
-                        FROM extrusion_productions p
+                            COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS total_coils,
+                            COALESCE(SUM(p.finished_qty_kg), 0) AS total_weight_kg,
+                            COALESCE(SUM(p.finished_qty_m), 0) AS total_length_m,
+                            COUNT(DISTINCT p.device_code) AS count_machines,
+                            COUNT(DISTINCT p.pipe_size) AS count_sizes
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY p.workshop
+                        GROUP BY 'Xưởng Đùn Nhựa V61'
                         ORDER BY {$orderField} {$sortOrder}
                     ";
                     break;
@@ -520,7 +487,7 @@ try {
             break;
 
         // =====================================================================
-        // 4. DANH SÁCH CHI TIẾT SẢN PHẨM & PHÂN TRANG (DATA LIST)
+        // 4. DANH SÁCH CHI TIẾT SẢN PHẨM & PHÂN TRANG (DATA LIST) - TRUY XUẤT TỪ extrusion_actual_logs
         // =====================================================================
         case 'get_data_list':
             $page = max(1, intval($_GET['page'] ?? 1));
@@ -530,43 +497,43 @@ try {
             $where = buildExtrusionWhereClause($conn, $_GET);
 
             // Đếm tổng số bản ghi
-            $countRes = $conn->query("SELECT COUNT(*) AS total FROM extrusion_productions p {$where}");
+            $countRes = $conn->query("SELECT COUNT(*) AS total FROM extrusion_actual_logs p {$where}");
             $total = $countRes ? intval($countRes->fetch_assoc()['total']) : 0;
 
             // Tính tổng nhanh theo bộ lọc
             $sumRes = $conn->query("
                 SELECT 
-                    COALESCE(SUM(p.finished_length), 0) AS sum_length,
-                    COALESCE(SUM(p.finished_weight), 0) AS sum_weight,
-                    COALESCE(SUM(p.total_coils), 0) AS sum_coils
-                FROM extrusion_productions p
+                    COALESCE(SUM(p.finished_qty_m), 0) AS sum_length,
+                    COALESCE(SUM(p.finished_qty_kg), 0) AS sum_weight,
+                    COALESCE(SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count), 0) AS sum_coils
+                FROM extrusion_actual_logs p
                 {$where}
             ");
             $summary = $sumRes ? $sumRes->fetch_assoc() : ['sum_length' => 0, 'sum_weight' => 0, 'sum_coils' => 0];
 
-            // Lấy danh sách phân trang
+            // Lấy danh sách phân trang từ extrusion_actual_logs
             $sql = "
                 SELECT 
                     p.id,
-                    p.production_code,
+                    p.production_order_code AS production_code,
                     p.production_date,
                     p.shift,
-                    p.directive_code,
+                    p.mfg_order_code AS directive_code,
                     p.product_code,
-                    p.size_calculated,
-                    p.machine_code,
-                    p.workshop,
-                    p.finished_length,
-                    p.finished_weight,
-                    p.total_weight,
-                    p.total_coils,
-                    p.coils_pl7,
-                    p.length_pl7,
-                    p.coils_pl4,
-                    p.length_pl4,
+                    p.pipe_size AS size_calculated,
+                    p.device_code AS machine_code,
+                    'Xưởng Đùn Nhựa V61' AS workshop,
+                    p.finished_qty_m AS finished_length,
+                    p.finished_qty_kg AS finished_weight,
+                    p.total_weight_kg AS total_weight,
+                    (p.bobbin_pl7_3_count + p.bobbin_pl4_7_count) AS total_coils,
+                    p.bobbin_pl7_3_count AS coils_pl7,
+                    p.bobbin_pl7_3_meters AS length_pl7,
+                    p.bobbin_pl4_7_count AS coils_pl4,
+                    p.bobbin_pl4_7_meters AS length_pl4,
                     p.employee_name,
-                    p.availability_rate
-                FROM extrusion_productions p
+                    p.machine_efficiency AS availability_rate
+                FROM extrusion_actual_logs p
                 {$where}
                 ORDER BY p.production_date DESC, p.id DESC
                 LIMIT {$offset}, {$limit}
@@ -588,11 +555,48 @@ try {
             break;
 
         // =====================================================================
-        // 5. XEM CHI TIẾT 1 BẢN GHI (FULL 41 ATTRIBUTES)
+        // 5. XEM CHI TIẾT 1 BẢN GHI (FULL 41 ATTRIBUTES) - TRUY XUẤT TỪ extrusion_actual_logs
         // =====================================================================
         case 'get_detail':
             $id = intval($_GET['id'] ?? 0);
-            $stmt = $conn->prepare("SELECT * FROM extrusion_productions WHERE id = ? LIMIT 1");
+            $stmt = $conn->prepare("
+                SELECT 
+                    p.*,
+                    p.production_order_code AS production_code,
+                    p.import_date AS input_date,
+                    p.mfg_order_code AS directive_code,
+                    p.pipe_size AS size_calculated,
+                    p.pipe_size AS size_original,
+                    p.device_code AS machine_code,
+                    'Xưởng Đùn Nhựa V61' AS workshop,
+                    COALESCE(p.process_name, 'Extrusion') AS stage,
+                    p.finished_qty_m AS finished_length,
+                    p.finished_qty_kg AS finished_weight,
+                    p.ng_qty_kg AS ng_weight,
+                    p.hard_waste_qty_kg AS hard_weight,
+                    p.total_weight_kg AS total_weight,
+                    (p.bobbin_pl7_3_count + p.bobbin_pl4_7_count) AS total_coils,
+                    p.bobbin_pl7_3_count AS coils_pl7,
+                    p.bobbin_pl7_3_meters AS length_pl7,
+                    p.bobbin_pl4_7_count AS coils_pl4,
+                    p.bobbin_pl4_7_meters AS length_pl4,
+                    p.total_downtime AS stop_time_total,
+                    p.total_runtime AS run_time,
+                    p.cycle_time,
+                    p.machine_efficiency AS availability_rate,
+                    p.regrind_count AS grind_num,
+                    p.regrind_package_code AS grind_package_code,
+                    p.is_test AS is_trial,
+                    p.material_ng_qty AS ng_material,
+                    p.lot_material_ng AS ng_material_lot,
+                    p.hdpe_qty AS hdpe_material,
+                    p.lio_clean_qty AS lio_clean,
+                    p.ti_clean_qty AS ti_clean,
+                    p.waiting_machine_count AS standby_machines
+                FROM extrusion_actual_logs p 
+                WHERE p.id = ? 
+                LIMIT 1
+            ");
             $stmt->bind_param("i", $id);
             $stmt->execute();
             $detail = $stmt->get_result()->fetch_assoc();
@@ -607,17 +611,38 @@ try {
             break;
 
         // =====================================================================
-        // 6. IMPORT DỮ LIỆU EXCEL & BULK UPSERT (CHUNK 1,000 ROWS)
+        // 6. ĐỒNG BỘ DỮ LIỆU THỦ CÔNG (MANUAL SYNC: SSOT -> extrusion_productions)
+        // =====================================================================
+        case 'sync_now':
+            if (!$isCli && $userRole === 'viewer') {
+                http_response_code(403);
+                echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer không có quyền đồng bộ!'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            $ok = syncExtrusionLogsToProductions($conn);
+            $cntLogs = $conn->query("SELECT COUNT(*) as c FROM extrusion_actual_logs")->fetch_assoc()['c'];
+            $cntProd = $conn->query("SELECT COUNT(*) as c FROM extrusion_productions")->fetch_assoc()['c'];
+
+            echo json_encode([
+                'success' => (bool)$ok,
+                'message' => $ok ? 'Đồng bộ dữ liệu thành công từ bảng chuẩn extrusion_actual_logs!' : ('Lỗi đồng bộ: ' . $conn->error),
+                'count_actual_logs' => intval($cntLogs),
+                'count_productions' => intval($cntProd)
+            ], JSON_UNESCAPED_UNICODE);
+            break;
+
+        // =====================================================================
+        // 7. IMPORT DỮ LIỆU EXCEL & BULK UPSERT VÀO SSOT VÀ ĐỒNG BỘ SANG extrusion_productions
         // =====================================================================
         case 'import_excel':
-            // Yêu cầu quyền quản lý/nhập dữ liệu
             if ($userRole === 'viewer') {
                 http_response_code(403);
                 echo json_encode(['success' => false, 'code' => 403, 'message' => 'Tài khoản Viewer chỉ có quyền xem, không thể thực hiện Import!'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
-            set_time_limit(600); // 10 phút cho file lớn >100.000 dòng
+            set_time_limit(600);
             ini_set('memory_limit', '1024M');
 
             $source = $_POST['file_source'] ?? 'upload';
@@ -626,7 +651,6 @@ try {
             $fileSize = 0;
 
             if ($source === 'sample') {
-                // Tải trực tiếp file mẫu trong thư mục data/
                 $filePath = __DIR__ . '/../data/Extrusion Report Sample.xlsx';
                 if (!file_exists($filePath)) {
                     echo json_encode(['success' => false, 'message' => 'Không tìm thấy file mẫu Extrusion Report Sample.xlsx trong thư mục data/']);
@@ -635,7 +659,6 @@ try {
                 $origFileName = 'Extrusion Report Sample.xlsx';
                 $fileSize = filesize($filePath);
             } else {
-                // File người dùng upload
                 if (!isset($_FILES['file']) || $_FILES['file']['error'] !== UPLOAD_ERR_OK) {
                     echo json_encode(['success' => false, 'message' => 'Vui lòng chọn file Excel hợp lệ để tải lên!']);
                     exit;
@@ -658,7 +681,6 @@ try {
                 exit;
             }
 
-            // Đọc sheet đầu tiên (DATA_PLASTIC)
             $sheetRows = $xlsx->rows(0);
             $totalRows = count($sheetRows);
             if ($totalRows < 6) {
@@ -666,7 +688,6 @@ try {
                 exit;
             }
 
-            // Tạo mã Batch Import
             $batchCode = 'IMP-' . date('Ymd-His') . '-' . rand(100, 999);
             $currentUser = $_SESSION['user']['username'] ?? 'SYSTEM';
 
@@ -687,30 +708,32 @@ try {
             $errorCount = 0;
             $errorLog = [];
 
-            // Bắt đầu đọc dữ liệu từ dòng 6 (index 5)
             for ($i = 5; $i < $totalRows; $i++) {
                 $r = $sheetRows[$i];
                 
-                $prodCode = trim($r[25] ?? ''); // Col Z
-                $directiveCode = trim($r[5] ?? ''); // Col F
-                $productCode = trim($r[6] ?? '');   // Col G
+                $prodCode = trim($r[25] ?? '');
+                $directiveCode = trim($r[5] ?? '');
+                $productCode = trim($r[6] ?? '');
 
-                // Bỏ qua dòng trống hoàn toàn
                 if (empty($prodCode) && empty($productCode) && empty($directiveCode)) {
                     continue;
                 }
 
-                // Nếu thiếu Mã SX, tự sinh mã tạm dựa trên Chỉ thị + Sản phẩm + Dòng
+                // Bỏ qua dòng tiêu đề nếu lẫn vào dữ liệu
+                if (in_array($productCode, ['Product Code', '品番']) || in_array($prodCode, ['Production Code', '生産コード'])) {
+                    continue;
+                }
+
                 if (empty($prodCode)) {
                     $prodCode = 'GEN-' . date('Ymd') . '-' . $directiveCode . '-' . $productCode . '-' . $i;
                 }
 
-                // Tính toán Size ống theo công thức AO
+                // Chuẩn hóa Size ống theo đúng quy tắc kỹ thuật
                 $calcSize = calculateExtrusionPipeSize($productCode);
-                $origSize = trim($r[40] ?? ''); // Col AO nếu có sẵn
+                $origSize = trim($r[40] ?? '');
 
-                $prodDate = parseExtrusionDate($r[1] ?? '', date('Y-m-d')); // Col B
-                $inputDate = parseExtrusionDate($r[0] ?? '', $prodDate);    // Col A
+                $prodDate = parseExtrusionDate($r[1] ?? '', date('Y-m-d'));
+                $inputDate = parseExtrusionDate($r[0] ?? '', $prodDate);
                 $prodMonth = substr($prodDate, 0, 7);
                 $prodYear = intval(substr($prodDate, 0, 4));
 
@@ -774,13 +797,14 @@ try {
                 }
             }
 
-            // Flush số dòng còn lại
             if (!empty($buffer)) {
                 executeExtrusionChunkUpsert($conn, $buffer, $inserted, $updated, $errorCount, $errorLog);
                 $buffer = [];
             }
 
-            // Cập nhật kết quả Batch
+            // Sau khi import, đồng bộ lại sang extrusion_productions
+            syncExtrusionLogsToProductions($conn);
+
             $status = ($errorCount > 0 && $inserted === 0 && $updated === 0) ? 'failed' : 'success';
             $errJson = !empty($errorLog) ? json_encode(array_slice($errorLog, 0, 50), JSON_UNESCAPED_UNICODE) : null;
 
@@ -798,53 +822,55 @@ try {
                 'batch_id' => $batchId,
                 'batch_code' => $batchCode,
                 'file_name' => $origFileName,
-                'total_read' => ($totalRows - 5),
                 'inserted' => $inserted,
                 'updated' => $updated,
                 'errors' => $errorCount,
-                'message' => "Import hoàn tất! Thêm mới: {$inserted} dòng, Cập nhật (UPSERT): {$updated} dòng, Lỗi: {$errorCount} dòng."
+                'message' => "Import hoàn tất vào bảng chuẩn extrusion_actual_logs: Thêm mới {$inserted} dòng, Cập nhật {$updated} dòng." . ($errorCount > 0 ? " Lỗi {$errorCount} dòng." : "")
             ], JSON_UNESCAPED_UNICODE);
             break;
 
         // =====================================================================
-        // 7. LỊCH SỬ CÁC ĐỢT IMPORT (AUDIT BATCHES)
+        // 8. LỊCH SỬ CÁC ĐỢT IMPORT
         // =====================================================================
         case 'get_import_history':
-            $res = $conn->query("SELECT * FROM extrusion_import_batches ORDER BY id DESC LIMIT 50");
-            $batches = [];
-            while ($r = $res->fetch_assoc()) {
-                $batches[] = $r;
+            $res = $conn->query("
+                SELECT id, batch_code, file_name, file_size, total_rows, inserted_rows, updated_rows, error_rows, status, imported_by, created_at
+                FROM extrusion_import_batches
+                ORDER BY id DESC
+                LIMIT 50
+            ");
+            $history = [];
+            if ($res) {
+                while ($r = $res->fetch_assoc()) {
+                    $history[] = $r;
+                }
             }
-            echo json_encode(['success' => true, 'data' => $batches], JSON_UNESCAPED_UNICODE);
+            echo json_encode(['success' => true, 'data' => $history], JSON_UNESCAPED_UNICODE);
             break;
 
         // =====================================================================
-        // 8. XUẤT EXCEL (EXPORT ENGINE CÓ TIÊU ĐỀ & BOM UTF-8)
+        // 9. XUẤT DỮ LIỆU EXCEL / CSV - TRUY XUẤT TỪ extrusion_actual_logs
         // =====================================================================
         case 'export_excel':
             $exportType = $_GET['export_type'] ?? 'summary_size';
             $where = buildExtrusionWhereClause($conn, $_GET);
-            $exportDate = date('d/m/Y H:i:s');
-            $exporter = $_SESSION['user']['fullname'] ?? ($_SESSION['user']['username'] ?? 'User');
 
-            // Tạo header HTTP để tải file CSV với UTF-8 BOM
-            $fileName = "BaoCaoSanLuongDunEp_" . $exportType . "_" . date('Ymd_His') . ".csv";
+            $exportDate = date('d/m/Y H:i');
+            $exporter = $_SESSION['user']['name'] ?? ($_SESSION['user']['username'] ?? 'Hệ thống');
+
+            $fileName = "Extrusion_Report_" . $exportType . "_" . date('Ymd_His') . ".csv";
+
             header('Content-Type: text/csv; charset=utf-8');
             header('Content-Disposition: attachment; filename="' . $fileName . '"');
-            header('Pragma: no-cache');
-            header('Expires: 0');
 
             $out = fopen('php://output', 'w');
-            // Ghi UTF-8 BOM để Excel tự động nhận diện tiếng Việt có dấu
             fputs($out, "\xEF\xBB\xBF");
 
-            // Phần tiêu đề doanh nghiệp
-            fputcsv($out, ['CÔNG TY TNHH NHỰA SMC (VIỆT NAM) - TẬP ĐOÀN DX PLASTIC GROUP']);
-            fputcsv($out, ['HỆ THỐNG QUẢN LÝ SẢN XUẤT MES - PHÂN HỆ ĐÙN ÉP ỐNG NHỰA']);
-            
-            $filterText = "Bộ lọc áp dụng: ";
+            $filterText = "Điều kiện lọc: ";
+            if (!empty($_GET['month'])) $filterText .= "Tháng: " . $_GET['month'] . " | ";
+            if (!empty($_GET['year'])) $filterText .= "Năm: " . $_GET['year'] . " | ";
             if (!empty($_GET['date_from']) || !empty($_GET['date_to'])) {
-                $filterText .= "Từ ngày " . ($_GET['date_from'] ?: '...') . " đến " . ($_GET['date_to'] ?: '...') . " | ";
+                $filterText .= "Từ: " . ($_GET['date_from'] ?? 'Đầu') . " Đến: " . ($_GET['date_to'] ?? 'Hiện tại') . " | ";
             }
             if (!empty($_GET['pipe_size']) && $_GET['pipe_size'] !== 'all') {
                 $filterText .= "Size: " . $_GET['pipe_size'] . " | ";
@@ -857,22 +883,22 @@ try {
             switch ($exportType) {
                 // Mẫu 1: Tổng hợp theo Size
                 case 'summary_size':
-                    fputcsv($out, ['BÁO CÁO TỔNG HỢP SẢN LƯỢNG ĐÙN ÉP THEO SIZE ỐNG']);
+                    fputcsv($out, ['BÁO CÁO TỔNG HỢP SẢN LƯỢNG ĐÙN ÉP THEO SIZE ỐNG (CHUẨN HÓA)']);
                     fputcsv($out, [$filterText]);
-                    fputcsv($out, []); // Dòng trống
+                    fputcsv($out, []);
 
                     fputcsv($out, ['STT', 'Size Ống (Col AO)', 'Số Lô/Mẫu', 'Tổng Số Cuộn (Bobin)', 'Tổng Trọng Lượng (kg)', 'Tổng Chiều Dài (m)', 'Tỷ Trọng (%)']);
                     
                     $res = $conn->query("
                         SELECT 
-                            size_calculated,
+                            p.pipe_size AS size_calculated,
                             COUNT(*) AS cnt,
-                            SUM(total_coils) AS coils,
-                            SUM(finished_weight) AS weight,
-                            SUM(finished_length) AS length
-                        FROM extrusion_productions p
+                            SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count) AS coils,
+                            SUM(p.finished_qty_kg) AS weight,
+                            SUM(p.finished_qty_m) AS length
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY size_calculated
+                        GROUP BY p.pipe_size
                         ORDER BY length DESC
                     ");
                     $stt = 1;
@@ -898,7 +924,6 @@ try {
                             $pct . '%'
                         ]);
                     }
-                    // Dòng tổng cộng
                     fputcsv($out, ['TỔNG CỘNG', '', number_format($totCnt), number_format($totCoils), number_format($totWeight, 2), number_format($totLength, 2), '100%']);
                     break;
 
@@ -911,15 +936,15 @@ try {
                     fputcsv($out, ['STT', 'Tháng', 'Tổng Chiều Dài (m)', 'Tổng Trọng Lượng (kg)', 'Tổng Số Cuộn', 'Số Loại Size', 'Số Mã Sản Phẩm']);
                     $res = $conn->query("
                         SELECT 
-                            production_month,
-                            SUM(finished_length) AS length,
-                            SUM(finished_weight) AS weight,
-                            SUM(total_coils) AS coils,
-                            COUNT(DISTINCT size_calculated) AS count_sizes,
-                            COUNT(DISTINCT product_code) AS count_products
-                        FROM extrusion_productions p
+                            DATE_FORMAT(p.production_date, '%Y-%m') AS production_month,
+                            SUM(p.finished_qty_m) AS length,
+                            SUM(p.finished_qty_kg) AS weight,
+                            SUM(p.bobbin_pl7_3_count + p.bobbin_pl4_7_count) AS coils,
+                            COUNT(DISTINCT p.pipe_size) AS count_sizes,
+                            COUNT(DISTINCT p.product_code) AS count_products
+                        FROM extrusion_actual_logs p
                         {$where}
-                        GROUP BY production_month
+                        GROUP BY DATE_FORMAT(p.production_date, '%Y-%m')
                         ORDER BY production_month ASC
                     ");
                     $stt = 1;
@@ -956,7 +981,43 @@ try {
                         'TG Dừng Máy (h)', 'TG Chạy Máy (h)', 'TG Chu Kỳ (s)', 'Khả Dụng (%)'
                     ]);
 
-                    $res = $conn->query("SELECT * FROM extrusion_productions p {$where} ORDER BY production_date DESC, id DESC LIMIT 50000");
+                    $res = $conn->query("
+                        SELECT 
+                            p.production_order_code AS production_code,
+                            p.import_date AS input_date,
+                            p.production_date,
+                            p.employee_code,
+                            p.employee_name,
+                            p.shift,
+                            p.mfg_order_code AS directive_code,
+                            p.product_code,
+                            p.pipe_size AS size_calculated,
+                            p.cost_center,
+                            COALESCE(p.process_name, 'Extrusion') AS stage,
+                            p.device_code AS machine_code,
+                            p.finished_qty_m AS finished_length,
+                            p.finished_qty_kg AS finished_weight,
+                            p.ng_qty_kg AS ng_weight,
+                            p.hard_waste_qty_kg AS hard_weight,
+                            p.total_weight_kg AS total_weight,
+                            p.material_code,
+                            p.lot_in,
+                            p.mold_code,
+                            p.spider_code,
+                            (p.bobbin_pl7_3_count + p.bobbin_pl4_7_count) AS total_coils,
+                            p.bobbin_pl7_3_count AS coils_pl7,
+                            p.bobbin_pl7_3_meters AS length_pl7,
+                            p.bobbin_pl4_7_count AS coils_pl4,
+                            p.bobbin_pl4_7_meters AS length_pl4,
+                            p.total_downtime AS stop_time_total,
+                            p.total_runtime AS run_time,
+                            p.cycle_time,
+                            p.machine_efficiency AS availability_rate
+                        FROM extrusion_actual_logs p 
+                        {$where} 
+                        ORDER BY p.production_date DESC, p.id DESC 
+                        LIMIT 50000
+                    ");
                     while ($r = $res->fetch_assoc()) {
                         fputcsv($out, [
                             $r['production_code'],
@@ -1006,30 +1067,26 @@ try {
 }
 
 /**
- * Hàm thực thi Bulk UPSERT theo lô để tối ưu hiệu năng
+ * Hàm thực thi Bulk UPSERT vào bảng chuẩn extrusion_actual_logs và đồng bộ sang extrusion_productions
  */
 if (!function_exists('executeExtrusionChunkUpsert')) {
 function executeExtrusionChunkUpsert($conn, $buffer, &$inserted, &$updated, &$errorCount, &$errorLog) {
     if (empty($buffer)) return;
 
-    $values = [];
+    $logValues = [];
     foreach ($buffer as $row) {
         $batchId          = intval($row['import_batch_id']);
         $prodCode         = "'" . $conn->real_escape_string($row['production_code']) . "'";
         $inputDate        = $row['input_date'] ? ("'" . $conn->real_escape_string($row['input_date']) . "'") : "NULL";
         $prodDate         = "'" . $conn->real_escape_string($row['production_date']) . "'";
-        $prodMonth        = "'" . $conn->real_escape_string($row['production_month']) . "'";
-        $prodYear         = intval($row['production_year']);
         $shift            = "'" . $conn->real_escape_string($row['shift']) . "'";
         $empCode          = "'" . $conn->real_escape_string($row['employee_code']) . "'";
         $empName          = "'" . $conn->real_escape_string($row['employee_name']) . "'";
         $dirCode          = "'" . $conn->real_escape_string($row['directive_code']) . "'";
         $prodCodeStr      = "'" . $conn->real_escape_string($row['product_code']) . "'";
-        $sizeOrig         = "'" . $conn->real_escape_string($row['size_original']) . "'";
         $sizeCalc         = "'" . $conn->real_escape_string($row['size_calculated']) . "'";
         $costCenter       = "'" . $conn->real_escape_string($row['cost_center']) . "'";
         $stage            = "'" . $conn->real_escape_string($row['stage']) . "'";
-        $workshop         = "'" . $conn->real_escape_string($row['workshop']) . "'";
         $machCode         = "'" . $conn->real_escape_string($row['machine_code']) . "'";
         $moldCode         = "'" . $conn->real_escape_string($row['mold_code']) . "'";
         $spiderCode       = "'" . $conn->real_escape_string($row['spider_code']) . "'";
@@ -1038,7 +1095,6 @@ function executeExtrusionChunkUpsert($conn, $buffer, &$inserted, &$updated, &$er
         $ngWt             = floatval($row['ng_weight']);
         $hardWt           = floatval($row['hard_weight']);
         $totWt            = floatval($row['total_weight']);
-        $totCoils         = intval($row['total_coils']);
         $coilsPl7         = intval($row['coils_pl7']);
         $lenPl7           = floatval($row['length_pl7']);
         $coilsPl4         = intval($row['coils_pl4']);
@@ -1053,84 +1109,57 @@ function executeExtrusionChunkUpsert($conn, $buffer, &$inserted, &$updated, &$er
         $lotIn            = "'" . $conn->real_escape_string($row['lot_in']) . "'";
         $isTrial          = intval($row['is_trial']);
         $matType          = "'" . $conn->real_escape_string($row['material_type']) . "'";
-        $ngMat            = "'" . $conn->real_escape_string($row['ng_material']) . "'";
+        $ngMat            = floatval($row['ng_material'] ?? 0);
         $ngMatLot         = "'" . $conn->real_escape_string($row['ng_material_lot']) . "'";
-        $hdpe             = "'" . $conn->real_escape_string($row['hdpe_material']) . "'";
-        $lioClean         = "'" . $conn->real_escape_string($row['lio_clean']) . "'";
-        $tiClean          = "'" . $conn->real_escape_string($row['ti_clean']) . "'";
+        $hdpe             = floatval($row['hdpe_material'] ?? 0);
+        $lioClean         = floatval($row['lio_clean'] ?? 0);
+        $tiClean          = floatval($row['ti_clean'] ?? 0);
         $printer          = "'" . $conn->real_escape_string($row['printer_type']) . "'";
         $ink              = "'" . $conn->real_escape_string($row['ink_type']) . "'";
         $standby          = intval($row['standby_machines']);
+        $recordHash       = "'" . md5("{$row['production_date']}|{$row['shift']}|{$row['directive_code']}|{$row['product_code']}|{$row['machine_code']}|{$row['production_code']}") . "'";
 
-        $values[] = "({$batchId}, {$prodCode}, {$inputDate}, {$prodDate}, {$prodMonth}, {$prodYear}, {$shift}, {$empCode}, {$empName}, {$dirCode}, {$prodCodeStr}, {$sizeOrig}, {$sizeCalc}, {$costCenter}, {$stage}, {$workshop}, {$machCode}, {$moldCode}, {$spiderCode}, {$finLen}, {$finWt}, {$ngWt}, {$hardWt}, {$totWt}, {$totCoils}, {$coilsPl7}, {$lenPl7}, {$coilsPl4}, {$lenPl4}, {$stopTime}, {$runTime}, {$cycleTime}, {$availRate}, {$matCode}, {$grindNum}, {$grindPkg}, {$lotIn}, {$isTrial}, {$matType}, {$ngMat}, {$ngMatLot}, {$hdpe}, {$lioClean}, {$tiClean}, {$printer}, {$ink}, {$standby})";
+        $logValues[] = "({$inputDate}, {$prodDate}, {$empCode}, {$empName}, {$shift}, {$dirCode}, {$prodCodeStr}, {$sizeCalc}, {$costCenter}, {$stage}, {$machCode}, {$finLen}, {$finWt}, {$ngWt}, {$hardWt}, {$totWt}, {$matCode}, {$grindNum}, {$grindPkg}, {$lotIn}, {$stopTime}, {$runTime}, {$cycleTime}, {$availRate}, {$moldCode}, {$spiderCode}, {$prodCode}, {$isTrial}, {$matType}, {$ngMat}, {$ngMatLot}, {$hdpe}, {$lioClean}, {$tiClean}, {$coilsPl7}, {$lenPl7}, {$coilsPl4}, {$lenPl4}, {$printer}, {$ink}, {$standby}, 'EXCEL', {$batchId}, {$recordHash})";
     }
 
-    $sql = "
-        INSERT INTO extrusion_productions (
-            import_batch_id, production_code, input_date, production_date, production_month, production_year, shift,
-            employee_code, employee_name, directive_code, product_code, size_original, size_calculated,
-            cost_center, stage, workshop, machine_code, mold_code, spider_code,
-            finished_length, finished_weight, ng_weight, hard_weight, total_weight, total_coils,
-            coils_pl7, length_pl7, coils_pl4, length_pl4, stop_time_total, run_time, cycle_time, availability_rate,
-            material_code, grind_num, grind_package_code, lot_in, is_trial, material_type,
-            ng_material, ng_material_lot, hdpe_material, lio_clean, ti_clean, printer_type, ink_type, standby_machines
-        ) VALUES " . implode(",\n", $values) . "
+    $sqlLog = "
+        INSERT INTO extrusion_actual_logs (
+            import_date, production_date, employee_code, employee_name, shift,
+            mfg_order_code, product_code, pipe_size, cost_center, process_name,
+            device_code, finished_qty_m, finished_qty_kg, ng_qty_kg, hard_waste_qty_kg,
+            total_weight_kg, material_code, regrind_count, regrind_package_code, lot_in,
+            total_downtime, total_runtime, cycle_time, machine_efficiency, mold_code,
+            spider_code, production_order_code, is_test, material_type, material_ng_qty,
+            lot_material_ng, hdpe_qty, lio_clean_qty, ti_clean_qty, bobbin_pl7_3_count,
+            bobbin_pl7_3_meters, bobbin_pl4_7_count, bobbin_pl4_7_meters, printer_type, ink_type,
+            waiting_machine_count, data_source, sync_batch_id, record_hash
+        ) VALUES " . implode(",\n", $logValues) . "
         ON DUPLICATE KEY UPDATE
-            import_batch_id   = VALUES(import_batch_id),
-            input_date        = VALUES(input_date),
-            production_date   = VALUES(production_date),
-            production_month  = VALUES(production_month),
-            production_year   = VALUES(production_year),
-            shift             = VALUES(shift),
-            employee_code     = VALUES(employee_code),
-            employee_name     = VALUES(employee_name),
-            directive_code    = VALUES(directive_code),
-            product_code      = VALUES(product_code),
-            size_original     = VALUES(size_original),
-            size_calculated   = VALUES(size_calculated),
-            cost_center       = VALUES(cost_center),
-            stage             = VALUES(stage),
-            workshop          = VALUES(workshop),
-            machine_code      = VALUES(machine_code),
-            mold_code         = VALUES(mold_code),
-            spider_code       = VALUES(spider_code),
-            finished_length   = VALUES(finished_length),
-            finished_weight   = VALUES(finished_weight),
-            ng_weight         = VALUES(ng_weight),
-            hard_weight       = VALUES(hard_weight),
-            total_weight      = VALUES(total_weight),
-            total_coils       = VALUES(total_coils),
-            coils_pl7         = VALUES(coils_pl7),
-            length_pl7        = VALUES(length_pl7),
-            coils_pl4         = VALUES(coils_pl4),
-            length_pl4        = VALUES(length_pl4),
-            stop_time_total   = VALUES(stop_time_total),
-            run_time          = VALUES(run_time),
-            cycle_time        = VALUES(cycle_time),
-            availability_rate = VALUES(availability_rate),
-            material_code     = VALUES(material_code),
-            grind_num         = VALUES(grind_num),
-            grind_package_code= VALUES(grind_package_code),
-            lot_in            = VALUES(lot_in),
-            is_trial          = VALUES(is_trial),
-            material_type     = VALUES(material_type),
-            ng_material       = VALUES(ng_material),
-            ng_material_lot   = VALUES(ng_material_lot),
-            hdpe_material     = VALUES(hdpe_material),
-            lio_clean         = VALUES(lio_clean),
-            ti_clean          = VALUES(ti_clean),
-            printer_type      = VALUES(printer_type),
-            ink_type          = VALUES(ink_type),
-            standby_machines  = VALUES(standby_machines),
-            updated_at        = CURRENT_TIMESTAMP
+            import_date = VALUES(import_date),
+            employee_code = VALUES(employee_code),
+            employee_name = VALUES(employee_name),
+            finished_qty_m = VALUES(finished_qty_m),
+            finished_qty_kg = VALUES(finished_qty_kg),
+            ng_qty_kg = VALUES(ng_qty_kg),
+            hard_waste_qty_kg = VALUES(hard_waste_qty_kg),
+            total_weight_kg = VALUES(total_weight_kg),
+            total_downtime = VALUES(total_downtime),
+            total_runtime = VALUES(total_runtime),
+            cycle_time = VALUES(cycle_time),
+            machine_efficiency = VALUES(machine_efficiency),
+            bobbin_pl7_3_count = VALUES(bobbin_pl7_3_count),
+            bobbin_pl7_3_meters = VALUES(bobbin_pl7_3_meters),
+            bobbin_pl4_7_count = VALUES(bobbin_pl4_7_count),
+            bobbin_pl4_7_meters = VALUES(bobbin_pl4_7_meters),
+            pipe_size = VALUES(pipe_size),
+            data_source = VALUES(data_source),
+            sync_batch_id = VALUES(sync_batch_id),
+            updated_at = CURRENT_TIMESTAMP
     ";
 
-    if ($conn->query($sql)) {
-        // Trong MySQL ON DUPLICATE KEY UPDATE:
-        // affected_rows = 1 nếu INSERT mới, 2 nếu UPDATE, 0 nếu không thay đổi
+    if ($conn->query($sqlLog)) {
         $affected = $conn->affected_rows;
         $batchCount = count($buffer);
-        // Ước tính số dòng INSERT vs UPDATE
         if ($affected <= $batchCount) {
             $inserted += $affected;
         } else {
@@ -1145,4 +1174,4 @@ function executeExtrusionChunkUpsert($conn, $buffer, &$inserted, &$updated, &$er
     }
 }
 }
-
+?>

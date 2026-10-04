@@ -33,40 +33,89 @@ requireApiPermission(['api.overtime.export', 'overtime.export', 'overtime.view',
 
 $action = trim($_REQUEST['action'] ?? 'export');
 
-// Nhận tham số bộ lọc
-$dateFrom = trim($_REQUEST['date_from'] ?? '');
-$dateTo = trim($_REQUEST['date_to'] ?? '');
-$dateSpecific = trim($_REQUEST['date_specific'] ?? '');
+// Nhận tham số bộ lọc - chấp nhận linh hoạt các tên tham số: start_date, end_date, date_from, date_to, date_specific
+$startDate = trim($_REQUEST['start_date'] ?? $_REQUEST['date_from'] ?? $_REQUEST['from_date'] ?? '');
+$endDate = trim($_REQUEST['end_date'] ?? $_REQUEST['date_to'] ?? $_REQUEST['to_date'] ?? '');
+$dateSpecific = trim($_REQUEST['date_specific'] ?? $_REQUEST['ot_date'] ?? $_REQUEST['specific_date'] ?? '');
 $costCenter = trim($_REQUEST['cost_center'] ?? '');
 $teamName = trim($_REQUEST['team_name'] ?? '');
 $factory = trim($_REQUEST['factory'] ?? 'SMC2');
 $empCode = trim($_REQUEST['employee_code'] ?? '');
 $fullName = trim($_REQUEST['full_name'] ?? '');
+$year = !empty($_REQUEST['year']) ? intval($_REQUEST['year']) : 0;
+$month = !empty($_REQUEST['month']) ? intval($_REQUEST['month']) : 0;
+$format = strtolower(trim($_REQUEST['format'] ?? 'xlsx'));
 
-// Mặc định ngày nếu rỗng
-if (empty($dateFrom) && empty($dateTo) && empty($dateSpecific)) {
-    $dateFrom = date('Y-m-01');
-    $dateTo = date('Y-m-d');
+if (!function_exists('normalizeDateStr')) {
+    function normalizeDateStr($d) {
+        $d = trim((string)$d);
+        if (empty($d)) return '';
+        if (preg_match('/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/', $d, $m)) {
+            return sprintf('%04d-%02d-%02d', (int)$m[3], (int)$m[2], (int)$m[1]);
+        }
+        if (preg_match('/^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})$/', $d, $m)) {
+            return sprintf('%04d-%02d-%02d', (int)$m[1], (int)$m[2], (int)$m[3]);
+        }
+        $ts = strtotime($d);
+        return $ts ? date('Y-m-d', $ts) : $d;
+    }
 }
+
+$startDate = normalizeDateStr($startDate);
+$endDate = normalizeDateStr($endDate);
+$dateSpecific = normalizeDateStr($dateSpecific);
+
+if (!empty($dateSpecific)) {
+    $startDate = $dateSpecific;
+    $endDate = $dateSpecific;
+}
+
+// Xử lý giá trị mặc định khi người dùng không chọn ngày
+if (empty($startDate) && empty($endDate)) {
+    if ($year > 0 && $month > 0) {
+        $startDate = sprintf('%04d-%02d-01', $year, $month);
+        $endDate = date('Y-m-t', strtotime($startDate));
+    } else if ($year > 0) {
+        $startDate = sprintf('%04d-01-01', $year);
+        $endDate = sprintf('%04d-12-31', $year);
+    } else {
+        $startDate = date('Y-m-01');
+        $endDate = date('Y-m-d');
+    }
+} else if (!empty($startDate) && empty($endDate)) {
+    $endDate = $startDate;
+} else if (empty($startDate) && !empty($endDate)) {
+    $startDate = $endDate;
+}
+
+// Đảm bảo thứ tự ngày bắt đầu <= ngày kết thúc
+if (!empty($startDate) && !empty($endDate) && $startDate > $endDate) {
+    $tmp = $startDate;
+    $startDate = $endDate;
+    $endDate = $tmp;
+}
+
+// Đồng bộ biến để tương thích ngược
+$dateFrom = $startDate;
+$dateTo = $endDate;
 
 // Xây dựng điều kiện WHERE
 $where = ["p.approval_status IN ('Chấp Nhận', 'Đã duyệt', 'Approved')"];
 $params = [];
 $types = '';
 
-if (!empty($dateSpecific)) {
-    $where[] = "p.ot_date = ?";
-    $params[] = $dateSpecific;
-    $types .= 's';
-} else {
-    if (!empty($dateFrom)) {
-        $where[] = "p.ot_date >= ?";
-        $params[] = $dateFrom;
+if (!empty($startDate) && !empty($endDate)) {
+    if ($startDate === $endDate) {
+        $where[] = "p.ot_date = ?";
+        $params[] = $startDate;
         $types .= 's';
-    }
-    if (!empty($dateTo)) {
+    } else {
+        $where[] = "p.ot_date >= ?";
+        $params[] = $startDate;
+        $types .= 's';
+
         $where[] = "p.ot_date <= ?";
-        $params[] = $dateTo;
+        $params[] = $endDate;
         $types .= 's';
     }
 }
@@ -134,8 +183,10 @@ if ($action === 'preview') {
         'success' => true,
         'count' => $total,
         'filters' => [
-            'date_from' => $dateFrom,
-            'date_to' => $dateTo,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'date_from' => $startDate,
+            'date_to' => $endDate,
             'date_specific' => $dateSpecific,
             'cost_center' => $costCenter,
             'team_name' => $teamName,
@@ -189,6 +240,47 @@ try {
         $rows[] = $row;
     }
     $stmt->close();
+
+    $rangeStr = !empty($dateSpecific) 
+        ? date('Ymd', strtotime($dateSpecific)) 
+        : (($startDate === $endDate) ? date('Ymd', strtotime($startDate)) : (date('Ymd', strtotime($startDate)) . '_' . date('Ymd', strtotime($endDate))));
+
+    // Nếu người dùng chọn định dạng CSV
+    if ($format === 'csv') {
+        if (ob_get_length()) ob_end_clean();
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="DanhSachTangCaKeHoach_' . $factory . '_' . $rangeStr . '.csv"');
+        header('Cache-Control: max-age=0, no-cache, no-store, must-revalidate');
+        header('Pragma: no-cache');
+        header('Expires: 0');
+        echo "\xEF\xBB\xBF";
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['STT', 'Mã Nhân Viên', 'Họ và Tên', 'Nhà Máy', 'Cost Center', 'Ca', 'Lý Do', 'Ngày OT', 'Từ Giờ', 'Đến Giờ', 'Xe Đưa Rước', 'Cần Điện Khí', 'Ghi Chú']);
+        $stt = 1;
+        foreach ($rows as $data) {
+            $shiftRaw = trim((string)$data['work_shift']);
+            $shiftVal = str_ireplace(['Ca ', 'ca '], '', $shiftRaw);
+            if (!in_array($shiftVal, ['1', '2', '3', 'HC'])) $shiftVal = '1';
+            $shuttleText = (!empty($data['use_shuttle_bus']) && $data['use_shuttle_bus'] == 1)
+                ? 'Có sử dụng xe đưa rước' : 'Không sử dụng xe đưa rước';
+            fputcsv($out, [
+                $stt++,
+                $data['employee_code'],
+                $data['full_name'],
+                !empty($factory) ? $factory : 'SMC2',
+                !empty($data['cost_center']) ? $data['cost_center'] : 'A00330',
+                $shiftVal,
+                '',
+                $data['ot_date'],
+                date('H:i:s', strtotime($data['start_time'])),
+                date('H:i:s', strtotime($data['end_time'])),
+                $shuttleText,
+                'SMC2 - B2 - F1',
+                $data['reason']
+            ]);
+        }
+        exit;
+    }
 
     $templatePath = __DIR__ . '/../Data/overtime.xlsx';
     if (!file_exists($templatePath)) {

@@ -147,17 +147,17 @@ if ($resTeams) {
             <!-- Từ ngày & Đến ngày -->
             <div class="col-md-6" id="boxDateFrom">
               <label class="form-label fw-bold small text-muted">Từ ngày <span class="text-danger">*</span></label>
-              <input type="date" class="form-control form-control-sm" id="expDateFrom" value="<?= $defaultDateFrom ?>" onchange="previewExportCount()">
+              <input type="date" class="form-control form-control-sm" id="expDateFrom" name="start_date" value="<?= $defaultDateFrom ?>" onchange="previewExportCount()">
             </div>
             <div class="col-md-6" id="boxDateTo">
               <label class="form-label fw-bold small text-muted">Đến ngày <span class="text-danger">*</span></label>
-              <input type="date" class="form-control form-control-sm" id="expDateTo" value="<?= $defaultDateTo ?>" onchange="previewExportCount()">
+              <input type="date" class="form-control form-control-sm" id="expDateTo" name="end_date" value="<?= $defaultDateTo ?>" onchange="previewExportCount()">
             </div>
 
             <!-- Một ngày cụ thể -->
             <div class="col-md-12" id="boxDateSpecific" style="display: none;">
               <label class="form-label fw-bold small text-muted">Ngày tăng ca cụ thể <span class="text-danger">*</span></label>
-              <input type="date" class="form-control form-control-sm" id="expDateSpecific" value="<?= $defaultDateTo ?>" onchange="previewExportCount()">
+              <input type="date" class="form-control form-control-sm" id="expDateSpecific" name="date_specific" value="<?= $defaultDateTo ?>" onchange="previewExportCount()">
             </div>
 
             <!-- Phím chọn nhanh thời gian -->
@@ -237,10 +237,16 @@ if ($resTeams) {
 
       <div class="modal-footer bg-light py-2 px-4 d-flex justify-content-between">
         <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Đóng</button>
-        <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" id="btnDoExportPlan" onclick="triggerPlanExport()">
-          <span class="material-icons fs-6">download</span>
-          <span id="btnExportText">Tải File Excel (.xlsx)</span>
-        </button>
+        <div class="d-flex align-items-center gap-2">
+          <button type="button" class="btn btn-outline-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" onclick="triggerPlanExport('csv')" title="Tải xuống tệp CSV nhanh chóng, mở trực tiếp bằng Excel">
+            <span class="material-icons fs-6">description</span>
+            <span>Xuất CSV</span>
+          </button>
+          <button type="button" class="btn btn-success btn-sm d-flex align-items-center gap-1 shadow-sm px-3" id="btnDoExportPlan" onclick="triggerPlanExport('xlsx')">
+            <span class="material-icons fs-6">download</span>
+            <span id="btnExportText">Tải File Excel (.xlsx)</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
@@ -434,6 +440,33 @@ function getExportPlanModal() {
 }
 
 function openExportPlanModal() {
+  // Tự động đồng bộ khoảng thời gian theo kỳ tháng & năm đang chọn trên giao diện tra cứu nếu hợp lệ
+  const selMonth = document.getElementById('recFilterMonth') ? document.getElementById('recFilterMonth').value : '';
+  const selYear = document.getElementById('recFilterYear') ? document.getElementById('recFilterYear').value : '';
+  if (selYear) {
+    const y = parseInt(selYear);
+    if (selMonth) {
+      const m = parseInt(selMonth);
+      const mm = String(m).padStart(2, '0');
+      const lastDay = new Date(y, m, 0).getDate();
+      const fromStr = `${y}-${mm}-01`;
+      const toStr = `${y}-${mm}-${String(lastDay).padStart(2, '0')}`;
+      const fromEl = document.getElementById('expDateFrom');
+      const toEl = document.getElementById('expDateTo');
+      const specEl = document.getElementById('expDateSpecific');
+      if (fromEl) fromEl.value = fromStr;
+      if (toEl) toEl.value = toStr;
+      if (specEl) specEl.value = fromStr;
+    } else {
+      const fromStr = `${y}-01-01`;
+      const toStr = `${y}-12-31`;
+      const fromEl = document.getElementById('expDateFrom');
+      const toEl = document.getElementById('expDateTo');
+      if (fromEl) fromEl.value = fromStr;
+      if (toEl) toEl.value = toStr;
+    }
+  }
+
   getExportPlanModal().show();
   previewExportCount();
 }
@@ -482,30 +515,45 @@ function debouncePreviewCount() {
 }
 
 function getExportParams(action = 'preview') {
-  const isSpecific = document.getElementById('modeDateSpecific').checked;
+  const isSpecific = document.getElementById('modeDateSpecific') && document.getElementById('modeDateSpecific').checked;
   const params = new URLSearchParams();
   params.set('action', action);
 
   if (isSpecific) {
-    params.set('date_specific', document.getElementById('expDateSpecific').value || '');
+    const specific = (document.getElementById('expDateSpecific') ? document.getElementById('expDateSpecific').value : '').trim();
+    params.set('date_specific', specific);
+    params.set('start_date', specific);
+    params.set('end_date', specific);
+    params.set('date_from', specific);
+    params.set('date_to', specific);
   } else {
-    params.set('date_from', document.getElementById('expDateFrom').value || '');
-    params.set('date_to', document.getElementById('expDateTo').value || '');
+    const from = (document.getElementById('expDateFrom') ? document.getElementById('expDateFrom').value : '').trim();
+    const to = (document.getElementById('expDateTo') ? document.getElementById('expDateTo').value : '').trim();
+    params.set('start_date', from);
+    params.set('end_date', to);
+    params.set('date_from', from);
+    params.set('date_to', to);
   }
 
-  const costCenter = document.getElementById('expCostCenter').value;
+  // Bổ sung month & year hiện tại để làm fallback an toàn
+  const recMonth = document.getElementById('recFilterMonth') ? document.getElementById('recFilterMonth').value : '';
+  const recYear = document.getElementById('recFilterYear') ? document.getElementById('recFilterYear').value : '';
+  if (recMonth) params.set('month', recMonth);
+  if (recYear) params.set('year', recYear);
+
+  const costCenter = document.getElementById('expCostCenter') ? document.getElementById('expCostCenter').value : '';
   if (costCenter) params.set('cost_center', costCenter);
 
-  const teamName = document.getElementById('expTeamName').value;
+  const teamName = document.getElementById('expTeamName') ? document.getElementById('expTeamName').value : '';
   if (teamName) params.set('team_name', teamName);
 
-  const factory = document.getElementById('expFactory').value;
+  const factory = document.getElementById('expFactory') ? document.getElementById('expFactory').value : '';
   if (factory) params.set('factory', factory);
 
-  const empCode = document.getElementById('expEmployeeCode').value.trim();
+  const empCode = document.getElementById('expEmployeeCode') ? document.getElementById('expEmployeeCode').value.trim() : '';
   if (empCode) params.set('employee_code', empCode);
 
-  const fullName = document.getElementById('expFullName').value.trim();
+  const fullName = document.getElementById('expFullName') ? document.getElementById('expFullName').value.trim() : '';
   if (fullName) params.set('full_name', fullName);
 
   return params;
@@ -554,7 +602,7 @@ async function previewExportCount() {
   }
 }
 
-function triggerPlanExport() {
+function triggerPlanExport(format = 'xlsx') {
   if (currentPreviewCount === 0) {
     alert('Không có dữ liệu tăng ca kế hoạch nào để xuất trong khoảng thời gian đã chọn! Vui lòng chọn lại khoảng ngày hoặc xóa bớt điều kiện lọc.');
     return;
@@ -566,6 +614,7 @@ function triggerPlanExport() {
   document.getElementById('btnExportText').textContent = 'Đang tạo file...';
 
   const params = getExportParams('export');
+  params.set('format', format);
   const exportUrl = `api/overtime_export_plan_template.php?${params.toString()}`;
 
   // Kích hoạt tải file an toàn
@@ -580,7 +629,8 @@ function triggerPlanExport() {
     btn.disabled = false;
     document.getElementById('btnExportText').textContent = oldText;
     getExportPlanModal().hide();
-    showExportToast(`Đã xuất thành công ${currentPreviewCount} bản ghi tăng ca kế hoạch theo mẫu overtime.xlsx!`);
+    const typeLabel = (format === 'csv') ? 'CSV' : 'Excel (.xlsx)';
+    showExportToast(`Đã xuất thành công ${currentPreviewCount} bản ghi tăng ca kế hoạch (${typeLabel})!`);
   }, 1000);
 }
 

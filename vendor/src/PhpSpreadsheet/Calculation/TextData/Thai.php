@@ -98,7 +98,7 @@ class Thai
 
         return implode(
             self::THAI_UNITS[6],
-            array_map(self::convertBlock(...), $chunks)
+            array_map(fn($m) => self::convertBlock($m), $chunks)
         );
     }
 

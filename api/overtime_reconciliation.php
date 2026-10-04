@@ -120,10 +120,13 @@ try {
                     // Ca chưa hoàn thành Bước 2 (Thực tế) - loại trừ các ca đã yêu cầu giải trình, đã giải trình hoặc đã hủy
                     $where .= " AND (r.actual_id IS NULL OR r.reconcile_status = 'plan_only') AND (r.explanation_requested = 0 OR r.explanation_requested IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) AND (r.is_explained = 0 OR r.is_explained IS NULL)";
                 } else if ($status === 'overdue_3days') {
-                    // Thiếu 1 trong 2 bước và quá 3 ngày
-                    $where .= " AND (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3";
+                    // Có kế hoạch hợp lệ nhưng thiếu thực tế và quá 3 ngày
+                    $where .= " AND r.plan_id IS NOT NULL AND r.actual_id IS NULL AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3";
                 } else if ($status === 'needs_explanation') {
-                    $where .= " AND (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL)";
+                    $where .= " AND r.plan_id IS NOT NULL AND (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL)";
+                } else if ($status === 'unplanned') {
+                    // Phát sinh ngoài kế hoạch (nhân viên không có đăng ký kế hoạch hợp lệ)
+                    $where .= " AND (r.reconcile_status = 'unplanned' OR (r.plan_id IS NULL AND r.actual_id IS NOT NULL))";
                 } else if ($status === 'dismissed') {
                     $where .= " AND r.is_dismissed = 1";
                 } else if ($status === 'explained') {
@@ -167,10 +170,11 @@ try {
                     COUNT(*) as total,
                     SUM(CASE WHEN r.plan_id IS NOT NULL AND r.actual_id IS NOT NULL THEN 1 ELSE 0 END) as completed,
                     SUM(CASE WHEN (r.actual_id IS NULL OR r.reconcile_status = 'plan_only') AND (r.explanation_requested = 0 OR r.explanation_requested IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) AND (r.is_explained = 0 OR r.is_explained IS NULL) THEN 1 ELSE 0 END) as uncompleted_actual,
-                    SUM(CASE WHEN (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 1 ELSE 0 END) as overdue_3days,
-                    SUM(CASE WHEN (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) THEN 1 ELSE 0 END) as needs_explanation,
+                    SUM(CASE WHEN (r.plan_id IS NOT NULL AND r.actual_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 1 ELSE 0 END) as overdue_3days,
+                    SUM(CASE WHEN r.plan_id IS NOT NULL AND (r.explanation_requested = 1 OR r.needs_explanation = 1) AND (r.is_explained = 0 OR r.is_explained IS NULL) AND (r.is_dismissed = 0 OR r.is_dismissed IS NULL) THEN 1 ELSE 0 END) as needs_explanation,
                     SUM(CASE WHEN r.is_dismissed = 1 THEN 1 ELSE 0 END) as dismissed_count,
-                    SUM(CASE WHEN r.is_explained = 1 THEN 1 ELSE 0 END) as explained_count
+                    SUM(CASE WHEN r.is_explained = 1 THEN 1 ELSE 0 END) as explained_count,
+                    SUM(CASE WHEN (r.reconcile_status = 'unplanned' OR (r.plan_id IS NULL AND r.actual_id IS NOT NULL)) THEN 1 ELSE 0 END) as unplanned_count
                 FROM ot_reconciliations r
                 {$badgeWhere}
             ";
@@ -212,7 +216,7 @@ try {
                     (CASE 
                         WHEN r.is_dismissed = 1 THEN 4
                         WHEN r.is_explained = 1 THEN 3
-                        WHEN (r.actual_id IS NULL OR r.plan_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 0
+                        WHEN (r.plan_id IS NOT NULL AND r.actual_id IS NULL) AND DATEDIFF(CURRENT_DATE, r.ot_date) > 3 THEN 0
                         WHEN r.actual_id IS NULL OR r.reconcile_status = 'plan_only' THEN 1
                         ELSE 2
                     END) ASC,
@@ -234,7 +238,7 @@ try {
                 $otTimestamp = strtotime($r['ot_date']);
                 $daysDiff = max(0, floor(($todayTimestamp - $otTimestamp) / 86400));
                 $r['days_diff'] = $daysDiff;
-                $r['is_overdue_3days'] = (!$r['is_fully_completed'] && $daysDiff > 3);
+                $r['is_overdue_3days'] = (!empty($r['plan_id']) && empty($r['actual_id']) && $daysDiff > 3);
 
                 $r['order_code'] = '#OT-' . str_pad($r['id'], 6, '0', STR_PAD_LEFT);
                 $items[] = $r;

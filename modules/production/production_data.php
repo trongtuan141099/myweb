@@ -191,9 +191,9 @@
 
             <select id="filterPipeSize" class="app-form-select" onchange="loadActualData(1)">
                 <option value="ALL">Tất cả Size ống</option>
-                <option value="TU04">TU04</option><option value="TU06">TU06</option>
-                <option value="TU08">TU08</option><option value="TU10">TU10</option>
-                <option value="TU12">TU12</option><option value="TU16">TU16</option>
+                <option value="TU0425">TU0425</option><option value="TU0604">TU0604</option>
+                <option value="TU0805">TU0805</option><option value="TU1065">TU1065</option>
+                <option value="TU1208">TU1208</option><option value="TU1610">TU1610</option>
                 <option value="TIUB01">TIUB01</option><option value="TIUB05">TIUB05</option>
                 <option value="TIUB07">TIUB07</option><option value="TIUB11">TIUB11</option>
                 <option value="TIUB13">TIUB13</option>

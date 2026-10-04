@@ -66,6 +66,8 @@ return array (
       56 => 'api.hrm.inventory_org_chart',
       57 => 'api.system.save_role_permissions',
       58 => 'api.system.check_auth',
+      'system.language' => 'system.language',
+      'api.system.languages' => 'api.system.languages',
       59 => 'overtime.view',
       60 => 'overtime.import',
       61 => 'overtime.reconcile',
@@ -108,6 +110,20 @@ return array (
       98 => 'quality.view',
       99 => 'quality.manage',
       100 => 'quality.investigate',
+      101 => 'orders.view',
+      102 => 'orders.create',
+      103 => 'orders.edit',
+      104 => 'orders.dun_confirm',
+      105 => 'orders.cuon_confirm',
+      106 => 'orders.approve_a',
+      107 => 'orders.delete',
+      108 => 'orders.export',
+      109 => 'api.orders.get',
+      110 => 'api.orders.save',
+      111 => 'api.orders.dun_confirm',
+      112 => 'api.orders.cuon_update',
+      113 => 'api.orders.approve_a',
+      114 => 'api.orders.delete',
     ),
     'editor' => 
     array (
@@ -198,6 +214,18 @@ return array (
       84 => 'quality.view',
       85 => 'quality.manage',
       86 => 'quality.investigate',
+      87 => 'orders.view',
+      88 => 'orders.create',
+      89 => 'orders.edit',
+      90 => 'orders.dun_confirm',
+      91 => 'orders.cuon_confirm',
+      92 => 'orders.approve_a',
+      93 => 'orders.export',
+      94 => 'api.orders.get',
+      95 => 'api.orders.save',
+      96 => 'api.orders.dun_confirm',
+      97 => 'api.orders.cuon_update',
+      98 => 'api.orders.approve_a',
     ),
     'viewer' => 
     array (
@@ -241,6 +269,8 @@ return array (
       37 => 'api.hrm.leave_summary',
       38 => 'api.warehouse.get',
       39 => 'quality.view',
+      40 => 'orders.view',
+      41 => 'api.orders.get',
     ),
   ),
   'permission_catalog' => 
@@ -339,6 +369,7 @@ return array (
       'permissions' => 
       array (
         'role.manage' => 'Quản trị và cấp quyền người dùng',
+        'system.language' => 'Quản lý thiết lập ngôn ngữ và từ điển i18n',
       ),
     ),
     'overtime' => 
@@ -393,6 +424,22 @@ return array (
         'quality.view' => 'Xem dashboard & theo dõi tỉ lệ thành phẩm (良品率)',
         'quality.manage' => 'Nhập liệu, import/export Excel & thiết lập benchmark',
         'quality.investigate' => 'Tạo & cập nhật phiếu yêu cầu điều tra bất thường',
+      ),
+    ),
+    'orders' => 
+    array (
+      'name' => 'Quản lý Đơn hàng (Order Management)',
+      'icon' => 'receipt_long',
+      'permissions' => 
+      array (
+        'orders.view' => 'Xem danh sách và tiến độ Đơn hàng (Đơn B)',
+        'orders.create' => 'Tạo mới đơn hàng & Import file Excel (PC)',
+        'orders.edit' => 'Chỉnh sửa thông tin đơn hàng & phân loại A/B (PC)',
+        'orders.dun_confirm' => 'Xác nhận & phản hồi xưởng Đùn nhựa',
+        'orders.cuon_confirm' => 'Cập nhật thực tích & xác nhận xưởng Cuộn nhựa',
+        'orders.approve_a' => 'Xét duyệt chuyển Đơn B sang Đơn A (PC)',
+        'orders.delete' => 'Xóa đơn hàng (PC/Admin)',
+        'orders.export' => 'Xuất dữ liệu Đơn hàng ra file Excel',
       ),
     ),
   ),
@@ -688,6 +735,12 @@ return array (
           'endpoint' => 'api/check_auth.php',
           'method' => 'GET',
         ),
+        'api.system.languages' => 
+        array (
+          'name' => 'Quản trị và cập nhật từ điển đa ngôn ngữ i18n',
+          'endpoint' => 'api/languages_api.php',
+          'method' => 'POST',
+        ),
       ),
     ),
     'overtime' => 
@@ -818,6 +871,50 @@ return array (
         array (
           'name' => 'Cập nhật tồn kho, cấu hình người duyệt, xử lý cảnh báo ROP',
           'endpoint' => 'api/warehouse.php?action=update_stock',
+          'method' => 'POST',
+        ),
+      ),
+    ),
+    'orders' => 
+    array (
+      'name' => 'Quản lý Đơn hàng API (Orders API)',
+      'icon' => 'receipt_long',
+      'apis' => 
+      array (
+        'api.orders.get' => 
+        array (
+          'name' => 'Truy vấn danh sách, chi tiết, thống kê Đơn B',
+          'endpoint' => 'api/don_b_api.php?action=list',
+          'method' => 'GET',
+        ),
+        'api.orders.save' => 
+        array (
+          'name' => 'Tạo & cập nhật đơn hàng, import Excel (PC)',
+          'endpoint' => 'api/don_b_api.php?action=save_manual',
+          'method' => 'POST',
+        ),
+        'api.orders.dun_confirm' => 
+        array (
+          'name' => 'Xác nhận xưởng Đùn nhựa',
+          'endpoint' => 'api/don_b_api.php?action=dun_confirm',
+          'method' => 'POST',
+        ),
+        'api.orders.cuon_update' => 
+        array (
+          'name' => 'Cập nhật thực tích xưởng Cuộn nhựa',
+          'endpoint' => 'api/don_b_api.php?action=cuon_update',
+          'method' => 'POST',
+        ),
+        'api.orders.approve_a' => 
+        array (
+          'name' => 'Xét duyệt chuyển Đơn B sang Đơn A (PC)',
+          'endpoint' => 'api/don_b_api.php?action=approve_b_to_a',
+          'method' => 'POST',
+        ),
+        'api.orders.delete' => 
+        array (
+          'name' => 'Xóa đơn hàng khỏi hệ thống',
+          'endpoint' => 'api/don_b_api.php?action=delete',
           'method' => 'POST',
         ),
       ),
