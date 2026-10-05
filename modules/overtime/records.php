@@ -118,12 +118,21 @@ if ($resTeams) {
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body p-4">
-        <!-- Chú thích quy định mẫu -->
+        <!-- Chú thích quy định mẫu & Nhận diện ca tự động -->
         <div class="alert alert-light border d-flex align-items-start gap-2 mb-3 py-2 px-3 small text-muted">
           <span class="material-icons text-success fs-5">verified</span>
           <div>
-            File xuất giữ nguyên <strong>100% cấu trúc, màu sắc, dropdown danh sách</strong> từ mẫu gốc <code>Data/overtime.xlsx</code>.<br>
-            Cột <em>"Lý do"</em> để trống ô dữ liệu & giữ dropdown; Cột <em>"Cần điện - khí"</em>: <code>SMC2 - B2 - F1</code>; Cột <em>"Nhà máy"</em>: <code>SMC2</code>.
+            <div>File xuất giữ nguyên <strong>100% cấu trúc, màu sắc, dropdown danh sách</strong> từ mẫu gốc <code>Data/overtime.xlsx</code>.</div>
+            <div class="mt-1">
+              <strong>Ca làm việc:</strong> Tự động nhận diện từ thời gian đăng ký OT kế hoạch theo bảng cấu hình <code>Shift_Master</code>:
+              <span class="badge bg-light text-dark border">Ca 1: 04:00~16:00</span>
+              <span class="badge bg-light text-dark border">Ca 2: 12:00~24:00</span>
+              <span class="badge bg-light text-dark border">Ca 3: 20:00~08:00</span>
+              <span class="badge bg-light text-dark border">HC: 05:45~20:00</span>
+            </div>
+            <div class="mt-1">
+              Cột <em>"Lý do"</em> để trống ô dữ liệu & giữ dropdown; Cột <em>"Cần điện - khí"</em>: <code>SMC2 - B2 - F1</code>; Cột <em>"Nhà máy"</em>: <code>SMC2</code>.
+            </div>
           </div>
         </div>
 

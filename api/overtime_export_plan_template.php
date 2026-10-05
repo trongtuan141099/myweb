@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../core/check_permission.php';
+require_once __DIR__ . '/../core/shift_service.php';
 require_once __DIR__ . '/../vendor/autoload.php';
 
 use PhpOffice\PhpSpreadsheet\IOFactory;
@@ -217,8 +218,9 @@ try {
             p.end_time,
             p.reason,
             COALESCE(e.cost_center, 'A00330') as cost_center,
-            COALESCE(e.work_shift, 'Ca 1') as work_shift,
-            COALESCE(e.use_shuttle_bus, 0) as use_shuttle_bus
+            COALESCE(e.use_shuttle_bus, 0) as use_shuttle_bus,
+            COALESCE(e.work_group, '') as work_group,
+            COALESCE(e.job_level, '') as job_level
         FROM ot_plans p
         LEFT JOIN employees e ON p.employee_code = e.employee_code
         WHERE {$whereSql}
@@ -258,9 +260,18 @@ try {
         fputcsv($out, ['STT', 'Mã Nhân Viên', 'Họ và Tên', 'Nhà Máy', 'Cost Center', 'Ca', 'Lý Do', 'Ngày OT', 'Từ Giờ', 'Đến Giờ', 'Xe Đưa Rước', 'Cần Điện Khí', 'Ghi Chú']);
         $stt = 1;
         foreach ($rows as $data) {
-            $shiftRaw = trim((string)$data['work_shift']);
-            $shiftVal = str_ireplace(['Ca ', 'ca '], '', $shiftRaw);
-            if (!in_array($shiftVal, ['1', '2', '3', 'HC'])) $shiftVal = '1';
+            // Tự động xác định Ca làm việc từ thời gian đăng ký OT kế hoạch & bảng Shift_Master
+            $shiftVal = ShiftMasterService::determineShift(
+                $data['start_time'],
+                $data['end_time'],
+                [
+                    'work_group' => $data['work_group'] ?? '',
+                    'job_level' => $data['job_level'] ?? '',
+                    'reason' => $data['reason'] ?? '',
+                    'cost_center' => $data['cost_center'] ?? ''
+                ],
+                $conn
+            );
             $shuttleText = (!empty($data['use_shuttle_bus']) && $data['use_shuttle_bus'] == 1)
                 ? 'Có sử dụng xe đưa rước' : 'Không sử dụng xe đưa rước';
             fputcsv($out, [
@@ -358,12 +369,18 @@ try {
         $sheet->setCellValueExplicit('F' . $rowIndex, (string)$ccVal, DataType::TYPE_STRING);
         $sheet->getStyle('F' . $rowIndex)->getNumberFormat()->setFormatCode('@');
 
-        // Col G: ca làm việc (1, 2, 3, HC)
-        $shiftRaw = trim((string)$data['work_shift']);
-        $shiftVal = str_ireplace(['Ca ', 'ca '], '', $shiftRaw);
-        if (!in_array($shiftVal, ['1', '2', '3', 'HC'])) {
-            $shiftVal = '1';
-        }
+        // Col G: ca làm việc (1, 2, 3, HC) - Tự động xác định từ thời gian đăng ký OT kế hoạch & bảng Shift_Master
+        $shiftVal = ShiftMasterService::determineShift(
+            $data['start_time'],
+            $data['end_time'],
+            [
+                'work_group' => $data['work_group'] ?? '',
+                'job_level' => $data['job_level'] ?? '',
+                'reason' => $data['reason'] ?? '',
+                'cost_center' => $data['cost_center'] ?? ''
+            ],
+            $conn
+        );
         $sheet->setCellValue('G' . $rowIndex, $shiftVal);
         $sheet->getStyle('G' . $rowIndex)->getNumberFormat()->setFormatCode('@');
         $sheet->getCell('G' . $rowIndex)->setDataValidation(clone $dvShift);
