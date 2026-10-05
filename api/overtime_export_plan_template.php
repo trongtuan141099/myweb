@@ -101,7 +101,7 @@ $dateFrom = $startDate;
 $dateTo = $endDate;
 
 // Xây dựng điều kiện WHERE
-$where = ["p.approval_status IN ('Chấp Nhận', 'Đã duyệt', 'Approved')"];
+$where = ["p.approval_status IN ('Chấp Nhận', 'Đã duyệt', 'Approved', 'Chưa duyệt')"];
 $params = [];
 $types = '';
 

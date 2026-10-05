@@ -493,7 +493,14 @@ async function savePlanMatrix() {
             body: JSON.stringify({ month: selectedMonth, matrix: currentPlanMatrix })
         });
 
-        const result = await res.json();
+        const text = await res.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            throw new Error(text && text.trim() ? text.substring(0, 150) : "Phản hồi rỗng từ máy chủ");
+        }
+
         if (result.success) {
             alert(result.message);
             closePlanModal();
@@ -504,11 +511,11 @@ async function savePlanMatrix() {
             }
             loadReportData();
         } else {
-            alert("Lỗi từ Server: " + result.message);
+            alert("Lỗi từ Server: " + (result.message || "Lưu kế hoạch thất bại!"));
         }
     } catch (err) {
         console.error("Lỗi khi lưu kế hoạch:", err);
-        alert("Lỗi kết nối Server khi lưu kế hoạch!");
+        alert("Lỗi khi lưu kế hoạch: " + (err.message || "Lỗi kết nối Server!"));
     }
 }
 
@@ -547,28 +554,53 @@ async function handleUploadPlanExcel() {
     const fileInput = document.getElementById("planExcelInput");
     if (!fileInput || !fileInput.files.length) return;
 
-    const selectedMonth = document.getElementById("modalPlanMonth").value;
+    const selectedMonth = document.getElementById("modalPlanMonth") ? document.getElementById("modalPlanMonth").value : "";
+    if (!selectedMonth) {
+        alert("Vui lòng chọn tháng kế hoạch trước khi tải lên!");
+        fileInput.value = "";
+        return;
+    }
+
+    const uploadLabel = fileInput.closest("label");
     const formData = new FormData();
     formData.append("plan_month", selectedMonth);
     formData.append("plan_excel", fileInput.files[0]);
+
+    if (uploadLabel) {
+        uploadLabel.style.pointerEvents = "none";
+        uploadLabel.style.opacity = "0.6";
+    }
 
     try {
         const res = await fetch('api/upload_production_plan.php', {
             method: 'POST',
             body: formData
         });
-        const result = await res.json();
+
+        const text = await res.text();
+        let result;
+        try {
+            result = JSON.parse(text);
+        } catch (jsonErr) {
+            console.error("Lỗi phản hồi máy chủ (không phải JSON hợp lệ):", text);
+            throw new Error(text && text.trim() ? `Phản hồi không hợp lệ từ máy chủ: ${text.substring(0, 150)}` : "Máy chủ không trả về dữ liệu (Phản hồi rỗng).");
+        }
 
         if (result.success) {
             alert(result.message);
             loadMatrixByMonth();
-            fileInput.value = "";
         } else {
-            alert("Lỗi Upload Kế Hoạch: " + result.message);
+            alert("Lỗi Upload Kế Hoạch: " + (result.message || "Xử lý file thất bại!"));
         }
     } catch (err) {
         console.error("Lỗi upload file kế hoạch:", err);
-        alert("Không thể upload file kế hoạch!");
+        alert("Không thể upload file kế hoạch: " + (err.message || err));
+    } finally {
+        if (uploadLabel) {
+            uploadLabel.style.pointerEvents = "";
+            uploadLabel.style.opacity = "";
+        }
+        fileInput.value = "";
     }
 }
 
