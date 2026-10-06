@@ -1,0 +1,11 @@
+{
+    "autoplay": true,
+    "interval": 5000,
+    "pause_on_hover": true,
+    "filter_category": "all",
+    "max_items": 10,
+    "animation_effect": "fade",
+    "show_indicators": true,
+    "show_arrows": true,
+    "show_badges": true
+}

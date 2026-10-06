@@ -62,7 +62,8 @@ if ($is_public_route) {
 // 3. Định nghĩa ma trận quyền Route toàn hệ thống
 $route_permissions = [
     'dashboard' => [
-        'overview' => 'dashboard.view'
+        'overview' => 'dashboard.view',
+        'banners'  => 'dashboard.view'
     ],
     'production' => [
         'production_planing' => 'production.plan',
