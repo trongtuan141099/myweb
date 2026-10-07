@@ -9,15 +9,15 @@
     "auto_sync_enabled": true,
     "sync_date_from": "2026-10-01",
     "sync_date_to": "2026-10-30",
-    "last_sync_time": "2026-10-06 11:11:44",
+    "last_sync_time": "2026-10-07 09:59:38",
     "last_sync_status": "success",
-    "last_sync_message": "Đồng bộ 3\/3 tài khoản thành công. Gộp KH: +0\/sửa 18. TT: +0\/sửa 5.",
+    "last_sync_message": "Đồng bộ 3\/3 tài khoản thành công. Gộp KH: +0\/sửa 18. TT: +0\/sửa 14.",
     "last_sync_stats": {
         "plan_inserted": 0,
         "plan_updated": 18,
         "plan_errors": 0,
         "actual_inserted": 0,
-        "actual_updated": 5,
+        "actual_updated": 14,
         "actual_errors": 0
     },
     "username": "02114273",
