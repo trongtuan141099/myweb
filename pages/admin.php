@@ -1,3 +1,11 @@
+<?php
+require_once __DIR__ . '/../core/check_permission.php';
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+}
+checkAuth();
+?>
 <!DOCTYPE html>
 <html lang="vi">
 <head>

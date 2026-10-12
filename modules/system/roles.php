@@ -1,5 +1,9 @@
 <?php
 // modules/system/roles.php
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+}
 require_once __DIR__ . '/../../core/check_permission.php';
 
 // Kiểm tra quyền truy cập trang quản lý Role

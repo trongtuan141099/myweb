@@ -1,5 +1,21 @@
 <?php
-session_start();
+if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.use_strict_mode', 1);
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_start();
+}
+
+// Thiết lập HTTP Header chống lưu cache trên trình duyệt và mạng nội bộ (LAN)
+header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+header("Pragma: no-cache");
+header("Expires: 0");
+
 require_once "config/db.php";
 require_once "core/check_permission.php";
 require_once "core/i18n.php";
@@ -32,6 +48,10 @@ if ($mainpage === 'don_b') {
 
 // 1. Xử lý riêng biệt cho Trang Đăng Nhập (Authentication)
 if ($mainpage === 'authentication' && $subpage === 'login') {
+    // Nếu chuyển hướng do hết thời gian chờ (timeout) hoặc yêu cầu đăng xuất, hủy phiên ngay lập tức
+    if (isset($_GET['timeout']) || isset($_GET['logout'])) {
+        destroyExpiredSession();
+    }
     // Nếu đã có session hợp lệ, tự động điều hướng vào Dashboard
     if (isset($_SESSION['user_id']) || isset($_SESSION['user'])) {
         header("Location: index.php?mainpage=dashboard&subpage=overview");
@@ -44,7 +64,7 @@ if ($mainpage === 'authentication' && $subpage === 'login') {
 // Danh sách các tiện ích công khai (cho phép truy cập nhanh không cần đăng nhập)
 $public_routes = [
     'materials' => ['viscoscity'],
-    'utilities' => ['color_mixer', 'color_mixer_summary']
+    'utilities' => ['color_mixer', 'color_mixer_summary', 'extrusion_manual_input', 'extrusion_actual_lookup']
 ];
 $is_public_route = isset($public_routes[$mainpage]) && in_array($subpage, $public_routes[$mainpage], true);
 
@@ -94,8 +114,10 @@ $route_permissions = [
         'settings'     => 'five_s.settings'
     ],
     'utilities' => [
-        'color_mixer'         => 'mixer.view',
-        'color_mixer_summary' => 'mixer.view'
+        'color_mixer'             => 'mixer.view',
+        'color_mixer_summary'     => 'mixer.view',
+        'extrusion_manual_input'  => 'production.data',
+        'extrusion_actual_lookup' => 'production.data'
     ],
     'system' => [
         'roles'             => 'role.manage',

@@ -1,6 +1,10 @@
 <?php
 // modules/system/language_settings.php
 // Quản trị Thiết lập Ngôn ngữ (Language Settings) - DX Plastic Group
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate');
+    header('Pragma: no-cache');
+}
 require_once __DIR__ . '/../../core/check_permission.php';
 require_once __DIR__ . '/../../core/i18n.php';
 

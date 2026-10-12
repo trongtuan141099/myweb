@@ -4,6 +4,11 @@ if (basename($_SERVER['SCRIPT_FILENAME'] ?? '') === 'login.php' && strpos($_SERV
     header("Location: ../../index.php?mainpage=authentication&subpage=login");
     exit;
 }
+if (!headers_sent()) {
+    header("Cache-Control: no-store, no-cache, must-revalidate, max-age=0");
+    header("Pragma: no-cache");
+    header("Expires: 0");
+}
 $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !== false) ? '../../index.php' : 'index.php';
 ?>
 <!DOCTYPE html>
@@ -20,6 +25,10 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
   <script>
     (function() {
       try {
+        // Làm sạch kho lưu trữ trình duyệt ngay đầu trang Đăng nhập để tránh lưu vết máy dùng chung
+        localStorage.removeItem('loggedInUser');
+        sessionStorage.clear();
+
         const saved = localStorage.getItem('dx-theme');
         if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
           document.documentElement.setAttribute('data-theme', 'dark');
@@ -818,6 +827,14 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
     <div class="topbar-actions">
       <!-- Desktop & Tablet Quick Nav Pills -->
       <nav class="quick-pills" aria-label="Truy cập nhanh">
+        <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=extrusion_manual_input" class="quick-pill pill-blue" style="border-color: var(--primary); background: var(--primary-subtle);" title="Nhập báo cáo sản xuất đùn thủ công (Format 7.2026)">
+          <span class="material-icons">edit_note</span>
+          <span>Nhập Báo Cáo Đùn</span>
+        </a>
+        <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=extrusion_actual_lookup" class="quick-pill pill-green" title="Tra cứu & Xuất Excel dữ liệu thực tích đùn (DATA_PLASTIC / DATA_TIME)">
+          <span class="material-icons">table_view</span>
+          <span>Thực tích &amp; Xuất Excel</span>
+        </a>
         <a href="<?= $baseAppUrl ?>?mainpage=materials&subpage=viscoscity" class="quick-pill pill-blue" title="Vào tra cứu độ nhớt vật liệu">
           <span class="material-icons">science</span>
           <span>Độ nhớt vật liệu</span>
@@ -844,6 +861,12 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
     <span class="mobile-fast-title">
       <span class="material-icons" style="font-size: 15px;">bolt</span> Vào nhanh:
     </span>
+    <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=extrusion_manual_input" class="quick-pill pill-blue">
+      <span class="material-icons">edit_note</span> Nhập BC Đùn
+    </a>
+    <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=extrusion_actual_lookup" class="quick-pill pill-green">
+      <span class="material-icons">table_view</span> Thực tích Đùn
+    </a>
     <a href="<?= $baseAppUrl ?>?mainpage=materials&subpage=viscoscity" class="quick-pill pill-blue">
       <span class="material-icons">science</span> Độ nhớt
     </a>
@@ -868,12 +891,42 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
           </div>
           <h2 class="util-heading">Tiện Ích Xưởng Sản Xuất</h2>
           <p class="util-desc">
-            Dành cho nhân viên vận hành và kỹ thuật kiểm tra nhanh thông số kéo ống, ma trận trộn màu và chỉ số vật liệu trực tiếp tại xưởng.
+            Dành cho nhân viên vận hành và kỹ thuật nhập nhanh báo cáo sản xuất đùn, tra cứu thực tích và kiểm tra thông số trực tiếp tại xưởng.
           </p>
         </div>
 
         <div class="util-cards-list">
-          <!-- TIỆN ÍCH 1: ĐỘ NHỚT VẬT LIỆU -->
+          <!-- TIỆN ÍCH NỔI BẬT 1: NHẬP BÁO CÁO SẢN XUẤT ĐÙN THỦ CÔNG -->
+          <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=extrusion_manual_input" class="util-card-item" style="border-color: var(--primary); box-shadow: 0 4px 14px rgba(2, 132, 199, 0.12);" title="Mở trang Nhập báo cáo sản xuất đùn thủ công (Format 7.2026)">
+            <div class="util-icon-box util-icon-blue">
+              <span class="material-icons">edit_note</span>
+            </div>
+            <div class="util-content">
+              <div class="util-top-meta">
+                <span class="util-item-title">Nhập báo cáo sản xuất đùn (Thủ công)</span>
+                <span class="util-item-tag" style="background: var(--primary-subtle); color: var(--primary); border-color: var(--primary);">Format 7.2026</span>
+              </div>
+              <p class="util-item-desc">Nhập nhanh sản lượng, phế phẩm, thời gian dừng máy &amp; chỉnh sửa báo cáo theo chuẩn phiếu đùn</p>
+            </div>
+            <span class="material-icons util-arrow">arrow_forward</span>
+          </a>
+
+          <!-- TIỆN ÍCH NỔI BẬT 2: TRA CỨU & XUẤT EXCEL DỮ LIỆU THỰC TÍCH -->
+          <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=extrusion_actual_lookup" class="util-card-item" title="Mở trang Tra cứu & Xuất Excel dữ liệu thực tích đùn (DATA_PLASTIC & DATA_TIME)">
+            <div class="util-icon-box util-icon-green">
+              <span class="material-icons">table_view</span>
+            </div>
+            <div class="util-content">
+              <div class="util-top-meta">
+                <span class="util-item-title">Tra cứu &amp; Xuất Excel thực tích đùn</span>
+                <span class="util-item-tag">DATA_PLASTIC / TIME</span>
+              </div>
+              <p class="util-item-desc">Tra cứu thực tích đã nhập và xuất báo cáo chuẩn 2 sheet DATA_PLASTIC &amp; DATA_TIME</p>
+            </div>
+            <span class="material-icons util-arrow">arrow_forward</span>
+          </a>
+
+          <!-- TIỆN ÍCH 3: ĐỘ NHỚT VẬT LIỆU -->
           <a href="<?= $baseAppUrl ?>?mainpage=materials&subpage=viscoscity" class="util-card-item" title="Mở trang Độ nhớt vật liệu">
             <div class="util-icon-box util-icon-blue">
               <span class="material-icons">science</span>
@@ -888,7 +941,7 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
             <span class="material-icons util-arrow">arrow_forward</span>
           </a>
 
-          <!-- TIỆN ÍCH 2: TRA CỨU TRỘN MÀU -->
+          <!-- TIỆN ÍCH 4: TRA CỨU TRỘN MÀU -->
           <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=color_mixer" class="util-card-item" title="Mở trang Tra cứu trộn màu">
             <div class="util-icon-box util-icon-green">
               <span class="material-icons">palette</span>
@@ -903,7 +956,7 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
             <span class="material-icons util-arrow">arrow_forward</span>
           </a>
 
-          <!-- TIỆN ÍCH 3: BẢNG TỔNG QUAN TRỘN MÀU -->
+          <!-- TIỆN ÍCH 5: BẢNG TỔNG QUAN TRỘN MÀU -->
           <a href="<?= $baseAppUrl ?>?mainpage=utilities&subpage=color_mixer_summary" class="util-card-item" title="Mở trang Bảng tổng quan trộn màu">
             <div class="util-icon-box util-icon-purple">
               <span class="material-icons">grid_view</span>
@@ -1023,6 +1076,9 @@ $baseAppUrl = (strpos($_SERVER['REQUEST_URI'] ?? '', 'modules/authentication') !
 
     document.addEventListener('DOMContentLoaded', () => {
       updateThemeIcon();
+      // Tự động xóa dữ liệu đăng nhập cũ khi vào trang login để tránh bị dính phiên của người trước
+    localStorage.removeItem('loggedInUser');
+    sessionStorage.clear();
     });
 
     // ẨN / HIỆN MẬT KHẨU

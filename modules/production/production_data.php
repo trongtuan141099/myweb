@@ -124,6 +124,12 @@
         </div>
 
         <div class="app-page-actions">
+            <a href="index.php?mainpage=utilities&subpage=extrusion_manual_input" class="app-btn app-btn-primary" style="text-decoration:none;">
+                <span class="material-icons">edit_note</span> Nhập Báo Cáo Thủ Công
+            </a>
+            <a href="index.php?mainpage=utilities&subpage=extrusion_actual_lookup" class="app-btn app-btn-warning" style="text-decoration:none;" title="Tra cứu & Xuất báo cáo chuẩn DATA_PLASTIC / DATA_TIME">
+                <span class="material-icons">table_view</span> Xuất Chuẩn DATA_PLASTIC &amp; TIME
+            </a>
             <?php if (hasPermission('production.data')): ?>
             <button onclick="openVnsystemSyncModal()" class="app-btn" style="background:#0284c7; color:#fff; font-weight:600; box-shadow: 0 1px 3px rgba(2,132,199,0.3);">
                 <span class="material-icons">sync</span> Đồng bộ Extrusion Report
@@ -135,7 +141,7 @@
             <button onclick="openVnsystemHistoryModal()" class="app-btn app-btn-secondary" title="Xem lịch sử các đợt đồng bộ Extrusion Report">
                 <span class="material-icons">history</span> Lịch sử đồng bộ
             </button>
-            <button onclick="exportExcel()" class="app-btn app-btn-primary">
+            <button onclick="exportExcel()" class="app-btn app-btn-secondary">
                 <span class="material-icons">file_download</span> Download Excel
             </button>
         </div>
@@ -537,9 +543,12 @@ function renderTableRows(rows) {
     }
 
     rows.forEach((r, idx) => {
-        const sourceBadge = (r.data_source === 'VNSYSTEM')
-            ? `<span style="background:#e0f2fe; color:#0284c7; border:1px solid rgba(2,132,199,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">VNSYSTEM</span>`
-            : `<span style="background:#f0fdf4; color:#16a34a; border:1px solid rgba(22,163,74,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">EXCEL</span>`;
+        let sourceBadge = `<span style="background:#f0fdf4; color:#16a34a; border:1px solid rgba(22,163,74,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">EXCEL</span>`;
+        if (r.data_source === 'VNSYSTEM') {
+            sourceBadge = `<span style="background:#e0f2fe; color:#0284c7; border:1px solid rgba(2,132,199,0.3); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">VNSYSTEM</span>`;
+        } else if (r.data_source === 'MANUAL') {
+            sourceBadge = `<span style="background:#fef3c7; color:#b45309; border:1px solid rgba(245,158,11,0.35); padding:2px 6px; border-radius:4px; font-size:10px; font-weight:700;">MANUAL</span>`;
+        }
 
         tbody.innerHTML += `
             <tr>

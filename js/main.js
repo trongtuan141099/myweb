@@ -44,6 +44,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // Kiểm tra trạng thái xác thực người dùng
   checkAuthentication();
 
+  // Khởi tạo bộ đếm ngược tự động đăng xuất khi không hoạt động (10 phút)
+  initInactivityLogout();
+
   // Khắc phục triệt để lỗi màn hình đen do Modal Backdrop trong Bootstrap 5:
   // Tự động di chuyển toàn bộ Modal trực tiếp ra body để không bị kẹt stacking context
   document.querySelectorAll('.modal').forEach(function (modalEl) {
@@ -87,6 +90,13 @@ async function checkAuthentication() {
     // Nếu đã đăng nhập, cập nhật thông tin hiển thị lên header
     if (data && data.authenticated && data.user) {
       displayUserInfo(data.user);
+    } else {
+      // Phiên trên Server không tồn tại hoặc đã hết hạn -> Làm sạch dữ liệu lưu vết phía Client
+      localStorage.removeItem('loggedInUser');
+      if (window.IS_PUBLIC_ROUTE === false) {
+        sessionStorage.clear();
+        window.location.href = 'index.php?mainpage=authentication&subpage=login&timeout=1';
+      }
     }
   } catch (error) {
     console.warn('Lưu ý khi kiểm tra phiên đăng nhập:', error);
@@ -123,15 +133,54 @@ async function logout() {
       const data = await response.json().catch(() => ({ success: true }));
       if (data.success || response.ok) {
         localStorage.removeItem('loggedInUser');
-        window.location.href = 'index.php?mainpage=authentication&subpage=login';
+        sessionStorage.clear();
+        window.location.href = 'index.php?mainpage=authentication&subpage=login&logout=1';
       } else {
         alert('Đã xảy ra lỗi khi đăng xuất: ' + (data.message || 'Thử lại sau'));
       }
     } catch (error) {
       console.error('Lỗi đăng xuất:', error);
-      window.location.href = 'index.php?mainpage=authentication&subpage=login';
+      localStorage.removeItem('loggedInUser');
+      sessionStorage.clear();
+      window.location.href = 'index.php?mainpage=authentication&subpage=login&logout=1';
     }
   }
+}
+
+// ==========================================================================
+// CƠ CHẾ SESSION TIMEOUT / INACTIVITY LOGOUT (10 PHÚT KHÔNG TƯƠNG TÁC)
+// ==========================================================================
+const INACTIVITY_LIMIT_MS = 10 * 60 * 1000; // 10 phút (600,000 ms)
+let inactivityTimerId = null;
+
+function handleInactivityTimeout() {
+  // Xóa sạch dữ liệu lưu trữ phía trình duyệt
+  localStorage.removeItem('loggedInUser');
+  sessionStorage.clear();
+
+  // Gửi yêu cầu hủy phiên lên Server và điều hướng về trang đăng nhập
+  fetch('api/logout.php', {
+    method: 'POST',
+    credentials: 'same-origin',
+    keepalive: true
+  }).finally(() => {
+    window.location.href = 'index.php?mainpage=authentication&subpage=login&timeout=1';
+  });
+}
+
+function resetInactivityTimer() {
+  if (inactivityTimerId) {
+    clearTimeout(inactivityTimerId);
+  }
+  inactivityTimerId = setTimeout(handleInactivityTimeout, INACTIVITY_LIMIT_MS);
+}
+
+function initInactivityLogout() {
+  const activityEvents = ['mousemove', 'mousedown', 'keydown', 'keypress', 'touchstart', 'touchmove', 'click', 'scroll'];
+  activityEvents.forEach(function (eventName) {
+    window.addEventListener(eventName, resetInactivityTimer, { passive: true });
+  });
+  resetInactivityTimer();
 }
 
 // ==========================================================================

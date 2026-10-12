@@ -35,14 +35,22 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
       </a>
     </div>
 
-    <!-- 2. Tiện ích trộn màu -->
+    <!-- 2. Tiện ích xưởng sản xuất (Báo cáo đùn & Trộn màu) -->
     <div class="has-submenu <?= ($current_main === 'utilities') ? 'open' : '' ?>">
       <div class="menu-item menu-parent <?= ($current_main === 'utilities') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
-        <span class="material-icons" style="color: var(--dx-success, #10b981);">palette</span>
-        <span class="label" data-i18n="nav.color_mixer_group"><?= __('nav.color_mixer_group', 'Tiện ích trộn màu') ?></span>
+        <span class="material-icons" style="color: var(--dx-success, #10b981);">handyman</span>
+        <span class="label" data-i18n="nav.color_mixer_group"><?= __('nav.color_mixer_group', 'Tiện ích sản xuất') ?></span>
         <span class="material-icons arrow-icon">expand_more</span>
       </div>
       <div class="submenu">
+        <a href="index.php?mainpage=utilities&subpage=extrusion_manual_input" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'extrusion_manual_input') ? 'active' : '' ?>">
+          <span class="material-icons">edit_note</span>
+          <span class="label">Nhập báo cáo đùn (Thủ công)</span>
+        </a>
+        <a href="index.php?mainpage=utilities&subpage=extrusion_actual_lookup" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'extrusion_actual_lookup') ? 'active' : '' ?>">
+          <span class="material-icons">table_view</span>
+          <span class="label">Tra cứu &amp; Xuất thực tích</span>
+        </a>
         <a href="index.php?mainpage=utilities&subpage=color_mixer" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'color_mixer') ? 'active' : '' ?>">
           <span class="material-icons">manage_search</span>
           <span class="label" data-i18n="nav.color_mixer"><?= __('nav.color_mixer', 'Tra cứu trộn màu') ?></span>
@@ -368,7 +376,7 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
     <?php endif; ?>
 
     <!-- 8. Tiện ích -->
-    <?php if (hasPermission('mixer.view')): ?>
+    <?php if (hasPermission(['mixer.view', 'production.data', 'dashboard.view'])): ?>
     <div class="has-submenu <?= ($current_main === 'utilities') ? 'open' : '' ?>">
       <div class="menu-item menu-parent <?= ($current_main === 'utilities') ? 'active' : '' ?>" onclick="toggleSubmenu(this)">
         <span class="material-icons">handyman</span>
@@ -376,6 +384,14 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
         <span class="material-icons arrow-icon">expand_more</span>
       </div>
       <div class="submenu">
+        <a href="index.php?mainpage=utilities&subpage=extrusion_manual_input" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'extrusion_manual_input') ? 'active' : '' ?>">
+          <span class="material-icons">edit_note</span>
+          <span class="label">Nhập báo cáo đùn (Thủ công)</span>
+        </a>
+        <a href="index.php?mainpage=utilities&subpage=extrusion_actual_lookup" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'extrusion_actual_lookup') ? 'active' : '' ?>">
+          <span class="material-icons">table_view</span>
+          <span class="label">Tra cứu &amp; Xuất thực tích</span>
+        </a>
         <a href="index.php?mainpage=utilities&subpage=color_mixer" class="submenu-item <?= ($current_main === 'utilities' && $current_sub === 'color_mixer') ? 'active' : '' ?>">
           <span class="material-icons">palette</span>
           <span class="label" data-i18n="nav.color_mixer"><?= __('nav.color_mixer', 'Tra cứu trộn màu') ?></span>

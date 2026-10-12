@@ -3,8 +3,87 @@
 // Middleware xác thực & phân quyền tập trung - DX Plastic Group
 
 if (session_status() === PHP_SESSION_NONE) {
+    ini_set('session.use_only_cookies', 1);
+    ini_set('session.use_strict_mode', 1);
+    session_set_cookie_params([
+        'lifetime' => 0,
+        'path'     => '/',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
     session_start();
 }
+
+// Thiết lập HTTP Header chống lưu cache trang quản trị / nội bộ
+if (!headers_sent()) {
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
+// Thời gian sống tối đa khi không hoạt động của Session phía Server: 600 giây (10 phút)
+if (!defined('SESSION_TIMEOUT_SECONDS')) {
+    define('SESSION_TIMEOUT_SECONDS', 600);
+}
+
+/**
+ * Hủy hoàn toàn phiên làm việc và xóa cookie PHPSESSID
+ */
+function destroyExpiredSession() {
+    $_SESSION = [];
+    if (ini_get('session.use_cookies') && !headers_sent()) {
+        $params = session_get_cookie_params();
+        setcookie(
+            session_name(),
+            '',
+            time() - 42000,
+            $params['path'],
+            $params['domain'],
+            $params['secure'],
+            $params['httponly']
+        );
+    }
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_destroy();
+    }
+}
+
+/**
+ * Kiểm tra thời gian sống của session (600 giây) và chống dùng lẫn phiên giữa các trình duyệt/máy tính
+ */
+function checkSessionTimeout() {
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+
+    if (!isset($_SESSION['user_id']) && !isset($_SESSION['user'])) {
+        return false;
+    }
+
+    // Kiểm tra User-Agent để ngăn chặn rò rỉ hoặc chiếm dụng PHPSESSID từ máy khác trong LAN
+    $currentUA = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    if (!empty($_SESSION['user_agent']) && $_SESSION['user_agent'] !== $currentUA) {
+        destroyExpiredSession();
+        return true;
+    }
+
+    // Kiểm tra thời gian không hoạt động vượt quá 600 giây (10 phút)
+    if (isset($_SESSION['last_activity']) && (time() - (int)$_SESSION['last_activity'] > SESSION_TIMEOUT_SECONDS)) {
+        destroyExpiredSession();
+        return true;
+    }
+
+    // Cập nhật lại thời điểm tương tác mới nhất
+    $_SESSION['last_activity'] = time();
+    if (empty($_SESSION['user_agent']) && $currentUA !== '') {
+        $_SESSION['user_agent'] = $currentUA;
+    }
+
+    return false;
+}
+
+// Thực thi kiểm tra timeout ngay khi nạp middleware
+checkSessionTimeout();
 
 /**
  * Tự động đồng bộ vai trò và danh sách quyền hạn người dùng từ DB & file cấu hình
@@ -12,6 +91,11 @@ if (session_status() === PHP_SESSION_NONE) {
 function syncUserAuth() {
     if (session_status() === PHP_SESSION_NONE) {
         session_start();
+    }
+
+    // Kiểm tra hạn thời gian sống của session (600 giây)
+    if (checkSessionTimeout()) {
+        return;
     }
     
     // Nếu chưa đăng nhập, không thực hiện đồng bộ
@@ -45,8 +129,7 @@ function syncUserAuth() {
             if ($user) {
                 // Nếu tài khoản bị khóa/hủy kích hoạt -> Hủy phiên ngay lập tức
                 if ($user['status'] !== 'active') {
-                    unset($_SESSION['user'], $_SESSION['user_id'], $_SESSION['username']);
-                    session_destroy();
+                    destroyExpiredSession();
                     return;
                 }
                 // Đồng bộ thông tin người dùng từ DB
