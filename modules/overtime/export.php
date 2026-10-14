@@ -8,7 +8,7 @@ checkAuth();
 requirePermission('overtime.export');
 
 $currentYear = intval(date('Y'));
-$currentMonth = intval(date('m'));
+$currentMonth = intval(date('n'));
 ?>
 
 <div class="app-page-wrapper">
@@ -29,8 +29,9 @@ $currentMonth = intval(date('m'));
       <div class="col-md-3">
         <label class="form-label small text-muted fw-bold m-0 mb-1">Năm Báo Cáo</label>
         <select class="app-form-select app-form-select-sm" id="exportYear" onchange="updateExportLinks()">
-          <option value="2026" selected>Năm 2026</option>
-          <option value="2025">Năm 2025</option>
+          <?php for ($y = $currentYear + 1; $y >= $currentYear - 2; $y--): ?>
+            <option value="<?= $y ?>" <?= ($y === $currentYear) ? 'selected' : '' ?>>Năm <?= $y ?></option>
+          <?php endfor; ?>
         </select>
       </div>
 
@@ -39,7 +40,7 @@ $currentMonth = intval(date('m'));
         <select class="app-form-select app-form-select-sm" id="exportMonth" onchange="updateExportLinks()">
           <option value="0">-- Tất cả 12 tháng --</option>
           <?php for ($m = 1; $m <= 12; $m++): ?>
-            <option value="<?= $m ?>" <?= ($m === 9) ? 'selected' : '' ?>>Tháng <?= $m ?></option>
+            <option value="<?= $m ?>" <?= ($m === $currentMonth) ? 'selected' : '' ?>>Tháng <?= $m ?></option>
           <?php endfor; ?>
         </select>
       </div>
@@ -220,5 +221,6 @@ function updateExportLinks() {
     btn.href = `api/overtime_export.php?type=${type}&year=${year}&month=${month}`;
   });
 }
+document.addEventListener('DOMContentLoaded', updateExportLinks);
 </script>
 

@@ -92,7 +92,7 @@ function sendCsvHeaders($filename) {
     echo "\xEF\xBB\xBF";
 }
 
-if ($type === 'plan_template' || $type === 'plan_excel') {
+if ($type === 'plan_template' || $type === 'plan_excel' || $type === 'plan_csv') {
     require_once __DIR__ . '/overtime_export_plan_template.php';
     exit;
 }
