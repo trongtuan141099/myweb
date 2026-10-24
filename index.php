@@ -107,9 +107,9 @@ $route_permissions = [
         'viscoscity' => 'materials.view'
     ],
     'five_s' => [
-        'overview'     => 'five_s.view',
-        'list'         => 'five_s.view',
-        'proposals'    => 'five_s.proposals',
+        'overview'     => ['five_s.view', 'five_s.audit', 'five_s.settings', 'five_s.proposals'],
+        'list'         => ['five_s.view', 'five_s.audit', 'five_s.settings'],
+        'proposals'    => ['five_s.proposals', 'five_s.view'],
         'mobile_audit' => 'five_s.audit',
         'settings'     => 'five_s.settings'
     ],

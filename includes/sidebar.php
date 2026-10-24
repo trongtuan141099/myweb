@@ -343,14 +343,50 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
         <span class="material-icons arrow-icon">expand_more</span>
       </div>
       <div class="submenu">
-        <?php if ($can5sView): ?>
-        <a href="index.php?mainpage=five_s&subpage=overview" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'overview') ? 'active' : '' ?>">
-          <span class="material-icons">dashboard</span>
-          <span class="label" data-i18n="nav.five_s_overview"><?= __('nav.five_s_overview', 'Tổng quan 5S') ?></span>
+        <?php if ($can5sSet): ?>
+        <div style="padding: 6px 14px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--dx-text-muted, #94a3b8); letter-spacing: 0.5px;">Danh mục hệ thống</div>
+        <a href="index.php?mainpage=five_s&tab=zones" class="submenu-item <?= ($current_main === 'five_s' && (($_GET['tab'] ?? '') === 'zones' || $current_sub === 'settings')) ? 'active' : '' ?>">
+          <span class="material-icons">domain</span>
+          <span class="label">Quản lý vị trí</span>
         </a>
-        <a href="index.php?mainpage=five_s&subpage=list" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'list') ? 'active' : '' ?>">
+        <a href="index.php?mainpage=five_s&tab=standards" class="submenu-item <?= ($current_main === 'five_s' && ($_GET['tab'] ?? '') === 'standards') ? 'active' : '' ?>">
           <span class="material-icons">rule</span>
-          <span class="label" data-i18n="nav.five_s_list"><?= __('nav.five_s_list', 'Danh sách vi phạm') ?></span>
+          <span class="label">Tiêu chuẩn kiểm tra</span>
+        </a>
+        <?php endif; ?>
+
+        <?php if ($can5sAudit || $can5sSet || $can5sView): ?>
+        <div style="padding: 6px 14px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--dx-text-muted, #94a3b8); letter-spacing: 0.5px;">Nghiệp vụ 5S</div>
+        <?php if ($can5sSet): ?>
+        <a href="index.php?mainpage=five_s&tab=plans" class="submenu-item <?= ($current_main === 'five_s' && ($_GET['tab'] ?? '') === 'plans') ? 'active' : '' ?>">
+          <span class="material-icons">calendar_month</span>
+          <span class="label">Kế hoạch kiểm tra</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($can5sAudit): ?>
+        <a href="index.php?mainpage=five_s&tab=audit" class="submenu-item <?= ($current_main === 'five_s' && (($_GET['tab'] ?? '') === 'audit' || $current_sub === 'mobile_audit')) ? 'active' : '' ?>">
+          <span class="material-icons">fact_check</span>
+          <span class="label">Thực hiện kiểm tra</span>
+        </a>
+        <?php endif; ?>
+        <?php if ($can5sView || $can5sAudit): ?>
+        <a href="index.php?mainpage=five_s&tab=issues" class="submenu-item <?= ($current_main === 'five_s' && (($_GET['tab'] ?? '') === 'issues' || $current_sub === 'list')) ? 'active' : '' ?>">
+          <span class="material-icons">healing</span>
+          <span class="label">Quản lý lỗi &amp; đối sách</span>
+        </a>
+        <?php endif; ?>
+        <?php endif; ?>
+
+        <?php if ($can5sView || $can5sProps): ?>
+        <div style="padding: 6px 14px 2px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--dx-text-muted, #94a3b8); letter-spacing: 0.5px;">Báo cáo &amp; Giám sát</div>
+        <?php if ($can5sView): ?>
+        <a href="index.php?mainpage=five_s&tab=dashboard" class="submenu-item <?= ($current_main === 'five_s' && (($_GET['tab'] ?? '') === 'dashboard' || ($current_sub === 'overview' && empty($_GET['tab'])))) ? 'active' : '' ?>">
+          <span class="material-icons">dashboard</span>
+          <span class="label">Dashboard 5S</span>
+        </a>
+        <a href="index.php?mainpage=five_s&tab=qrcode" class="submenu-item <?= ($current_main === 'five_s' && ($_GET['tab'] ?? '') === 'qrcode') ? 'active' : '' ?>">
+          <span class="material-icons">qr_code_2</span>
+          <span class="label">QR Code &amp; In thẻ</span>
         </a>
         <?php endif; ?>
         <?php if ($can5sProps): ?>
@@ -359,17 +395,6 @@ $is_guest     = !isset($_SESSION['user_id']) && !isset($_SESSION['user']);
           <span class="label" data-i18n="nav.five_s_proposals"><?= __('nav.five_s_proposals', 'Đề xuất cải tiến') ?></span>
         </a>
         <?php endif; ?>
-        <?php if ($can5sAudit): ?>
-        <a href="index.php?mainpage=five_s&subpage=mobile_audit" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'mobile_audit') ? 'active' : '' ?>">
-          <span class="material-icons">fact_check</span>
-          <span class="label" data-i18n="nav.five_s_audit"><?= __('nav.five_s_audit', 'Công việc kiểm tra') ?></span>
-        </a>
-        <?php endif; ?>
-        <?php if ($can5sSet): ?>
-        <a href="index.php?mainpage=five_s&subpage=settings" class="submenu-item <?= ($current_main === 'five_s' && $current_sub === 'settings') ? 'active' : '' ?>">
-          <span class="material-icons">tune</span>
-          <span class="label" data-i18n="nav.five_s_settings"><?= __('nav.five_s_settings', 'Thiết lập 5S') ?></span>
-        </a>
         <?php endif; ?>
       </div>
     </div>

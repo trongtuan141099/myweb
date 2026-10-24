@@ -9,78 +9,103 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
+$action = trim($_POST['action'] ?? 'save');
 $zoneId = intval($_POST['zone_id'] ?? 0);
-$zoneCode = trim($_POST['zone_code'] ?? '');
-$zoneName = trim($_POST['zone_name'] ?? '');
-$qrCode = trim($_POST['qr_code'] ?? '');
-$layoutImage = trim($_POST['layout_image'] ?? '');
-$description = trim($_POST['description'] ?? '');
-
-if ($zoneCode === '' || $zoneName === '') {
-    echo json_encode(['success' => false, 'message' => 'Vui lòng nhập mã và tên khu vực']);
-    exit;
-}
-
-$columns = [];
-$result = $conn->query("SHOW COLUMNS FROM five_s_zones");
-while ($result && ($column = $result->fetch_assoc())) {
-    $columns[$column['Field']] = true;
-}
-if (!isset($columns['ok_reference_image']) || !isset($columns['ng_reference_image'])) {
-    echo json_encode(['success' => false, 'message' => 'Database chưa có cột ảnh mẫu. Hãy chạy migration five_s_workflow.sql']);
-    exit;
-}
-
-$uploadDir = __DIR__ . '/../documents/5s_images/';
-if (!is_dir($uploadDir)) {
-    mkdir($uploadDir, 0777, true);
-}
-
-function saveReferenceImage($field, $uploadDir) {
-    if (!isset($_FILES[$field]) || $_FILES[$field]['error'] === UPLOAD_ERR_NO_FILE) {
-        return null;
-    }
-    if ($_FILES[$field]['error'] !== UPLOAD_ERR_OK) {
-        throw new Exception('Không thể tải ảnh lên');
-    }
-    $extension = strtolower(pathinfo($_FILES[$field]['name'], PATHINFO_EXTENSION));
-    if (!in_array($extension, ['jpg', 'jpeg', 'png', 'webp'], true)) {
-        throw new Exception('Ảnh mẫu chỉ hỗ trợ JPG, PNG hoặc WEBP');
-    }
-    $fileName = 'reference_' . $field . '_' . time() . '_' . rand(1000, 9999) . '.' . $extension;
-    if (!move_uploaded_file($_FILES[$field]['tmp_name'], $uploadDir . $fileName)) {
-        throw new Exception('Không thể lưu ảnh mẫu');
-    }
-    return 'documents/5s_images/' . $fileName;
-}
 
 try {
-    $okImage = saveReferenceImage('ok_reference_image', $uploadDir);
-    $ngImage = saveReferenceImage('ng_reference_image', $uploadDir);
-    if ($zoneId > 0) {
-        if ($okImage !== null && $ngImage !== null) {
-            $stmt = $conn->prepare("UPDATE five_s_zones SET zone_code = ?, zone_name = ?, qr_code_hash = ?, layout_image = ?, description = ?, ok_reference_image = ?, ng_reference_image = ? WHERE id = ?");
-            $stmt->bind_param('sssssssi', $zoneCode, $zoneName, $qrCode, $layoutImage, $description, $okImage, $ngImage, $zoneId);
-        } elseif ($okImage !== null) {
-            $stmt = $conn->prepare("UPDATE five_s_zones SET zone_code = ?, zone_name = ?, qr_code_hash = ?, layout_image = ?, description = ?, ok_reference_image = ? WHERE id = ?");
-            $stmt->bind_param('ssssssi', $zoneCode, $zoneName, $qrCode, $layoutImage, $description, $okImage, $zoneId);
-        } elseif ($ngImage !== null) {
-            $stmt = $conn->prepare("UPDATE five_s_zones SET zone_code = ?, zone_name = ?, qr_code_hash = ?, layout_image = ?, description = ?, ng_reference_image = ? WHERE id = ?");
-            $stmt->bind_param('ssssssi', $zoneCode, $zoneName, $qrCode, $layoutImage, $description, $ngImage, $zoneId);
-        } else {
-            $stmt = $conn->prepare("UPDATE five_s_zones SET zone_code = ?, zone_name = ?, qr_code_hash = ?, layout_image = ?, description = ? WHERE id = ?");
-            $stmt->bind_param('sssssi', $zoneCode, $zoneName, $qrCode, $layoutImage, $description, $zoneId);
-        }
-    } else {
-        if ($okImage === null || $ngImage === null) {
-            echo json_encode(['success' => false, 'message' => 'Khu vực mới cần đủ ảnh mẫu OK và NG']);
+    // 1. Toggle Active status
+    if ($action === 'toggle_active') {
+        if ($zoneId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'ID vị trí không hợp lệ']);
             exit;
         }
-        $stmt = $conn->prepare("INSERT INTO five_s_zones (zone_code, zone_name, qr_code_hash, layout_image, description, ok_reference_image, ng_reference_image) VALUES (?, ?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param('sssssss', $zoneCode, $zoneName, $qrCode, $layoutImage, $description, $okImage, $ngImage);
+        $stmt = $conn->prepare("UPDATE five_s_zones SET is_active = NOT COALESCE(is_active, 1) WHERE id = ?");
+        $stmt->bind_param("i", $zoneId);
+        $stmt->execute();
+        
+        $res = $conn->query("SELECT is_active FROM five_s_zones WHERE id = $zoneId")->fetch_assoc();
+        $newStatus = (int)($res['is_active'] ?? 1);
+        echo json_encode([
+            'success' => true, 
+            'message' => $newStatus ? 'Đã kích hoạt vị trí' : 'Đã tạm ngừng sử dụng vị trí',
+            'is_active' => $newStatus
+        ]);
+        exit;
     }
-    $stmt->execute();
-    echo json_encode(['success' => true, 'message' => $zoneId > 0 ? 'Đã cập nhật khu vực' : 'Đã tạo khu vực']);
+
+    // 2. Delete Zone
+    if ($action === 'delete') {
+        if ($zoneId <= 0) {
+            echo json_encode(['success' => false, 'message' => 'ID vị trí không hợp lệ']);
+            exit;
+        }
+        $chkAudit = $conn->prepare("SELECT COUNT(*) AS c FROM five_s_audits WHERE zone_id = ?");
+        $chkAudit->bind_param("i", $zoneId);
+        $chkAudit->execute();
+        $auditCount = (int)$chkAudit->get_result()->fetch_assoc()['c'];
+
+        if ($auditCount > 0) {
+            $stmt = $conn->prepare("UPDATE five_s_zones SET is_active = 0 WHERE id = ?");
+            $stmt->bind_param("i", $zoneId);
+            $stmt->execute();
+            echo json_encode(['success' => true, 'message' => 'Vị trí đã có lịch sử kiểm tra nên hệ thống chuyển sang trạng thái "Ngừng sử dụng" để lưu trữ dữ liệu.']);
+            exit;
+        }
+
+        $stmtDel = $conn->prepare("DELETE FROM five_s_zones WHERE id = ?");
+        $stmtDel->bind_param("i", $zoneId);
+        $stmtDel->execute();
+        echo json_encode(['success' => true, 'message' => 'Đã xóa vị trí 5S thành công']);
+        exit;
+    }
+
+    // 3. Save / Update Zone (ONLY Position Info, NO Personnel Configuration)
+    $zoneCode = trim($_POST['zone_code'] ?? '');
+    $zoneName = trim($_POST['zone_name'] ?? '');
+    $factory = trim($_POST['factory'] ?? 'Nhà Máy 1');
+    $area = trim($_POST['area'] ?? 'Khu Vực Sản Xuất');
+    $description = trim($_POST['description'] ?? '');
+    $qrCode = trim($_POST['qr_code'] ?? '');
+    $isActive = isset($_POST['is_active']) ? intval($_POST['is_active']) : 1;
+
+    if ($zoneCode === '' || $zoneName === '') {
+        echo json_encode(['success' => false, 'message' => 'Vui lòng nhập mã và tên vị trí 5S']);
+        exit;
+    }
+
+    if ($qrCode === '') {
+        $qrCode = '5S-' . $zoneCode;
+    }
+
+    if ($zoneId > 0) {
+        $query = "UPDATE five_s_zones SET 
+                    zone_code = ?, 
+                    zone_name = ?, 
+                    factory = ?,
+                    area = ?,
+                    department = ?,
+                    qr_code_hash = ?, 
+                    description = ?,
+                    is_active = ?
+                  WHERE id = ?";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("sssssssii", $zoneCode, $zoneName, $factory, $area, $area, $qrCode, $description, $isActive, $zoneId);
+        $stmt->execute();
+    } else {
+        $query = "INSERT INTO five_s_zones (
+                    zone_code, zone_name, factory, area, department, qr_code_hash, description, is_active
+                  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param("sssssssi", $zoneCode, $zoneName, $factory, $area, $area, $qrCode, $description, $isActive);
+        $stmt->execute();
+        $zoneId = $conn->insert_id;
+    }
+
+    echo json_encode([
+        'success' => true, 
+        'message' => 'Lưu thông tin vị trí 5S thành công',
+        'zone_id' => $zoneId
+    ]);
 } catch (Throwable $error) {
     echo json_encode(['success' => false, 'message' => $error->getMessage()]);
 }

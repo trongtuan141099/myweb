@@ -3,6 +3,10 @@
 if (!defined('INDEX_AUTH')) {
     define('INDEX_AUTH', true);
 }
+require_once __DIR__ . '/../../config/db.php';
+require_once __DIR__ . '/../../core/check_permission.php';
+
+requirePermission(['five_s.proposals', 'five_s.view']);
 $current_month = date('Y-m');
 ?>
 
